@@ -30,4 +30,6 @@ Convex agent skills for common tasks can be installed by running
   `better-auth` and `@better-auth/*` stay on `~1.6.33`, `@better-auth-ui/*` on exactly `1.6.45`.
   Don't run `pnpm dlx shadcn add @better-auth-ui/...` (the hosted registry serves 1.7 components). See README.
 - `src/components/auth/**` and `src/components/ui/**` are generated from registries; prefer composing them over editing.
+- Better Auth runs as a **locally installed Convex component** (`convex/betterAuth`). After changing plugins or
+  user/org fields in `convex/auth.ts`, run `pnpm auth:generate` and commit `generatedSchema.ts`. Never hand-edit it.
 - Deploys go through Vercel, which runs `convex deploy --cmd 'pnpm build'` (see `vercel.json`).

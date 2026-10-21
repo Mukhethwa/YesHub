@@ -25,11 +25,8 @@ export function SignOut({ className }: SignOutProps) {
         replace: true
       })
     },
-    onSuccess: () =>
-      navigate({
-        to: `${basePaths.auth}/${viewPaths.auth.signIn}`,
-        replace: true
-      })
+    // YES Hub: signing out returns to the landing page
+    onSuccess: () => navigate({ to: "/", replace: true })
   })
 
   const hasSignedOut = useRef(false)

@@ -12,7 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "convex/_generated/**",
+    "convex/**/_generated/**",
   ]),
   {
     // Vendored from the better-auth-ui shadcn registry. These components read

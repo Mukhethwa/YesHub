@@ -56,6 +56,24 @@ pnpm dev
 Open http://localhost:3000 and sign up at `/auth/sign-up`. In development, the dashboard has a
 **Dev: fill in a sample business** button that creates a sample SME profile for your account.
 
+### YES Hub admins
+
+YES Hub staff (the `/admin` area) are accounts with the Better Auth `admin` role. Any account created with an
+email listed in `SUPER_ADMIN_EMAILS` on the Convex deployment becomes an admin as it signs up:
+
+```bash
+pnpm exec convex env set SUPER_ADMIN_EMAILS "you@example.com,teammate@example.com"   # add --prod for production
+```
+
+For accounts that already exist, set or remove the role directly, and delete accounts the same way. These are
+internal functions, so only the CLI or the Convex dashboard can run them:
+
+```bash
+pnpm exec convex run admin:setPlatformRole '{"email":"you@example.com","role":"admin"}'   # or "user"
+pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'                # also removes their SME profile and files
+# add --prod for production
+```
+
 ### Environment variables
 
 | Variable | Where | Notes |
@@ -65,7 +83,8 @@ Open http://localhost:3000 and sign up at `/auth/sign-up`. In development, the d
 | `BETTER_AUTH_SECRET` | Convex | Signs sessions and tokens |
 | `SITE_URL` | Convex | The app's public URL; used in email links and to validate requests |
 | `RESEND_API_KEY` | Convex | Emails are sent from Convex, not Next.js |
-| `AUTH_EMAIL_FROM` | Convex | Sender address on a domain verified in Resend |
+| `SUPER_ADMIN_EMAILS` | Convex | Comma-separated emails that become YES Hub admins when they sign up |
+| `AUTH_EMAIL_FROM` | Convex | Sender address on a domain verified in Resend. Until one is set, mail only reaches the Resend account owner, so sign-up doesn’t require email verification (see `convex/auth.ts`) |
 | `CONVEX_DEPLOY_KEY` | Vercel | See below |
 
 ### Scripts
@@ -77,6 +96,7 @@ Open http://localhost:3000 and sign up at `/auth/sign-up`. In development, the d
 | `pnpm build` | Production build |
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | Route type generation + `tsc` |
+| `pnpm auth:generate` | Regenerate the Better Auth schema in `convex/betterAuth` after changing auth plugins or fields |
 
 ## Deployment
 
@@ -114,7 +134,9 @@ sign-in to work.
 | --- | --- |
 | `convex/schema.ts` | Database schema (`smes`: SME business profiles, keyed by Better Auth user) |
 | `convex/smes.ts` | SME profile queries and mutations |
-| `convex/auth.ts` | Better Auth instance (`createAuth`) backed by the Convex component |
+| `convex/auth.ts` | Better Auth options and instance: email/password, organisations (enterprises, with teams) and admin |
+| `convex/betterAuth/` | Locally installed Better Auth component: generated schema, adapter, component functions |
+| `convex/admin.ts` | Internal admin tooling, e.g. `setPlatformRole` |
 | `convex/email.tsx` | Auth emails via Resend, using `@better-auth-ui/react/email` templates |
 | `convex/http.ts` | Mounts the Better Auth HTTP routes on Convex |
 | `src/app/api/auth/[...all]/route.ts` | Proxies `/api/auth/*` from Next.js to Convex |

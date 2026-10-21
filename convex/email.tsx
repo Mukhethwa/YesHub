@@ -2,6 +2,7 @@ import { Resend } from "@convex-dev/resend";
 import {
   ChangeEmailConfirmationEmail,
   EmailVerificationEmail,
+  OrganizationInvitationEmail,
   PasswordChangedEmail,
   ResetPasswordEmail,
 } from "@better-auth-ui/react/email";
@@ -75,6 +76,31 @@ export function sendChangeEmailConfirmation(
       newEmail={newEmail}
       appName={appName}
       expirationMinutes={expirationMinutes}
+    />,
+  );
+}
+
+export function sendOrganizationInvitation(
+  ctx: ActionCtx,
+  {
+    to,
+    url,
+    organizationName,
+    inviterName,
+    inviterEmail,
+  }: { to: string; url: string; organizationName: string; inviterName: string; inviterEmail: string },
+) {
+  return send(
+    ctx,
+    to,
+    `${inviterName} invited you to join ${organizationName} on ${appName}`,
+    <OrganizationInvitationEmail
+      url={url}
+      email={to}
+      organizationName={organizationName}
+      inviterName={inviterName}
+      inviterEmail={inviterEmail}
+      appName={appName}
     />,
   );
 }

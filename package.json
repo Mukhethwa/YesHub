@@ -17,7 +17,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "auth:generate": "cd convex/betterAuth && pnpm dlx auth@1.6.33 generate --output generatedSchema.ts -y"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
