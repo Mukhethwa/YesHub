@@ -3,21 +3,21 @@
 # YES Hub
 
 **AI SME opportunity matching** (YES AI Hub, Challenge 4). YES Hub connects enterprise tenders, RFQs and funding
-with the right SME providers: SMEs build a match-ready business profile, and corporates and funders find suppliers
-who are compliant and can deliver in their area.
+with the right SME providers.
 
-This is the Next.js + Convex rebuild of the original Vite prototype, migrated a piece at a time.
+## How it works
 
-| Area | Status |
-| --- | --- |
-| Accounts: sign up, sign in, email verification, password reset, account & security settings | Done |
-| SME dashboard: layout, navigation, Overview (profile readiness, coverage, documents, matches) | Done |
-| SME registration (6-step business profile) | Next |
-| Dashboard: Documents, Business profile, Settings | Planned |
-| Opportunities, matching, Corporate / Funder and YES Programme Team portals | Planned |
+YES Hub has a portal for each side of the match:
 
-Until registration is migrated, the dashboard offers a **Dev: fill in a sample business** button in development so
-the Overview can be seen with data.
+- **SMEs** register their business once: company details, the services they offer, the provinces and areas they
+  can deliver in, and the compliance documents buyers ask for (B-BBEE certificate, tax compliance status, CIPC
+  registration and more). Their dashboard shows a **profile readiness** score with the gaps holding them back,
+  which documents are missing or expired, and the opportunities they've been matched to.
+- **Corporates and funders** publish tenders, RFQs and grants, and find suppliers who are compliant and can
+  deliver where the work is.
+- **The YES Programme Team** oversees the programme across both sides.
+
+Matching uses what SMEs put in their profile, so a complete, current profile means more and better matches.
 
 ## Stack
 
@@ -53,7 +53,8 @@ In a second terminal:
 pnpm dev
 ```
 
-Open http://localhost:3000 and sign up at `/auth/sign-up`.
+Open http://localhost:3000 and sign up at `/auth/sign-up`. In development, the dashboard has a
+**Dev: fill in a sample business** button that creates a sample SME profile for your account.
 
 ### Environment variables
 
@@ -77,30 +78,35 @@ Open http://localhost:3000 and sign up at `/auth/sign-up`.
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | Route type generation + `tsc` |
 
-## Deploying to Vercel
+## Deployment
+
+Production runs at **https://yes-hub.vercel.app** (Vercel project `yes-hub`) against the Convex production
+deployment `fortunate-pigeon-601`.
 
 `vercel.json` makes every Vercel build run `pnpm convex deploy --cmd 'pnpm build'`: it deploys the Convex
-functions and schema first, then builds Next.js against that deployment.
+functions and schema to production first, then builds Next.js against that deployment. Vercel authenticates to
+Convex with the `CONVEX_DEPLOY_KEY` environment variable (Production), and the production backend has
+`BETTER_AUTH_SECRET`, `SITE_URL` and `RESEND_API_KEY` set.
 
-1. In Vercel, **Add New → Project** and import `Mukhethwa/YesHub`. Keep the detected settings; `vercel.json`
-   supplies the install and build commands.
-2. In the [Convex dashboard](https://dashboard.convex.dev), open the project's **Production** deployment →
-   **Settings** → **Generate Production Deploy Key**. Add it in Vercel as `CONVEX_DEPLOY_KEY`, scoped to the
-   **Production** environment.
-3. Set the production backend's environment (use your Vercel or custom domain for `SITE_URL`):
+To deploy from your machine:
 
-   ```bash
-   pnpm exec convex env set --prod BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
-   pnpm exec convex env set --prod SITE_URL https://your-domain.example
-   pnpm exec convex env set --prod RESEND_API_KEY re_...
-   pnpm exec convex env set --prod AUTH_EMAIL_FROM "YES Hub <auth@your-verified-domain.com>"
-   ```
+```bash
+pnpm dlx vercel link        # once, pick the yes-hub project
+pnpm dlx vercel deploy --prod
+```
 
-4. Deploy. Pushes to `main` deploy to production from then on.
+Pushes to `main` deploy automatically once the Vercel project is connected to this GitHub repository
+(Vercel project **Settings → Git**; connecting needs the Vercel GitHub app installed with access to the repo).
 
-**Preview deployments** need a Convex _preview_ deploy key as `CONVEX_DEPLOY_KEY` in Vercel's **Preview**
-environment; each branch then gets its own Convex backend. Sign-in on previews also needs `SITE_URL` to match the
-preview's URL, which isn't automated yet, so auth on previews isn't set up.
+If you use a custom domain, update the backend to match:
+
+```bash
+pnpm exec convex env set --prod SITE_URL https://your-domain.example
+```
+
+**Preview deployments** would need a Convex _preview_ deploy key as `CONVEX_DEPLOY_KEY` in Vercel's **Preview**
+environment, so each branch gets its own Convex backend, plus a `SITE_URL` that matches each preview's URL for
+sign-in to work.
 
 ## Project layout
 
