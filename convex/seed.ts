@@ -10,7 +10,7 @@ import { samplePdf } from "./lib/samplePdf";
 
 /*
  * Dev seed: realistic users, SMEs, enterprises (with teams, members and invitations) and staff, so the
- * admin area has something to manage. Only runs when SITE_URL is a localhost URL.
+ * admin area has something to manage. Only runs when SITE_URL is a localhost URL, or ALLOW_SEED is true.
  *
  *   pnpm exec convex run seed:devData
  *
@@ -48,8 +48,9 @@ const PEOPLE = {
 
 type Person = keyof typeof PEOPLE;
 
+// A shared test deployment can opt in with `convex env set ALLOW_SEED true` (unset it again afterwards)
 function assertDevSite() {
-  if (!process.env.SITE_URL?.startsWith("http://localhost")) {
+  if (!process.env.SITE_URL?.startsWith("http://localhost") && process.env.ALLOW_SEED !== "true") {
     throw new ConvexError("The seed only runs against development deployments (SITE_URL on localhost).");
   }
 }

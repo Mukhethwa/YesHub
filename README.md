@@ -65,7 +65,8 @@ staff:
 pnpm exec convex run seed:devData '{"inviterEmail":"you@example.com"}'   # inviterEmail is optional
 ```
 
-It refuses to run unless the deployment's `SITE_URL` is on localhost, and it's safe to re-run. Every seed account
+It refuses to run unless the deployment's `SITE_URL` is on localhost (or `ALLOW_SEED` is `true`, for a shared test
+deployment; unset it again afterwards), and it's safe to re-run. Every seed account
 uses the password in `SEED_PASSWORD` (`convex/seed.ts`); `naledi@yeshub.test` is a super admin, `musa@`,
 `lindiwe@` and `tumi@yeshub.test` are an admin, a moderator and a viewer.
 
