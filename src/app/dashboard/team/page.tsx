@@ -1,6 +1,5 @@
-import { ENTERPRISE_NAV } from "@/components/enterprise/nav";
-import { ComingSoon } from "@/components/portal/coming-soon";
+import { TeamView } from "@/components/enterprise/team-view";
 
 export default function Page() {
-  return <ComingSoon title={ENTERPRISE_NAV.team.label} icon={ENTERPRISE_NAV.team.icon} />;
+  return <TeamView />;
 }

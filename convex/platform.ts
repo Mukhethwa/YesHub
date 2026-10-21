@@ -3,6 +3,7 @@ import { ConvexError, v } from "convex/values";
 import { components } from "./_generated/api";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { deleteApplicationsForSme } from "./lib/opportunities";
+import { deleteMemberPreferences } from "./lib/organizationSettings";
 
 // Internal functions the Better Auth hooks (convex/auth.ts) call, and CLI tooling.
 
@@ -46,6 +47,7 @@ export const makeStaffOwner = internalMutation({
 
 /** Removes everything YES Hub keeps for an account outside Better Auth: its SME profile, files and applications. */
 export async function deleteAppData(ctx: MutationCtx, userId: string) {
+  await deleteMemberPreferences(ctx, userId);
   const sme = await ctx.db
     .query("smes")
     .withIndex("by_user", (q) => q.eq("userId", userId))

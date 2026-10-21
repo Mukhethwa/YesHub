@@ -1,5 +1,6 @@
+import { components } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import type { MutationCtx } from "../_generated/server";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { OpportunityKind, OpportunityListing, OpportunityStatus } from "../schema";
 import { evaluateApplication } from "./evaluation";
 
@@ -241,6 +242,24 @@ function sampleCodeFor(title: string) {
   return SAMPLE_OPPORTUNITIES.find((s) => s.title === title)?.code;
 }
 
+/** Which department (Better Auth team name) owns each sample opportunity, when the organisation has it. */
+const SAMPLE_DEPARTMENTS: Record<string, string> = {
+  FAC: "Facilities",
+  BLD: "Facilities",
+  SEC: "Facilities",
+  CAT: "Human Resources",
+  GRT: "Procurement",
+  LOG: "Procurement",
+};
+
+/** The id of the organisation's team a sample opportunity belongs to, if it has a team by that name. */
+export async function sampleTeamIdFor(ctx: QueryCtx, organizationId: string, title: string) {
+  const code = sampleCodeFor(title);
+  if (!code) return undefined;
+  const detail = await ctx.runQuery(components.betterAuth.organizations.detail, { organizationId });
+  return detail?.teams.find((t) => t.name === SAMPLE_DEPARTMENTS[code])?.id;
+}
+
 /** A sample opportunity's listing, or null when the title isn't one of the samples. */
 export function sampleListingFor(title: string, organizationName: string, publishedAt: number): OpportunityListing | null {
   const code = sampleCodeFor(title);
@@ -306,6 +325,7 @@ export async function insertSampleOpportunities(
       closesAt: isoDate(sample.closesInDays),
       status: sample.status,
       listing: sampleListingFor(sample.title, organizationName, Date.now() - 14 * DAY) ?? undefined,
+      teamId: await sampleTeamIdFor(ctx, organizationId, sample.title),
       isDemo: true,
     });
     const opportunity = (await ctx.db.get("opportunities", opportunityId))!;

@@ -17,6 +17,7 @@ import type * as enterprise from "../enterprise.js";
 import type * as http from "../http.js";
 import type * as lib_evaluation from "../lib/evaluation.js";
 import type * as lib_opportunities from "../lib/opportunities.js";
+import type * as lib_organizationSettings from "../lib/organizationSettings.js";
 import type * as lib_samplePdf from "../lib/samplePdf.js";
 import type * as lib_staff from "../lib/staff.js";
 import type * as platform from "../platform.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/evaluation": typeof lib_evaluation;
   "lib/opportunities": typeof lib_opportunities;
+  "lib/organizationSettings": typeof lib_organizationSettings;
   "lib/samplePdf": typeof lib_samplePdf;
   "lib/staff": typeof lib_staff;
   platform: typeof platform;

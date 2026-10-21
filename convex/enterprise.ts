@@ -5,8 +5,22 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, type MutationCtx, type QueryCtx, query } from "./_generated/server";
 import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
+import { components } from "./_generated/api";
 import { evaluateApplication } from "./lib/evaluation";
-import type { ActivityAction, DocKey, DocRef } from "./schema";
+import {
+  canManage,
+  getMemberPreferences,
+  getOrganizationSettings,
+  saveMemberPreferences,
+  saveOrganizationSettings,
+} from "./lib/organizationSettings";
+import {
+  type ActivityAction,
+  type DocKey,
+  type DocRef,
+  memberPreferencesValidator,
+  organizationSettingsValidator,
+} from "./schema";
 import {
   APPLICATION_LIMIT,
   deleteOpportunitiesForOrganization,
@@ -33,7 +47,26 @@ async function applicationsFor(ctx: QueryCtx, opportunity: Doc<"opportunities">)
     .take(APPLICATION_LIMIT);
 }
 
-function summarize(opportunity: Doc<"opportunities">, applications: Doc<"applications">[]) {
+/** The organisation's members, departments (Better Auth teams) and pending invitations. */
+async function organizationDetail(ctx: QueryCtx, organizationId: string) {
+  const detail = await ctx.runQuery(components.betterAuth.organizations.detail, { organizationId });
+  return detail ?? { members: [], teams: [], invitations: [] };
+}
+
+type OrganizationDetail = Awaited<ReturnType<typeof organizationDetail>>;
+
+/** The departments the signed-in user belongs to. */
+function teamIdsOf(detail: OrganizationDetail, userId: string) {
+  return detail.members.find((m) => m.userId === userId)?.teamIds ?? [];
+}
+
+function summarize(
+  opportunity: Doc<"opportunities">,
+  applications: Doc<"applications">[],
+  teamNames: Map<string, string>,
+) {
+  // A department that has since been deleted counts as unassigned
+  const teamId = opportunity.teamId && teamNames.has(opportunity.teamId) ? opportunity.teamId : null;
   return {
     id: opportunity._id,
     kind: opportunity.kind,
@@ -45,9 +78,13 @@ function summarize(opportunity: Doc<"opportunities">, applications: Doc<"applica
     closesAt: opportunity.closesAt,
     status: opportunity.status,
     createdAt: opportunity._creationTime,
+    teamId,
+    teamName: teamId ? teamNames.get(teamId)! : null,
     applications: applications.length,
     qualified: applications.filter((a) => a.evaluation.qualifies).length,
     shortlisted: applications.filter((a) => a.status === "shortlisted").length,
+    /** Applications nobody has shortlisted or declined yet. */
+    awaitingReview: applications.filter((a) => a.status === "submitted").length,
   };
 }
 
@@ -61,14 +98,20 @@ export const overview = query({
     const enterprise = await getEnterprise(ctx);
     if (!enterprise) return null;
 
-    const opportunities = await ctx.db
-      .query("opportunities")
-      .withIndex("by_organization", (q) => q.eq("organizationId", enterprise.organization.id))
-      .order("desc")
-      .take(OPPORTUNITY_LIMIT);
+    const [opportunities, detail] = await Promise.all([
+      ctx.db
+        .query("opportunities")
+        .withIndex("by_organization", (q) => q.eq("organizationId", enterprise.organization.id))
+        .order("desc")
+        .take(OPPORTUNITY_LIMIT),
+      organizationDetail(ctx, enterprise.organization.id),
+    ]);
+    const teamNames = new Map(detail.teams.map((t) => [t.id, t.name]));
 
     const rows = await Promise.all(
-      opportunities.map(async (opportunity) => summarize(opportunity, await applicationsFor(ctx, opportunity))),
+      opportunities.map(async (opportunity) =>
+        summarize(opportunity, await applicationsFor(ctx, opportunity), teamNames),
+      ),
     );
 
     return {
@@ -78,6 +121,8 @@ export const overview = query({
         role: enterprise.organization.role,
         verificationStatus: enterprise.organization.verificationStatus,
       },
+      departments: detail.teams.map((t) => ({ id: t.id, name: t.name })),
+      myTeamIds: teamIdsOf(detail, enterprise.user._id),
       opportunities: rows,
       more: opportunities.length === OPPORTUNITY_LIMIT,
     };
@@ -146,8 +191,16 @@ export const opportunity = query({
       });
     }
 
+    const [detail, settings] = await Promise.all([
+      organizationDetail(ctx, enterprise.organization.id),
+      getOrganizationSettings(ctx, enterprise.organization.id),
+    ]);
+    const summary = summarize(opportunity, applications, new Map(detail.teams.map((t) => [t.id, t.name])));
+    const manager = canManage(enterprise.organization.role);
+    const myTeamIds = teamIdsOf(detail, enterprise.user._id);
+
     return {
-      ...summarize(opportunity, applications),
+      ...summary,
       description: opportunity.description,
       services: opportunity.services,
       minBbbeeLevel: opportunity.minBbbeeLevel ?? null,
@@ -155,7 +208,37 @@ export const opportunity = query({
       listing: opportunity.listing ?? null,
       documents,
       applicants,
+      departments: detail.teams.map((t) => ({ id: t.id, name: t.name })),
+      /** Owners and admins, or members of its department (or any department, while it's unassigned). */
+      canAssignDepartment: manager || (summary.teamId ? myTeamIds.includes(summary.teamId) : myTeamIds.length > 0),
+      /** Departments the signed-in user may move it into. */
+      assignableDepartmentIds: manager ? detail.teams.map((t) => t.id) : myTeamIds,
+      canShortlist: manager || !settings.shortlistAdminsOnly,
+      defaultApplicantFilter: settings.defaultApplicantFilter,
     };
+  },
+});
+
+/** Moves an opportunity to a department, or makes it unassigned (teamId null). */
+export const setOpportunityDepartment = mutation({
+  args: { opportunityId: v.id("opportunities"), teamId: v.union(v.string(), v.null()) },
+  handler: async (ctx, args) => {
+    const { enterprise, opportunity } = await ownOpportunity(ctx, args.opportunityId);
+    const detail = await organizationDetail(ctx, enterprise.organization.id);
+    if (args.teamId && !detail.teams.some((t) => t.id === args.teamId)) {
+      throw new ConvexError("That department doesn’t exist any more.");
+    }
+
+    if (!canManage(enterprise.organization.role)) {
+      // Members move work within their own departments: from one of theirs (or unassigned) to one of theirs
+      const mine = teamIdsOf(detail, enterprise.user._id);
+      const fromOk = !opportunity.teamId || mine.includes(opportunity.teamId);
+      const toOk = !args.teamId || mine.includes(args.teamId);
+      if (!fromOk || !toOk) throw new ConvexError("Only owners and admins can move work between other departments.");
+    }
+
+    await ctx.db.patch("opportunities", opportunity._id, { teamId: args.teamId ?? undefined });
+    return null;
   },
 });
 
@@ -177,6 +260,10 @@ export const setApplicationStatus = mutation({
       throw new ConvexError("That application isn’t available.");
     }
     if (application.status === "awarded") throw new ConvexError("This application has already been awarded.");
+    const settings = await getOrganizationSettings(ctx, enterprise.organization.id);
+    if (settings.shortlistAdminsOnly && !canManage(enterprise.organization.role)) {
+      throw new ConvexError("In your organisation, only owners and admins shortlist applicants.");
+    }
 
     await ctx.db.patch("applications", application._id, {
       status: args.status,
@@ -583,6 +670,142 @@ export const supplier = query({
       contact: contactVisible ? contactOf(sme) : null,
       history,
     };
+  },
+});
+
+/* ------------------------------------------------------------------------------------------------------ */
+/* Team and departments                                                                                   */
+/* ------------------------------------------------------------------------------------------------------ */
+
+/**
+ * The Team page: members with their roles and departments, the departments, pending invitations (owners
+ * and admins only) and every opportunity with its department, so work can be split by department.
+ * Membership changes go through Better Auth's organisation API, which enforces who may make them.
+ */
+export const team = query({
+  args: {},
+  handler: async (ctx) => {
+    const enterprise = await getEnterprise(ctx);
+    if (!enterprise) return null;
+
+    const [detail, opportunities] = await Promise.all([
+      organizationDetail(ctx, enterprise.organization.id),
+      ctx.db
+        .query("opportunities")
+        .withIndex("by_organization", (q) => q.eq("organizationId", enterprise.organization.id))
+        .order("desc")
+        .take(OPPORTUNITY_LIMIT),
+    ]);
+    const teamNames = new Map(detail.teams.map((t) => [t.id, t.name]));
+    const rows = await Promise.all(
+      opportunities.map(async (o) => summarize(o, await applicationsFor(ctx, o), teamNames)),
+    );
+    const manager = canManage(enterprise.organization.role);
+
+    return {
+      organization: { id: enterprise.organization.id, name: enterprise.organization.name },
+      me: {
+        userId: enterprise.user._id,
+        role: enterprise.organization.role,
+        teamIds: teamIdsOf(detail, enterprise.user._id),
+        canManage: manager,
+      },
+      members: detail.members,
+      departments: detail.teams,
+      invitations: manager ? detail.invitations : [],
+      opportunities: rows,
+    };
+  },
+});
+
+/* ------------------------------------------------------------------------------------------------------ */
+/* Settings                                                                                               */
+/* ------------------------------------------------------------------------------------------------------ */
+
+/** The organisation's settings and the signed-in member's own notification preferences. */
+export const settings = query({
+  args: {},
+  handler: async (ctx) => {
+    const enterprise = await getEnterprise(ctx);
+    if (!enterprise) return null;
+    const [organizationSettings, preferences] = await Promise.all([
+      getOrganizationSettings(ctx, enterprise.organization.id),
+      getMemberPreferences(ctx, enterprise.user._id),
+    ]);
+    return {
+      organization: {
+        id: enterprise.organization.id,
+        name: enterprise.organization.name,
+        slug: enterprise.organization.slug,
+        verificationStatus: enterprise.organization.verificationStatus,
+        createdAt: enterprise.organization.createdAt,
+      },
+      role: enterprise.organization.role,
+      canManage: canManage(enterprise.organization.role),
+      settings: organizationSettings,
+      preferences,
+    };
+  },
+});
+
+const VALID_DOC_KEYS = new Set<string>([
+  "bbbeeCertificate",
+  "taxCertificate",
+  "cipcCertificate",
+  "companyProfile",
+  "csdReport",
+  "bankLetter",
+  "coidaLetter",
+  "proofOfAddress",
+]);
+
+/** Saves the organisation-wide settings. Owners and admins only. */
+export const updateOrganizationSettings = mutation({
+  args: { settings: organizationSettingsValidator },
+  handler: async (ctx, args) => {
+    const enterprise = await getEnterprise(ctx);
+    if (!enterprise) throw new ConvexError("You need an organisation to change its settings.");
+    if (!canManage(enterprise.organization.role)) {
+      throw new ConvexError("Only owners and admins can change organisation settings.");
+    }
+
+    const s = args.settings;
+    if (s.retentionMonths < 3 || s.retentionMonths > 60) throw new ConvexError("Keep data for between 3 and 60 months.");
+    if (s.defaultMinBbbeeLevel < 0 || s.defaultMinBbbeeLevel > 8) throw new ConvexError("Choose a B-BBEE level from 1 to 8.");
+    if (s.procurementEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.procurementEmail.trim())) {
+      throw new ConvexError("Enter a valid procurement email address.");
+    }
+
+    await saveOrganizationSettings(
+      ctx,
+      enterprise.organization.id,
+      {
+        ...s,
+        about: s.about.trim().slice(0, 1000),
+        industry: s.industry.trim(),
+        website: s.website.trim(),
+        procurementEmail: s.procurementEmail.trim().toLowerCase(),
+        defaultRequiredDocuments: s.defaultRequiredDocuments.filter((key) => VALID_DOC_KEYS.has(key)),
+        defaultEvaluationCriteria: s.defaultEvaluationCriteria.map((c) => c.trim()).filter(Boolean).slice(0, 20),
+        defaultSubmission: s.defaultSubmission.trim().slice(0, 1000),
+      },
+      enterprise.user.name,
+    );
+    return null;
+  },
+});
+
+/** Saves the signed-in member's own notification preferences. */
+export const updatePreferences = mutation({
+  args: { preferences: memberPreferencesValidator },
+  handler: async (ctx, args) => {
+    const enterprise = await getEnterprise(ctx);
+    if (!enterprise) throw new ConvexError("You need an organisation to set preferences.");
+    if (![1, 3, 7, 14].includes(args.preferences.closingReminderDays)) {
+      throw new ConvexError("Choose 1, 3, 7 or 14 days for closing reminders.");
+    }
+    await saveMemberPreferences(ctx, enterprise.user._id, args.preferences);
+    return null;
   },
 });
 

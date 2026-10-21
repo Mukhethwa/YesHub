@@ -5,7 +5,7 @@ import type { DocKey, SmeDetails } from "./schema";
 import { components, internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { createAuth } from "./auth";
-import { sampleDocumentLabelsFor, sampleListingFor } from "./lib/opportunities";
+import { sampleDocumentLabelsFor, sampleListingFor, sampleTeamIdFor } from "./lib/opportunities";
 import { samplePdf } from "./lib/samplePdf";
 
 /*
@@ -502,6 +502,18 @@ export const backfillDemoListings = internalMutation({
   },
 });
 
+/** Gives demo opportunities created before departments existed their sample department. */
+export const backfillDemoDepartments = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    for (const opportunity of await ctx.db.query("opportunities").take(500)) {
+      if (!opportunity.isDemo || opportunity.teamId) continue;
+      const teamId = await sampleTeamIdFor(ctx, opportunity.organizationId, opportunity.title);
+      if (teamId) await ctx.db.patch("opportunities", opportunity._id, { teamId });
+    }
+  },
+});
+
 /** Demo opportunities that haven't had their sample documents released yet. */
 export const demoOpportunitiesWithoutDocuments = internalQuery({
   args: {},
@@ -570,6 +582,7 @@ export const sampleDocuments = internalAction({
   handler: async (ctx): Promise<number> => {
     assertDevSite();
     await ctx.runMutation(internal.seed.backfillDemoListings, {});
+    await ctx.runMutation(internal.seed.backfillDemoDepartments, {});
     const opportunities = await ctx.runQuery(internal.seed.demoOpportunitiesWithoutDocuments, {});
     let created = 0;
     for (const opportunity of opportunities) {

@@ -145,6 +145,45 @@ export const activityAction = v.union(
   v.literal("document_opened"),
 );
 
+/** An enterprise's own settings, edited by its owners and admins. */
+export const organizationSettingsFields = {
+  // Profile shown to SMEs on listings
+  about: v.string(),
+  industry: v.string(),
+  website: v.string(),
+  procurementEmail: v.string(),
+
+  // Defaults for new listings
+  defaultRequiredDocuments: v.array(v.string()),
+  /** 0 means no minimum. */
+  defaultMinBbbeeLevel: v.number(),
+  defaultEvaluationCriteria: v.array(v.string()),
+  defaultSubmission: v.string(),
+
+  // Reviewing applicants
+  defaultApplicantFilter: v.union(v.literal("all"), v.literal("qualify")),
+  /** Only owners and admins can shortlist when this is on. */
+  shortlistAdminsOnly: v.boolean(),
+
+  // Data
+  /** Months to keep applicants' data after an opportunity closes. */
+  retentionMonths: v.number(),
+};
+export const organizationSettingsValidator = v.object(organizationSettingsFields);
+
+/** One member's own notification preferences. */
+export const memberPreferencesFields = {
+  notifyNewApplications: v.boolean(),
+  onlyMyDepartments: v.boolean(),
+  notifyClosingSoon: v.boolean(),
+  closingReminderDays: v.number(),
+  notifyColleagueShortlists: v.boolean(),
+  weeklySummary: v.boolean(),
+};
+export const memberPreferencesValidator = v.object(memberPreferencesFields);
+
+export type OrganizationSettings = Infer<typeof organizationSettingsValidator>;
+export type MemberPreferences = Infer<typeof memberPreferencesValidator>;
 export type OpportunityListing = Infer<typeof opportunityListing>;
 export type ActivityAction = Infer<typeof activityAction>;
 export type OpportunityKind = Infer<typeof opportunityKind>;
@@ -199,8 +238,23 @@ export default defineSchema({
     status: opportunityStatus,
     /** The published notice. Missing on opportunities created before listings existed. */
     listing: v.optional(opportunityListing),
+    /** The department (Better Auth team) that owns it, or absent when it's unassigned. */
+    teamId: v.optional(v.string()),
     isDemo: v.optional(v.boolean()),
   }).index("by_organization", ["organizationId"]),
+
+  /** Settings an enterprise's owners and admins choose for the whole organisation. One row per organisation. */
+  organizationSettings: defineTable({
+    organizationId: v.string(),
+    ...organizationSettingsFields,
+    updatedBy: v.string(),
+  }).index("by_organization", ["organizationId"]),
+
+  /** A member's own notification preferences. One row per user. */
+  memberPreferences: defineTable({
+    userId: v.string(),
+    ...memberPreferencesFields,
+  }).index("by_user", ["userId"]),
 
   /** Documents released with an opportunity: the RFQ itself, specifications, pricing schedules, forms. */
   opportunityDocuments: defineTable({

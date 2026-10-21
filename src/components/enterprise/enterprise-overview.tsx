@@ -181,7 +181,7 @@ export function OpportunityTable({ rows }: { rows: Row[] }) {
                 <Link href={`/dashboard/opportunities?id=${r.id}`} className="block">
                   <span className="block truncate font-medium hover:underline">{r.title}</span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {KIND_LABELS[r.kind]} · {r.reference}
+                    {KIND_LABELS[r.kind]} · {r.reference} · {r.teamName ?? "No department"}
                   </span>
                 </Link>
               </TableCell>

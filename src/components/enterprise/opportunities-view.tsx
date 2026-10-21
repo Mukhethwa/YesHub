@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,6 +26,7 @@ import { formatBytes, formatDate } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
 import { CreateOrganisation } from "./create-organisation";
 import { OpportunityTable } from "./enterprise-overview";
+import { DepartmentSelect } from "./team-view";
 import { closingLabel, formatRand, KIND_LABELS, percent, PhasePill, phaseOf } from "./tenders";
 
 type Filter = "all" | "open" | "closing" | "closed";
@@ -38,33 +40,49 @@ function matches(row: Parameters<typeof phaseOf>[0], filter: Filter) {
 
 /** The Opportunities page: the full list, or one opportunity when the URL has ?id=. */
 export function OpportunitiesView() {
-  const id = useSearchParams().get("id");
-  return id ? <OpportunityDetail opportunityId={id} /> : <OpportunityList />;
+  const params = useSearchParams();
+  const id = params.get("id");
+  return id ? (
+    <OpportunityDetail opportunityId={id} />
+  ) : (
+    <OpportunityList initialDepartment={params.get("department") ?? "all"} />
+  );
 }
 
-function OpportunityList() {
+/** "all", "mine" (the user's departments), "none" (unassigned) or a department id. */
+function inDepartment(row: { teamId: string | null }, department: string, myTeamIds: string[]) {
+  if (department === "all") return true;
+  if (department === "mine") return !!row.teamId && myTeamIds.includes(row.teamId);
+  if (department === "none") return !row.teamId;
+  return row.teamId === department;
+}
+
+function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
   const data = useQuery(api.enterprise.overview);
   const [filter, setFilter] = useState<Filter>("all");
+  const [department, setDepartment] = useState(initialDepartment);
   const [search, setSearch] = useState("");
 
   const rows = useMemo(() => data?.opportunities ?? [], [data]);
+  const myTeamIds = useMemo(() => data?.myTeamIds ?? [], [data]);
+  const inScope = useMemo(() => rows.filter((r) => inDepartment(r, department, myTeamIds)), [rows, department, myTeamIds]);
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return rows.filter(
+    return inScope.filter(
       (r) =>
         matches(r, filter) &&
         (!term || r.title.toLowerCase().includes(term) || r.reference.toLowerCase().includes(term)),
     );
-  }, [rows, filter, search]);
+  }, [inScope, filter, search]);
 
   const pagination = usePagination(visible);
   const { setPage } = pagination;
-  useEffect(() => setPage(0), [filter, search, setPage]);
+  useEffect(() => setPage(0), [filter, department, search, setPage]);
 
   if (data === undefined) return <Spinner className="mx-auto mt-24" />;
   if (data === null) return <CreateOrganisation />;
 
-  const count = (f: Filter) => rows.filter((r) => matches(r, f)).length;
+  const count = (f: Filter) => inScope.filter((r) => matches(r, f)).length;
 
   return (
     <div className="space-y-5">
@@ -85,14 +103,33 @@ function OpportunityList() {
             { id: "closed", label: "Closed", count: count("closed") },
           ]}
         />
-        <Input
-          type="search"
-          placeholder="Search by title or reference"
-          aria-label="Search opportunities"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="lg:w-72"
-        />
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {data.departments.length > 0 && (
+            <Select value={department} onValueChange={setDepartment}>
+              <SelectTrigger className="sm:w-52" aria-label="Department">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All departments</SelectItem>
+                {data.myTeamIds.length > 0 && <SelectItem value="mine">My departments</SelectItem>}
+                {data.departments.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value="none">No department</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <Input
+            type="search"
+            placeholder="Search by title or reference"
+            aria-label="Search opportunities"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="sm:w-72"
+          />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border bg-card">
@@ -140,7 +177,8 @@ function Stat({ label, value, note }: { label: string; value: number; note?: str
 
 function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
   const detail = useQuery(api.enterprise.opportunity, { opportunityId });
-  const [filter, setFilter] = useState<ApplicantFilter>("all");
+  // Null until the user picks a filter, so it starts from the organisation's chosen default
+  const [chosenFilter, setFilter] = useState<ApplicantFilter | null>(null);
 
   if (detail === undefined) return <Spinner className="mx-auto mt-24" />;
   if (detail === null) {
@@ -156,6 +194,7 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
   }
 
   const phase = phaseOf(detail);
+  const filter: ApplicantFilter = chosenFilter ?? detail.defaultApplicantFilter;
   const qualifying = detail.applicants.filter((a) => a.evaluation.qualifies);
   const visible = detail.applicants.filter((a) =>
     filter === "all" ? true : filter === "qualify" ? a.evaluation.qualifies : !a.evaluation.qualifies,
@@ -186,6 +225,19 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
         <Fact label="Value">{formatRand(detail.value)}</Fact>
         <Fact label="Where">{detail.provinces.length ? detail.provinces.join(", ") : "Nationwide"}</Fact>
         <Fact label="Industry">{detail.industry || "Any industry"}</Fact>
+        <Fact label="Department">
+          {detail.canAssignDepartment && detail.departments.length > 0 ? (
+            <DepartmentSelect
+              opportunityId={detail.id}
+              value={detail.teamId}
+              departments={detail.departments}
+              allowed={detail.assignableDepartmentIds}
+              className="mt-0.5 h-8 w-full"
+            />
+          ) : (
+            (detail.teamName ?? "No department")
+          )}
+        </Fact>
         <Fact label="Minimum B-BBEE">{detail.minBbbeeLevel ? `Level ${detail.minBbbeeLevel}` : "None"}</Fact>
         <Fact label="Services">{detail.services.length ? detail.services.join(", ") : "Any"}</Fact>
         <div className="sm:col-span-2">
@@ -242,6 +294,7 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
               ) : (
                 <ApplicantTable
                   opportunityId={detail.id}
+                  canShortlist={detail.canShortlist}
                   applicants={visible}
                   ranks={new Map(detail.applicants.map((a, i) => [a.id, i + 1]))}
                 />
@@ -479,7 +532,7 @@ function OpportunityActivityCard({ opportunityId }: { opportunityId: Detail["id"
   );
 }
 
-function ShortlistButton({ applicant }: { applicant: Applicant }) {
+function ShortlistButton({ applicant, allowed }: { applicant: Applicant; allowed: boolean }) {
   const setStatus = useMutation(api.enterprise.setApplicationStatus);
   const [pending, setPending] = useState(false);
   const shortlisted = applicant.status === "shortlisted";
@@ -489,7 +542,8 @@ function ShortlistButton({ applicant }: { applicant: Applicant }) {
     <Button
       variant={shortlisted ? "outline" : "default"}
       size="sm"
-      disabled={pending}
+      disabled={pending || !allowed}
+      title={allowed ? undefined : "In your organisation, only owners and admins shortlist applicants"}
       onClick={async () => {
         setPending(true);
         await runMutation(
@@ -507,10 +561,12 @@ function ShortlistButton({ applicant }: { applicant: Applicant }) {
 
 function ApplicantTable({
   opportunityId,
+  canShortlist,
   applicants,
   ranks,
 }: {
   opportunityId: string;
+  canShortlist: boolean;
   applicants: Applicant[];
   ranks: Map<string, number>;
 }) {
@@ -581,7 +637,7 @@ function ApplicantTable({
                         View business
                       </Link>
                     </Button>
-                    <ShortlistButton applicant={a} />
+                    <ShortlistButton applicant={a} allowed={canShortlist} />
                   </div>
                 </TableCell>
               </TableRow>
