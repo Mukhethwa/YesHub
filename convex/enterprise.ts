@@ -336,7 +336,7 @@ export const applicationActivity = query({
       .query("applicationActivity")
       .withIndex("by_application", (q) => q.eq("applicationId", application._id))
       .order("desc")
-      .take(50);
+      .take(200);
     return entries.map(activityRow);
   },
 });

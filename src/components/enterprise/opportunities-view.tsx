@@ -11,6 +11,7 @@ import { AdminPageHeader, Pill } from "@/components/admin/page-header";
 import { FilterTabs, formatDateTime, runMutation, TablePagination, usePagination } from "@/components/admin/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -637,32 +638,62 @@ function ApplicantChecks({ applicant }: { applicant: Applicant }) {
         Applied {formatDateTime(applicant.submittedAt)} · checked {formatDateTime(evaluation.evaluatedAt)} by{" "}
         {evaluation.engine === "jev" ? "Jev" : "YES Hub’s eligibility rules"}
       </p>
-      <ApplicationLog applicationId={applicant.id} />
+      <ApplicationLog applicationId={applicant.id} companyName={applicant.sme.companyName} />
     </div>
   );
 }
 
-/** Who in the organisation did what with one application, newest first. */
-function ApplicationLog({ applicationId }: { applicationId: Applicant["id"] }) {
+/** How many activity entries show inline before the rest move to the pop-up. */
+const INLINE_ACTIVITY = 3;
+
+type ActivityEntry = NonNullable<FunctionReturnType<typeof api.enterprise.applicationActivity>>[number];
+
+function ActivityList({ entries }: { entries: ActivityEntry[] }) {
+  return (
+    <ul className="space-y-1 text-sm">
+      {entries.map((entry) => (
+        <li key={entry.id} className="flex flex-wrap gap-x-2">
+          <span className="text-muted-foreground tabular-nums">{formatDateTime(entry.at)}</span>
+          <span>
+            <span className="font-medium">{entry.actorName}</span> {activityText(entry)}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Who in the organisation did what with one application: the latest few, and the rest in a pop-up. */
+function ApplicationLog({ applicationId, companyName }: { applicationId: Applicant["id"]; companyName: string }) {
   const entries = useQuery(api.enterprise.applicationActivity, { applicationId });
   if (!entries || entries.length === 0) return null;
 
   return (
     <div className="border-t pt-3">
-      <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Activity</p>
-      <ul className="space-y-1 text-sm">
-        {entries.slice(0, 8).map((entry) => (
-          <li key={entry.id} className="flex flex-wrap gap-x-2">
-            <span className="text-muted-foreground tabular-nums">{formatDateTime(entry.at)}</span>
-            <span>
-              <span className="font-medium">{entry.actorName}</span> {activityText(entry)}
-            </span>
-          </li>
-        ))}
-      </ul>
-      {entries.length > 8 && (
-        <p className="mt-1 text-xs text-muted-foreground">Showing the latest 8. The Activity tab has the full log.</p>
-      )}
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Activity</p>
+        {entries.length > INLINE_ACTIVITY && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="link" size="sm" className="h-auto p-0">
+                View all activity ({entries.length})
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Activity</DialogTitle>
+                <DialogDescription>
+                  Everything your organisation did with the application from {companyName}, newest first.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto pr-1">
+                <ActivityList entries={entries} />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+      <ActivityList entries={entries.slice(0, INLINE_ACTIVITY)} />
     </div>
   );
 }
