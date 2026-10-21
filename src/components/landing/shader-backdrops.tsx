@@ -47,8 +47,9 @@ export function HeroContours() {
   const dark = resolvedTheme === "dark";
 
   return (
-    <Backdrop className={dark ? "opacity-[0.14]" : "opacity-[0.10]"}>
-      <ContourLines levels={14} lineWidth={1} colorMode="custom" lineColor={dark ? "#ffffff" : "#000000"}>
+    // Solid line colours just off each theme's background, so the lines stay faint without canvas opacity
+    <Backdrop>
+      <ContourLines levels={14} lineWidth={1} colorMode="custom" lineColor={dark ? "#272727" : "#e4e4e4"}>
         <SimplexNoise scale={3} speed={reducedMotion ? 0 : 0.08} seed={7} />
       </ContourLines>
     </Backdrop>

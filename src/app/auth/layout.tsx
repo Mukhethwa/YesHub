@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: LayoutProps<"/auth">) {
       </div>
 
       <Link href="/" className="relative">
-        <Logo className="text-lg" />
+        <Logo className="h-10" />
       </Link>
 
       <div className="relative flex w-full justify-center">{children}</div>

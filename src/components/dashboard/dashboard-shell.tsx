@@ -8,13 +8,13 @@ import { UserButton } from "@/components/auth/user/user-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 import { AppSidebar } from "./app-sidebar";
 
 export function DashboardShell({ children }: { children: ReactNode }) {
-  // Redirects to sign-in when there's no session (and if it ends while the page is open)
-  const { data: session } = useAuthenticate(authClient);
+  // Redirects to sign-in when there's no session (and if it ends while the page is open).
+  // Pages render regardless and show their own loading state until the profile query resolves.
+  useAuthenticate(authClient);
 
   return (
     <SidebarProvider>
@@ -38,7 +38,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </header>
 
         <main className="flex-1 p-4 md:p-6">
-          {session ? children : <Spinner className="mx-auto mt-24" />}
+          {children}
         </main>
       </SidebarInset>
     </SidebarProvider>
