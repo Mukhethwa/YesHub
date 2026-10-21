@@ -98,7 +98,7 @@ export const register = mutation({
     if (await getOwnSme(ctx)) throw new ConvexError("You’ve already registered a business.");
     // An account is either an SME or an enterprise member, never both
     if ((await organizationsFor(ctx, user._id)).length > 0) {
-      throw new ConvexError("This account belongs to an enterprise. Use a separate account to register an SME.");
+      throw new ConvexError("This account belongs to an organisation. Use a separate account to register an SME.");
     }
 
     // The contact email is the account's sign-in email

@@ -100,5 +100,26 @@ export default defineSchema({
     /** Missing until the SME saves settings; read through getSettings(). */
     settings: v.optional(smeSettings),
     isDemo: v.optional(v.boolean()),
+
+    // Moderation by YES Hub staff (set from the admin area)
+    /** When staff checked the profile and documents. */
+    verifiedAt: v.optional(v.number()),
+    verifiedBy: v.optional(v.string()),
+    /** Suspended profiles are hidden from matching until reinstated. */
+    suspendedAt: v.optional(v.number()),
+    suspendedReason: v.optional(v.string()),
   }).index("by_user", ["userId"]),
+
+  /** Every action YES Hub staff take in the admin area, newest first by _creationTime. */
+  auditLog: defineTable({
+    actorId: v.string(),
+    actorName: v.string(),
+    /** e.g. "user.ban", "organization.verify", "sme.suspend". */
+    action: v.string(),
+    targetType: v.union(v.literal("user"), v.literal("organization"), v.literal("sme"), v.literal("staff")),
+    targetId: v.optional(v.string()),
+    /** What the target was called at the time, so entries stay readable after deletes. */
+    targetLabel: v.optional(v.string()),
+    details: v.optional(v.string()),
+  }).index("by_target", ["targetType", "targetId"]),
 });

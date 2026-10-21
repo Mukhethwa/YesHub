@@ -7,7 +7,7 @@ import { useAccount } from "@/hooks/use-account";
 
 export default function EnterpriseOverviewPage() {
   const account = useAccount();
-  const organization = account?.organizations[0];
+  const organization = account?.enterprise;
 
   if (!organization) {
     return (
@@ -23,7 +23,11 @@ export default function EnterpriseOverviewPage() {
     <ComingSoon
       title={organization.name}
       icon={Building2Icon}
-      description="Your enterprise dashboard is coming in the next build: post tenders, RFQs and grants, and review matched SMEs with your team."
+      description={
+        organization.verificationStatus === "verified"
+          ? "Your enterprise dashboard is coming in the next build: post tenders, RFQs and grants, and review matched SMEs with your team."
+          : "YES Hub is verifying your organisation. You’ll be able to post opportunities once it’s approved."
+      }
     />
   );
 }

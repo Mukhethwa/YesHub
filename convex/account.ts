@@ -1,16 +1,16 @@
+import { isStaffRole } from "../src/lib/permissions";
 import { components } from "./_generated/api";
 import { query, type QueryCtx } from "./_generated/server";
 import { authComponent } from "./auth";
 
-/** The organisations (enterprises / funders) a user belongs to. */
+/** The organisations a user belongs to (at most one by policy). */
 export async function organizationsFor(ctx: QueryCtx, userId: string) {
-  return ctx.runQuery(components.betterAuth.users.organizationsForUser, { userId });
+  return ctx.runQuery(components.betterAuth.organizations.forUser, { userId });
 }
 
 /**
- * Who the signed-in person is to YES Hub, for routing them to the right portal.
- * An account is either an SME (has an SME profile) or an enterprise member (belongs to an organisation);
- * a new account is neither until it registers. Admins are YES Hub staff.
+ * Who the signed-in person is to YES Hub, for routing them to the right portal. Every account is exactly
+ * one of: YES Hub staff (a member of the staff organisation), an enterprise member, an SME, or new.
  */
 export const overview = query({
   args: {},
@@ -25,11 +25,14 @@ export const overview = query({
         .unique(),
       organizationsFor(ctx, user._id),
     ]);
+    const enterprise = organizations.find((org) => org.kind === "enterprise") ?? null;
 
     return {
-      isAdmin: user.role === "admin",
+      /** Platform access level ("superadmin", "admin", "moderator", "viewer"), or null for non-staff. */
+      staffRole: isStaffRole(user.role) ? user.role : null,
       hasSmeProfile: sme !== null,
-      organizations,
+      /** The enterprise organisation this account belongs to, with the user's role in it. */
+      enterprise,
     };
   },
 });

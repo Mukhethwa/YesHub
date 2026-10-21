@@ -56,21 +56,48 @@ pnpm dev
 Open http://localhost:3000 and sign up at `/auth/sign-up`. In development, the SME portal has a
 **Dev: fill in a sample business** button that creates a sample SME profile for your account.
 
+### Sample data
+
+To fill a development deployment with accounts, SMEs, enterprises (with teams, members and invitations) and
+staff:
+
+```bash
+pnpm exec convex run seed:devData '{"inviterEmail":"you@example.com"}'   # inviterEmail is optional
+```
+
+It refuses to run unless the deployment's `SITE_URL` is on localhost, and it's safe to re-run. Every seed account
+uses the password in `SEED_PASSWORD` (`convex/seed.ts`); `naledi@yeshub.test` is a super admin, `musa@`,
+`lindiwe@` and `tumi@yeshub.test` are an admin, a moderator and a viewer.
+
+### Accounts and organisations
+
+- **SMEs** are business accounts: one account, one SME profile, no teammates.
+- **Enterprises** (Capitec, Boxer, …) are Better Auth organisations with members, teams and invitations. Anyone can
+  create one, but it stays **unverified** until YES Hub staff approve it, and only verified organisations can post
+  opportunities.
+- **YES Hub staff** are members of the staff organisation (slug `yeshub`). Their role there is their access level
+  in `/admin`, synced to the Better Auth admin role: owner → **super admin**, then **admin**, **moderator** and
+  **viewer** (`src/lib/permissions.ts` lists what each can do).
+- An account belongs to at most one organisation, and an SME account can't join one.
+
 ### YES Hub admins
 
-YES Hub staff (the `/admin` area) are accounts with the Better Auth `admin` role. Any account created with an
-email listed in `SUPER_ADMIN_EMAILS` on the Convex deployment becomes an admin as it signs up:
+Super admins invite staff and set access levels from **Admin → Staff**. Every staff action in the admin area is
+recorded in **Admin → Audit log**.
+
+To bootstrap the first super admin, list their email in `SUPER_ADMIN_EMAILS` on the Convex deployment, and the
+account becomes the staff organisation's owner when it signs up:
 
 ```bash
 pnpm exec convex env set SUPER_ADMIN_EMAILS "you@example.com,teammate@example.com"   # add --prod for production
 ```
 
-For accounts that already exist, set or remove the role directly, and delete accounts the same way. These are
-internal functions, so only the CLI or the Convex dashboard can run them:
+For an account that already exists, or to delete one from the command line (internal functions, so only the CLI
+or the Convex dashboard can run them):
 
 ```bash
-pnpm exec convex run admin:setPlatformRole '{"email":"you@example.com","role":"admin"}'   # or "user"
-pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'                # also removes their SME profile and files
+pnpm exec convex run platform:makeSuperAdmin '{"email":"you@example.com"}'
+pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'   # also removes their SME profile and files
 # add --prod for production
 ```
 
@@ -83,7 +110,7 @@ pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'      
 | `BETTER_AUTH_SECRET` | Convex | Signs sessions and tokens |
 | `SITE_URL` | Convex | The app's public URL; used in email links and to validate requests |
 | `RESEND_API_KEY` | Convex | Emails are sent from Convex, not Next.js |
-| `SUPER_ADMIN_EMAILS` | Convex | Comma-separated emails that become YES Hub admins when they sign up |
+| `SUPER_ADMIN_EMAILS` | Convex | Comma-separated emails that become YES Hub super admins when they sign up |
 | `AUTH_EMAIL_FROM` | Convex | Sender address on a domain verified in Resend. Until one is set, mail only reaches the Resend account owner, so sign-up doesn’t require email verification (see `convex/auth.ts`) |
 | `CONVEX_DEPLOY_KEY` | Vercel | See below |
 
@@ -101,7 +128,7 @@ pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'      
 ## Deployment
 
 Production runs at **https://yes-hub.vercel.app** (Vercel project `yes-hub`) against the Convex production
-deployment `fortunate-pigeon-601`.
+deployment `posh-seahorse-411`.
 
 `vercel.json` makes every Vercel build run `pnpm convex deploy --cmd 'pnpm build'`: it deploys the Convex
 functions and schema to production first, then builds Next.js against that deployment. Vercel authenticates to
@@ -132,11 +159,13 @@ sign-in to work.
 
 | Path | What |
 | --- | --- |
-| `convex/schema.ts` | Database schema (`smes`: SME business profiles, keyed by Better Auth user) |
+| `convex/schema.ts` | Database schema (`smes`: SME business profiles, keyed by Better Auth user; `auditLog`: staff actions) |
 | `convex/smes.ts` | SME profile queries and mutations |
-| `convex/auth.ts` | Better Auth options and instance: email/password, organisations (enterprises, with teams) and admin |
+| `convex/auth.ts` | Better Auth options and instance: email/password, organisations (enterprises with teams, and YES Hub staff), admin, and the hooks that enforce access levels and write the audit log |
 | `convex/betterAuth/` | Locally installed Better Auth component: generated schema, adapter, component functions |
-| `convex/admin.ts` | Internal admin tooling, e.g. `setPlatformRole` |
+| `convex/admin.ts` | The admin area's queries and mutations (SMEs, organisations, staff), each checked against the caller's access level |
+| `convex/platform.ts`, `convex/audit.ts` | Account state, staff roles and the audit log |
+| `convex/seed.ts` | Development sample data |
 | `convex/email.tsx` | Auth emails via Resend, using `@better-auth-ui/react/email` templates |
 | `convex/http.ts` | Mounts the Better Auth HTTP routes on Convex |
 | `src/app/api/auth/[...all]/route.ts` | Proxies `/api/auth/*` from Next.js to Convex |
@@ -145,11 +174,12 @@ sign-in to work.
 | `src/app/start/` | Where sign-in lands: sends each account to its portal, or asks new accounts if they're an SME or an enterprise |
 | `src/app/sme/` | SME portal (`/sme`) and the registration wizard (`/sme/register`) |
 | `src/app/dashboard/` | Enterprise dashboard (`/dashboard`), for organisation members |
-| `src/app/admin/` | YES Hub admin (`/admin`), for accounts with the `admin` role |
+| `src/app/admin/` | YES Hub admin (`/admin`), for staff: users, SMEs, organisations, staff and the audit log |
 | `src/app/(app)/` | Account settings, with the app header |
 | `src/components/portal/` | Shared portal shell, sidebar and access guard |
 | `src/components/sme-portal/`, `enterprise/`, `admin/` | Each portal's navigation and screens |
 | `src/lib/sme/` | SME domain logic shared by the UI: profile readiness, document status |
+| `src/lib/permissions.ts` | Access control shared by Convex and the UI: staff access levels and organisation roles |
 | `src/components/auth/**`, `src/components/ui/**` | Better Auth UI and shadcn/ui components (owned code, from registries) |
 
 ## Version pins: read before upgrading

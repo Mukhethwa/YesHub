@@ -1,4 +1,5 @@
 import { type AuthView, viewPaths } from "@better-auth-ui/core";
+import { organizationPlugin } from "@better-auth-ui/core/plugins";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -6,7 +7,8 @@ import { Suspense } from "react";
 import { Auth } from "@/components/auth/auth";
 import { Spinner } from "@/components/ui/spinner";
 
-const authPaths = Object.values(viewPaths.auth);
+// Core auth views plus the organisation plugin's (accept-invitation)
+const authPaths = [...Object.values(viewPaths.auth), ...Object.values(organizationPlugin().viewPaths.auth ?? {})];
 
 const titles: Partial<Record<AuthView, string>> = {
   signIn: "Sign in",
@@ -17,6 +19,7 @@ const titles: Partial<Record<AuthView, string>> = {
   resetLinkSent: "Check your email",
   verifyEmail: "Verify your email",
   redirect: "Redirecting",
+  acceptInvitation: "Accept invitation",
 };
 
 export function generateStaticParams() {

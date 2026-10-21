@@ -1,11 +1,13 @@
 import { viewPaths } from "@better-auth-ui/core";
+import { organizationPlugin } from "@better-auth-ui/core/plugins";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { Spinner } from "@/components/ui/spinner";
 import { SettingsView } from "./settings-view";
 
-const settingsPaths = Object.values(viewPaths.settings);
+// Account and security, plus the organisation plugin's organisations tab
+const settingsPaths = [...Object.values(viewPaths.settings), ...Object.values(organizationPlugin().viewPaths.settings ?? {})];
 
 export function generateStaticParams() {
   return settingsPaths.map((path) => ({ path }));

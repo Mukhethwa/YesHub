@@ -9,19 +9,13 @@ import type { PortalArea } from "./types";
 
 /** Where to send someone who doesn't belong in `area`, or null if they may stay. */
 function redirectFor(area: PortalArea, account: Account): string | null {
-  // YES Hub staff can open every area
-  if (account.isAdmin) return null;
+  // Staff accounts are staff only; everyone else stays out of the admin area
+  if (account.staffRole) return area === "admin" ? null : "/admin";
+  if (area === "admin") return "/start";
 
-  const isEnterprise = account.organizations.length > 0;
-  switch (area) {
-    case "admin":
-      return "/start";
-    case "sme":
-      // New accounts may enter to register; enterprise members belong in their dashboard
-      return isEnterprise && !account.hasSmeProfile ? "/dashboard" : null;
-    case "enterprise":
-      return account.hasSmeProfile && !isEnterprise ? "/sme" : null;
-  }
+  // New accounts may enter either side to register; after that, each account has one home
+  if (area === "sme") return account.enterprise ? "/dashboard" : null;
+  return account.hasSmeProfile ? "/sme" : null;
 }
 
 /**

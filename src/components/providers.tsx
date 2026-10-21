@@ -15,10 +15,15 @@ import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { adminPlugin } from "@/lib/auth/admin-plugin";
+import { organizationPlugin } from "@/lib/auth/organization-plugin";
 import { authClient } from "@/lib/auth-client";
 import { getQueryClient } from "@/lib/query-client";
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+// Organisations (enterprises, teams, invitations) and admin (stop impersonating) screens from better-auth-ui
+const PLUGINS = [organizationPlugin(), adminPlugin()];
 
 // @convex-dev/better-auth's AuthClient type is inferred against better-auth 1.6.15 and
 // rejects the session type from 1.6.19+ (required by better-auth-ui). Runtime is unaffected.
@@ -47,6 +52,7 @@ export function Providers({ children }: { children: ReactNode }) {
               replace ? router.replace(to) : router.push(to)
             }
             Link={Link}
+            plugins={PLUGINS}
           >
             <TooltipProvider>
               <ImpersonationBanner />

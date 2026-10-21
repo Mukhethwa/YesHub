@@ -79,6 +79,10 @@ export const tables = {
     logo: v.optional(v.union(v.null(), v.string())),
     createdAt: v.number(),
     metadata: v.optional(v.union(v.null(), v.string())),
+    kind: v.optional(v.union(v.null(), v.string())),
+    verificationStatus: v.optional(v.union(v.null(), v.string())),
+    verifiedAt: v.optional(v.union(v.null(), v.number())),
+    verificationNote: v.optional(v.union(v.null(), v.string())),
   })
     .index("name", ["name"])
     .index("slug", ["slug"]),

@@ -90,10 +90,14 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             | {
                 data: {
                   createdAt: number;
+                  kind?: null | string;
                   logo?: null | string;
                   metadata?: null | string;
                   name: string;
                   slug: string;
+                  verificationNote?: null | string;
+                  verificationStatus?: null | string;
+                  verifiedAt?: null | number;
                 };
                 model: "organization";
               }
@@ -311,7 +315,16 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 where?: Array<{
                   connector?: "AND" | "OR";
                   field:
-                    "name" | "slug" | "logo" | "createdAt" | "metadata" | "_id";
+                    | "name"
+                    | "slug"
+                    | "logo"
+                    | "createdAt"
+                    | "metadata"
+                    | "kind"
+                    | "verificationStatus"
+                    | "verifiedAt"
+                    | "verificationNote"
+                    | "_id";
                   mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
@@ -662,7 +675,16 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 where?: Array<{
                   connector?: "AND" | "OR";
                   field:
-                    "name" | "slug" | "logo" | "createdAt" | "metadata" | "_id";
+                    | "name"
+                    | "slug"
+                    | "logo"
+                    | "createdAt"
+                    | "metadata"
+                    | "kind"
+                    | "verificationStatus"
+                    | "verifiedAt"
+                    | "verificationNote"
+                    | "_id";
                   mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
@@ -1141,15 +1163,28 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 model: "organization";
                 update: {
                   createdAt?: number;
+                  kind?: null | string;
                   logo?: null | string;
                   metadata?: null | string;
                   name?: string;
                   slug?: string;
+                  verificationNote?: null | string;
+                  verificationStatus?: null | string;
+                  verifiedAt?: null | number;
                 };
                 where?: Array<{
                   connector?: "AND" | "OR";
                   field:
-                    "name" | "slug" | "logo" | "createdAt" | "metadata" | "_id";
+                    | "name"
+                    | "slug"
+                    | "logo"
+                    | "createdAt"
+                    | "metadata"
+                    | "kind"
+                    | "verificationStatus"
+                    | "verifiedAt"
+                    | "verificationNote"
+                    | "_id";
                   mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
@@ -1578,15 +1613,28 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 model: "organization";
                 update: {
                   createdAt?: number;
+                  kind?: null | string;
                   logo?: null | string;
                   metadata?: null | string;
                   name?: string;
                   slug?: string;
+                  verificationNote?: null | string;
+                  verificationStatus?: null | string;
+                  verifiedAt?: null | number;
                 };
                 where?: Array<{
                   connector?: "AND" | "OR";
                   field:
-                    "name" | "slug" | "logo" | "createdAt" | "metadata" | "_id";
+                    | "name"
+                    | "slug"
+                    | "logo"
+                    | "createdAt"
+                    | "metadata"
+                    | "kind"
+                    | "verificationStatus"
+                    | "verifiedAt"
+                    | "verificationNote"
+                    | "_id";
                   mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
@@ -1803,6 +1851,163 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         Name
       >;
     };
+    organizations: {
+      detail: FunctionReference<
+        "query",
+        "internal",
+        { organizationId: string },
+        null | {
+          invitations: Array<{
+            email: string;
+            expiresAt: number;
+            id: string;
+            role?: null | string;
+            status: string;
+          }>;
+          members: Array<{
+            createdAt: number;
+            email: string;
+            id: string;
+            name: string;
+            role: string;
+            teamIds: Array<string>;
+            userId: string;
+          }>;
+          organization: {
+            createdAt: number;
+            id: string;
+            kind: string;
+            logo?: null | string;
+            name: string;
+            slug: string;
+            verificationNote?: null | string;
+            verificationStatus: string;
+            verifiedAt?: null | number;
+          };
+          teams: Array<{
+            createdAt: number;
+            id: string;
+            memberCount: number;
+            name: string;
+          }>;
+        },
+        Name
+      >;
+      ensureStaffOwner: FunctionReference<
+        "mutation",
+        "internal",
+        { userId: string },
+        string,
+        Name
+      >;
+      forUser: FunctionReference<
+        "query",
+        "internal",
+        { userId: string },
+        Array<{
+          createdAt: number;
+          id: string;
+          kind: string;
+          logo?: null | string;
+          name: string;
+          role: string;
+          slug: string;
+          verificationNote?: null | string;
+          verificationStatus: string;
+          verifiedAt?: null | number;
+        }>,
+        Name
+      >;
+      list: FunctionReference<
+        "query",
+        "internal",
+        { limit: number },
+        Array<{
+          createdAt: number;
+          id: string;
+          kind: string;
+          logo?: null | string;
+          memberCount: number;
+          name: string;
+          slug: string;
+          teamCount: number;
+          verificationNote?: null | string;
+          verificationStatus: string;
+          verifiedAt?: null | number;
+        }>,
+        Name
+      >;
+      memberUserIds: FunctionReference<
+        "query",
+        "internal",
+        { limit: number },
+        { enterprise: Array<string>; staff: Array<string> },
+        Name
+      >;
+      remove: FunctionReference<
+        "mutation",
+        "internal",
+        { organizationId: string },
+        null | string,
+        Name
+      >;
+      removeMember: FunctionReference<
+        "mutation",
+        "internal",
+        { memberId: string },
+        null | {
+          organizationKind: string;
+          organizationName: string;
+          userId: string;
+        },
+        Name
+      >;
+      setVerification: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          note?: string;
+          organizationId: string;
+          status: "verified" | "rejected" | "unverified";
+        },
+        null | string,
+        Name
+      >;
+    };
+    seed: {
+      organizations: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          banned: Array<{ reason: string; userId: string }>;
+          enterprises: Array<{
+            invitations: Array<{
+              email: string;
+              inviterId: string;
+              role: string;
+            }>;
+            members: Array<{
+              role: string;
+              teams: Array<string>;
+              userId: string;
+            }>;
+            name: string;
+            slug: string;
+            teams: Array<string>;
+            verificationNote?: string;
+            verificationStatus: string;
+          }>;
+          staff: Array<{ role: string; userId: string }>;
+          staffInvitations: Array<{
+            email: string;
+            inviterId: string;
+            role: string;
+          }>;
+        },
+        null,
+        Name
+      >;
+    };
     users: {
       deleteUserByEmail: FunctionReference<
         "mutation",
@@ -1811,18 +2016,11 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         null | string,
         Name
       >;
-      listOrganizations: FunctionReference<
+      idByEmail: FunctionReference<
         "query",
         "internal",
-        { limit: number },
-        Array<{
-          createdAt: number;
-          id: string;
-          logo?: null | string;
-          memberCount: number;
-          name: string;
-          slug: string;
-        }>,
+        { email: string },
+        null | string,
         Name
       >;
       listUsers: FunctionReference<
@@ -1843,25 +2041,18 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         }>,
         Name
       >;
-      memberUserIds: FunctionReference<
-        "query",
-        "internal",
-        { limit: number },
-        Array<string>,
-        Name
-      >;
-      organizationsForUser: FunctionReference<
-        "query",
-        "internal",
-        { userId: string },
-        Array<{ id: string; name: string; role: string; slug: string }>,
-        Name
-      >;
       setRoleByEmail: FunctionReference<
         "mutation",
         "internal",
         { email: string; role: "admin" | "user" },
         null | string,
+        Name
+      >;
+      setRoleById: FunctionReference<
+        "mutation",
+        "internal",
+        { role: string; userId: string },
+        null,
         Name
       >;
       usersById: FunctionReference<

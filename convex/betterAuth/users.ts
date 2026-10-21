@@ -57,26 +57,6 @@ export const deleteUserByEmail = mutation({
   },
 });
 
-/** The organisations a user belongs to, with their role in each. */
-export const organizationsForUser = query({
-  args: { userId: v.string() },
-  returns: v.array(v.object({ id: v.string(), name: v.string(), slug: v.string(), role: v.string() })),
-  handler: async (ctx, args) => {
-    const memberships = await ctx.db
-      .query("member")
-      .withIndex("userId", (q) => q.eq("userId", args.userId))
-      .take(50);
-
-    const organizations = [];
-    for (const member of memberships) {
-      const orgId = ctx.db.normalizeId("organization", member.organizationId);
-      const org = orgId && (await ctx.db.get("organization", orgId));
-      if (org) organizations.push({ id: org._id, name: org.name, slug: org.slug, role: member.role });
-    }
-    return organizations;
-  },
-});
-
 const userSummary = v.object({
   id: v.string(),
   name: v.string(),
@@ -126,47 +106,26 @@ export const usersById = query({
   },
 });
 
-/** Newest organisations first, with member counts, for the admin area. */
-export const listOrganizations = query({
-  args: { limit: v.number() },
-  returns: v.array(
-    v.object({
-      id: v.string(),
-      name: v.string(),
-      slug: v.string(),
-      logo: v.optional(v.union(v.null(), v.string())),
-      createdAt: v.number(),
-      memberCount: v.number(),
-    }),
-  ),
+/** Sets a user's platform access level by id (kept in sync with the staff organisation). */
+export const setRoleById = mutation({
+  args: { userId: v.string(), role: v.string() },
+  returns: v.null(),
   handler: async (ctx, args) => {
-    const organizations = await ctx.db.query("organization").order("desc").take(args.limit);
-    const result = [];
-    for (const org of organizations) {
-      // Bounded: organisations on YES Hub are teams, not crowds
-      const members = await ctx.db
-        .query("member")
-        .withIndex("organizationId", (q) => q.eq("organizationId", org._id))
-        .take(500);
-      result.push({
-        id: org._id,
-        name: org.name,
-        slug: org.slug,
-        logo: org.logo,
-        createdAt: org.createdAt,
-        memberCount: members.length,
-      });
-    }
-    return result;
+    const userId = ctx.db.normalizeId("user", args.userId);
+    if (userId) await ctx.db.patch("user", userId, { role: args.role, updatedAt: Date.now() });
+    return null;
   },
 });
 
-/** Ids of users who belong to at least one organisation (bounded), to label enterprise accounts. */
-export const memberUserIds = query({
-  args: { limit: v.number() },
-  returns: v.array(v.string()),
+/** Finds an account id by email, or null. */
+export const idByEmail = query({
+  args: { email: v.string() },
+  returns: v.union(v.null(), v.string()),
   handler: async (ctx, args) => {
-    const members = await ctx.db.query("member").take(args.limit);
-    return [...new Set(members.map((m) => m.userId))];
+    const user = await ctx.db
+      .query("user")
+      .withIndex("email_name", (q) => q.eq("email", args.email.trim().toLowerCase()))
+      .first();
+    return user?._id ?? null;
   },
 });
