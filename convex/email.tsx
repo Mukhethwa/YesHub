@@ -14,7 +14,7 @@ import type { ActionCtx } from "./_generated/server";
 // testMode defaults to true, which only delivers to @resend.dev addresses.
 export const resend = new Resend(components.resend, { testMode: false });
 
-const appName = "Tendr";
+const appName = "YES Hub";
 
 // Must be an address on a domain verified in Resend. The default, onboarding@resend.dev,
 // can only deliver to the email address of the Resend account owner.

@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tendr",
-  description: "Tendr",
+  title: "YES Hub",
+  description: "AI SME opportunity matching: connecting enterprise tenders with the right SME providers.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -21,3 +21,13 @@ Convex agent skills for common tasks can be installed by running
 `npx convex ai-files install`.
 
 <!-- convex-ai-end -->
+
+## Project conventions
+
+- **Use pnpm** for everything (`pnpm install`, `pnpm add`, `pnpm exec convex …`). Never commit a `package-lock.json`.
+  Packages with install scripts must be allowed in `pnpm-workspace.yaml` (`allowBuilds`).
+- **Better Auth versions are pinned** because `@convex-dev/better-auth` doesn't support better-auth 1.7 yet:
+  `better-auth` and `@better-auth/*` stay on `~1.6.33`, `@better-auth-ui/*` on exactly `1.6.45`.
+  Don't run `pnpm dlx shadcn add @better-auth-ui/...` (the hosted registry serves 1.7 components). See README.
+- `src/components/auth/**` and `src/components/ui/**` are generated from registries; prefer composing them over editing.
+- Deploys go through Vercel, which runs `convex deploy --cmd 'pnpm build'` (see `vercel.json`).

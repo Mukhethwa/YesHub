@@ -15,7 +15,7 @@ export default function Home() {
       </AuthLoading>
 
       <Unauthenticated>
-        <h1 className="text-2xl font-semibold">Welcome to Tendr</h1>
+        <h1 className="text-2xl font-semibold">Welcome to YES Hub</h1>
         <div className="flex gap-2">
           <Button asChild>
             <Link href="/auth/sign-in">Sign in</Link>
