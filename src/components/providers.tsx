@@ -39,7 +39,8 @@ export function Providers({ children }: { children: ReactNode }) {
           <AuthProvider
             authClient={authClient}
             redirectTo="/dashboard"
-            emailAndPassword={{ requireEmailVerification: true }}
+            // Must match convex/auth.ts: sign-up goes straight in instead of to "check your email"
+            emailAndPassword={{ requireEmailVerification: false }}
             navigate={({ to, replace }) =>
               replace ? router.replace(to) : router.push(to)
             }

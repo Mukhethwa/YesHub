@@ -25,7 +25,9 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: true,
+      // Off until a domain is verified in Resend: onboarding@resend.dev only delivers to the
+      // Resend account owner, so nobody else could ever verify. Turn on with sendOnSignUp below.
+      requireEmailVerification: false,
       sendResetPassword: async ({ user, url }) => {
         await sendResetPassword(requireActionCtx(ctx), { to: user.email, url });
       },
@@ -34,9 +36,8 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
       },
     },
     emailVerification: {
-      sendOnSignUp: true,
-      // Signing in with an unverified email re-sends the verification link
-      sendOnSignIn: true,
+      sendOnSignUp: false,
+      sendOnSignIn: false,
       autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user, url }) => {
         await sendEmailVerification(requireActionCtx(ctx), { to: user.email, url });
