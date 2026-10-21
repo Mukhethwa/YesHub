@@ -1,24 +1,48 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
-import type { OpportunityKind, OpportunityStatus } from "../schema";
+import type { OpportunityKind, OpportunityListing, OpportunityStatus } from "../schema";
 import { evaluateApplication } from "./evaluation";
 
 /** Most applications read for one opportunity. Enough for any tender we expect during the pilot. */
 export const APPLICATION_LIMIT = 500;
 
-/** Removes an SME's applications. Call wherever an SME profile is deleted. */
+/** Files an organisation can release with an opportunity: PDFs, Word and Excel documents, images. */
+export const TENDER_DOC_MIME_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/png",
+  "image/jpeg",
+];
+export const TENDER_DOC_MAX_MB = 10;
+
+async function deleteApplication(ctx: MutationCtx, applicationId: Id<"applications">) {
+  for await (const entry of ctx.db.query("applicationActivity").withIndex("by_application", (q) => q.eq("applicationId", applicationId))) {
+    await ctx.db.delete("applicationActivity", entry._id);
+  }
+  await ctx.db.delete("applications", applicationId);
+}
+
+/** Removes an SME's applications and their activity. Call wherever an SME profile is deleted. */
 export async function deleteApplicationsForSme(ctx: MutationCtx, smeId: Id<"smes">) {
   for await (const application of ctx.db.query("applications").withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", smeId))) {
-    await ctx.db.delete("applications", application._id);
+    await deleteApplication(ctx, application._id);
   }
 }
 
-/** Removes an organisation's opportunities and every application to them. Call when an organisation is deleted. */
+/**
+ * Removes an organisation's opportunities with their applications, activity and released documents.
+ * Call when an organisation is deleted.
+ */
 export async function deleteOpportunitiesForOrganization(ctx: MutationCtx, organizationId: string, demoOnly = false) {
   for await (const opportunity of ctx.db.query("opportunities").withIndex("by_organization", (q) => q.eq("organizationId", organizationId))) {
     if (demoOnly && !opportunity.isDemo) continue;
     for await (const application of ctx.db.query("applications").withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))) {
-      await ctx.db.delete("applications", application._id);
+      await deleteApplication(ctx, application._id);
+    }
+    for await (const doc of ctx.db.query("opportunityDocuments").withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))) {
+      await ctx.storage.delete(doc.storageId);
+      await ctx.db.delete("opportunityDocuments", doc._id);
     }
     await ctx.db.delete("opportunities", opportunity._id);
   }
@@ -137,6 +161,109 @@ const SAMPLE_OPPORTUNITIES: SampleOpportunity[] = [
   },
 ];
 
+/** The published notice and released documents for each sample opportunity, keyed by its code. */
+const SAMPLE_LISTINGS: Record<
+  string,
+  Omit<OpportunityListing, "enquiriesName" | "enquiriesEmail" | "publishedAt"> & { documents: string[] }
+> = {
+  FAC: {
+    scope:
+      "Daily office cleaning, washroom hygiene services (sanitary bins, consumables) and quarterly deep cleans for 9 regional offices and 22 branches in Gauteng and KwaZulu-Natal. The supplier provides all staff, equipment and consumables and must keep a supervisor on call during business hours.",
+    contractPeriod: "36 months, with a 3-month performance review",
+    briefing: "Optional virtual briefing session on Microsoft Teams, 10:00 on the Tuesday after publication",
+    submission:
+      "Submit one PDF containing the completed RFQ, pricing schedule and SBD forms through YES Hub before 11:00 on the closing date. Late submissions are not considered.",
+    evaluationCriteria: [
+      "Functionality: 60 points minimum to proceed (capacity, references, supervision plan)",
+      "Price: 80 points",
+      "B-BBEE status: 20 points",
+    ],
+    documents: ["Request for quotation", "Site list and cleaning specification", "Pricing schedule"],
+  },
+  CAT: {
+    scope:
+      "Breakfast and lunch service for about 600 staff at the Stellenbosch head office, five days a week, from the on-site kitchen. Menus must include halaal and vegetarian options and rotate every four weeks.",
+    contractPeriod: "12 months, renewable for a further 12 months",
+    briefing: "Compulsory site visit at the Stellenbosch head office kitchen, 09:00 on the Thursday after publication",
+    submission: "Quote through YES Hub with a sample four-week menu and your price per meal.",
+    evaluationCriteria: ["Price per meal: 80 points", "B-BBEE status: 20 points", "Food safety certificate required"],
+    documents: ["Request for quotation", "Kitchen equipment list"],
+  },
+  BLD: {
+    scope:
+      "Interior refurbishment of 18 branches in North West and Gauteng: removing and installing partitioning, painting, vinyl flooring and minor plumbing. Work happens after hours so branches can trade.",
+    contractPeriod: "9 months from site handover",
+    briefing: "Compulsory briefing at the Rustenburg branch, 10:00 on the Monday after publication",
+    submission:
+      "Submit the bill of quantities, programme of works and CIDB certificate through YES Hub before 12:00 on the closing date.",
+    evaluationCriteria: [
+      "CIDB grading 4GB or higher required",
+      "Functionality: 70 points minimum to proceed",
+      "Price: 80 points",
+      "B-BBEE status: 20 points",
+    ],
+    documents: ["Terms of reference", "Bill of quantities", "Branch drawings pack"],
+  },
+  SEC: {
+    scope:
+      "24-hour guarding, access control and incident reporting at 14 branches in Durban, with armed response backup and monthly reporting.",
+    contractPeriod: "24 months",
+    briefing: "",
+    submission: "Submit your proposal, PSIRA certificates for the company and guards, and pricing through YES Hub.",
+    evaluationCriteria: ["PSIRA registration required", "Price: 80 points", "B-BBEE status: 20 points"],
+    documents: ["Request for proposal", "Branch list and guarding schedule"],
+  },
+  GRT: {
+    scope:
+      "Grants of up to R250 000 for equipment and working capital for township businesses, with 12 months of mentoring from the enterprise development team.",
+    contractPeriod: "Grant paid over 12 months against milestones",
+    briefing: "Information session online, 14:00 on the Wednesday after publication",
+    submission: "Apply through YES Hub with a one-page business plan and a quote for the equipment you need.",
+    evaluationCriteria: [
+      "Business based in or serving a township",
+      "At least one year of trading",
+      "Growth and job creation potential",
+    ],
+    documents: ["Grant guidelines", "Business plan template"],
+  },
+  LOG: {
+    scope:
+      "Twice-weekly collection and delivery of documents and parcels between branches in Kimberley, Upington and De Aar, with proof of delivery.",
+    contractPeriod: "12 months",
+    briefing: "",
+    submission: "Quote through YES Hub with a price per trip and your vehicle details.",
+    evaluationCriteria: ["Price: 80 points", "B-BBEE status: 20 points"],
+    documents: ["Request for quotation"],
+  },
+};
+
+function sampleCodeFor(title: string) {
+  return SAMPLE_OPPORTUNITIES.find((s) => s.title === title)?.code;
+}
+
+/** A sample opportunity's listing, or null when the title isn't one of the samples. */
+export function sampleListingFor(title: string, organizationName: string, publishedAt: number): OpportunityListing | null {
+  const code = sampleCodeFor(title);
+  if (!code) return null;
+  const { scope, contractPeriod, briefing, submission, evaluationCriteria } = SAMPLE_LISTINGS[code];
+  return {
+    scope,
+    contractPeriod,
+    briefing,
+    submission,
+    evaluationCriteria,
+    enquiriesName: `${organizationName} procurement office`,
+    enquiriesEmail: `tenders@${organizationName.toLowerCase().replace(/[^a-z0-9]+/g, "")}.test`,
+    publishedAt,
+  };
+}
+
+/** The documents a sample opportunity was released with. */
+export function sampleDocumentLabelsFor(title: string) {
+  const code = sampleCodeFor(title);
+  return code ? SAMPLE_LISTINGS[code].documents : [];
+}
+
 /** "Capitec Bank" → "CAP". */
 export function referencePrefix(name: string) {
   const letters = name.replace(/[^A-Za-z]/g, "").toUpperCase();
@@ -178,6 +305,7 @@ export async function insertSampleOpportunities(
       value: sample.value,
       closesAt: isoDate(sample.closesInDays),
       status: sample.status,
+      listing: sampleListingFor(sample.title, organizationName, Date.now() - 14 * DAY) ?? undefined,
       isDemo: true,
     });
     const opportunity = (await ctx.db.get("opportunities", opportunityId))!;

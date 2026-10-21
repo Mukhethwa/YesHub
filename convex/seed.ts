@@ -5,6 +5,7 @@ import type { DocKey, SmeDetails } from "./schema";
 import { components, internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { createAuth } from "./auth";
+import { sampleDocumentLabelsFor, sampleListingFor } from "./lib/opportunities";
 import { samplePdf } from "./lib/samplePdf";
 
 /*
@@ -482,9 +483,85 @@ export const attachDemoFile = internalMutation({
   },
 });
 
+/** Gives demo opportunities created before listings existed their sample listing. */
+export const backfillDemoListings = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    for (const opportunity of await ctx.db.query("opportunities").take(500)) {
+      if (!opportunity.isDemo || opportunity.listing) continue;
+      const [organization] = await ctx.runQuery(components.betterAuth.organizations.forUser, {
+        userId: opportunity.createdBy,
+      });
+      const listing = sampleListingFor(
+        opportunity.title,
+        organization?.name ?? "YES Hub",
+        opportunity._creationTime - 14 * 24 * 60 * 60 * 1000,
+      );
+      if (listing) await ctx.db.patch("opportunities", opportunity._id, { listing });
+    }
+  },
+});
+
+/** Demo opportunities that haven't had their sample documents released yet. */
+export const demoOpportunitiesWithoutDocuments = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const result = [];
+    for (const opportunity of await ctx.db.query("opportunities").take(500)) {
+      if (!opportunity.isDemo) continue;
+      const existing = await ctx.db
+        .query("opportunityDocuments")
+        .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
+        .take(1);
+      if (existing.length > 0) continue;
+      result.push({
+        id: opportunity._id,
+        organizationId: opportunity.organizationId,
+        title: opportunity.title,
+        reference: opportunity.reference,
+        closesAt: opportunity.closesAt,
+        scope: opportunity.listing?.scope ?? opportunity.description,
+        contractPeriod: opportunity.listing?.contractPeriod ?? "",
+        organization: opportunity.listing?.enquiriesName.replace(/ procurement office$/, "") ?? "",
+        labels: sampleDocumentLabelsFor(opportunity.title),
+      });
+    }
+    return result;
+  },
+});
+
+export const attachTenderDocument = internalMutation({
+  args: {
+    opportunityId: v.id("opportunities"),
+    organizationId: v.string(),
+    storageId: v.id("_storage"),
+    label: v.string(),
+    name: v.string(),
+    size: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("opportunityDocuments", { ...args, type: "application/pdf", uploadedBy: "Sample data" });
+  },
+});
+
+/** Splits text into lines short enough for a sample PDF page. */
+function wrap(text: string, width = 88) {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of text.split(/\s+/)) {
+    if ((line + " " + word).trim().length > width) {
+      lines.push(line);
+      line = word;
+    } else line = (line + " " + word).trim();
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 /**
- * Gives every seeded SME document a real (clearly marked sample) PDF, so corporates can open and check
- * documents in development. Real SMEs' uploads are never touched. Safe to re-run.
+ * Gives every seeded SME document, and every demo opportunity's released documents, a real (clearly
+ * marked sample) PDF, so they can be opened and checked in development. Real uploads are never touched.
+ * Safe to re-run.
  *
  *   pnpm exec convex run seed:sampleDocuments
  */
@@ -492,6 +569,35 @@ export const sampleDocuments = internalAction({
   args: {},
   handler: async (ctx): Promise<number> => {
     assertDevSite();
+    await ctx.runMutation(internal.seed.backfillDemoListings, {});
+    const opportunities = await ctx.runQuery(internal.seed.demoOpportunitiesWithoutDocuments, {});
+    let created = 0;
+    for (const opportunity of opportunities) {
+      for (const label of opportunity.labels) {
+        const bytes = samplePdf(label, [
+          ...(opportunity.organization ? [`Issued by: ${opportunity.organization}`] : []),
+          `Reference: ${opportunity.reference}`,
+          `Opportunity: ${opportunity.title}`,
+          `Closing date: ${opportunity.closesAt}`,
+          ...(opportunity.contractPeriod ? [`Contract period: ${opportunity.contractPeriod}`] : []),
+          "",
+          ...wrap(opportunity.scope),
+          "",
+          "Submit your response through YES Hub before the closing date.",
+        ]);
+        const storageId = await ctx.storage.store(new Blob([bytes], { type: "application/pdf" }));
+        await ctx.runMutation(internal.seed.attachTenderDocument, {
+          opportunityId: opportunity.id,
+          organizationId: opportunity.organizationId,
+          storageId,
+          label,
+          name: `${opportunity.reference} ${label}.pdf`,
+          size: bytes.byteLength,
+        });
+        created++;
+      }
+    }
+
     const missing = await ctx.runQuery(internal.seed.demoDocumentsWithoutFiles, {});
     for (const doc of missing) {
       const label = DOCUMENTS.find((d) => d.key === doc.key)?.label ?? doc.key;
@@ -516,6 +622,6 @@ export const sampleDocuments = internalAction({
         size: bytes.byteLength,
       });
     }
-    return missing.length;
+    return created + missing.length;
   },
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -19,6 +19,7 @@ import { isExpired } from "@/lib/sme/dates";
 import { DOCUMENTS } from "@/lib/sme/documents";
 import { formatBytes, formatDate, websiteHref } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { CreateOrganisation } from "./create-organisation";
 import { KIND_LABELS } from "./tenders";
 
@@ -247,7 +248,7 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
             </CardContent>
           </Card>
 
-          <DocumentsCard profile={profile} />
+          <DocumentsCard profile={profile} fromOpportunity={fromOpportunity} />
           <HistoryCard profile={profile} />
         </div>
 
@@ -362,8 +363,16 @@ function TagList({ label, items }: { label: string; items: string[] }) {
   );
 }
 
-function DocumentsCard({ profile }: { profile: Profile }) {
+function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpportunity: string | null }) {
+  const recordOpened = useMutation(api.enterprise.recordDocumentOpened);
   const byKey = new Map(profile.documents.map((d) => [d.key, d]));
+  // Best effort: an activity entry on the application, never a blocker for opening the file
+  const opened = (label: string) =>
+    void recordOpened({
+      smeId: profile.id,
+      opportunityId: (fromOpportunity ?? undefined) as Id<"opportunities"> | undefined,
+      document: label,
+    }).catch(() => {});
   const expiryFor = (key: string) =>
     key === "bbbeeCertificate" ? profile.bbbeeExpiry : key === "taxCertificate" ? profile.taxExpiry : "";
 
@@ -405,7 +414,7 @@ function DocumentsCard({ profile }: { profile: Profile }) {
                 {doc &&
                   (doc.url ? (
                     <Button variant="outline" size="sm" asChild className="shrink-0">
-                      <a href={doc.url} target="_blank" rel="noreferrer">
+                      <a href={doc.url} target="_blank" rel="noreferrer" onClick={() => opened(type.label)}>
                         Open document
                       </a>
                     </Button>

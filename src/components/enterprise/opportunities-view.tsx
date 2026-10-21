@@ -4,18 +4,23 @@ import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { AdminPageHeader, Pill } from "@/components/admin/page-header";
-import { FilterTabs, runMutation, TablePagination, usePagination } from "@/components/admin/shared";
+import { FilterTabs, formatDateTime, runMutation, TablePagination, usePagination } from "@/components/admin/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUploadFile } from "@/hooks/use-upload-file";
+import { errorMessage } from "@/lib/errors";
 import { DOCUMENTS } from "@/lib/sme/documents";
-import { formatDate } from "@/lib/sme/format";
+import { formatBytes, formatDate } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
 import { CreateOrganisation } from "./create-organisation";
 import { OpportunityTable } from "./enterprise-overview";
@@ -200,41 +205,276 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
         <Stat label="Shortlisted" value={detail.shortlisted} />
       </div>
 
+      <Tabs defaultValue="applicants">
+        <TabsList>
+          <TabsTrigger value="applicants">Applicants ({detail.applicants.length})</TabsTrigger>
+          <TabsTrigger value="listing">Listing and documents ({detail.documents.length})</TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="applicants">
+          <Card>
+            <CardHeader>
+              <CardTitle>Applicants</CardTitle>
+              <CardDescription>
+                Ranked best fit first: SMEs that meet every requirement, then by score.{" "}
+                {usesJev ? "Ranked by Jev." : "Checked by YES Hub’s eligibility rules until Jev ranking is connected."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 px-0">
+              <div className="px-6">
+                <FilterTabs
+                  label="Filter applicants"
+                  value={filter}
+                  onChange={setFilter}
+                  options={[
+                    { id: "all", label: "All", count: detail.applicants.length },
+                    { id: "qualify", label: "Qualify", count: qualifying.length },
+                    { id: "not", label: "Don’t qualify", count: detail.applicants.length - qualifying.length },
+                  ]}
+                />
+              </div>
+              {visible.length === 0 ? (
+                <p className="px-6 py-6 text-sm text-muted-foreground">
+                  {detail.applicants.length === 0 ? "No SMEs have applied yet." : "No applicants in this group."}
+                </p>
+              ) : (
+                <ApplicantTable
+                  opportunityId={detail.id}
+                  applicants={visible}
+                  ranks={new Map(detail.applicants.map((a, i) => [a.id, i + 1]))}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="listing" className="space-y-6">
+          <ListingCard detail={detail} />
+          <ReleasedDocumentsCard detail={detail} />
+        </TabsContent>
+
+        <TabsContent value="activity">
+          <OpportunityActivityCard opportunityId={detail.id} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------------------------------------ */
+/* Listing, released documents and activity                                                               */
+/* ------------------------------------------------------------------------------------------------------ */
+
+function ListingCard({ detail }: { detail: Detail }) {
+  const listing = detail.listing;
+  if (!listing) {
+    return (
       <Card>
         <CardHeader>
-          <CardTitle>Applicants</CardTitle>
-          <CardDescription>
-            Ranked best fit first: SMEs that meet every requirement, then by score.{" "}
-            {usesJev ? "Ranked by Jev." : "Checked by YES Hub’s eligibility rules until Jev ranking is connected."}
-          </CardDescription>
+          <CardTitle>Listing</CardTitle>
+          <CardDescription>This opportunity was created before full listings were captured.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 px-0">
-          <div className="px-6">
-            <FilterTabs
-              label="Filter applicants"
-              value={filter}
-              onChange={setFilter}
-              options={[
-                { id: "all", label: "All", count: detail.applicants.length },
-                { id: "qualify", label: "Qualify", count: qualifying.length },
-                { id: "not", label: "Don’t qualify", count: detail.applicants.length - qualifying.length },
-              ]}
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Listing</CardTitle>
+        <CardDescription>What was published for SMEs on {formatDateTime(listing.publishedAt)}.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <dl className="space-y-5 text-sm">
+          <ListingItem label="Scope of work">
+            <p className="whitespace-pre-line">{listing.scope}</p>
+          </ListingItem>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <ListingItem label="Contract period">{listing.contractPeriod || "Not stated"}</ListingItem>
+            <ListingItem label="Briefing session">{listing.briefing || "No briefing session"}</ListingItem>
+          </div>
+          <ListingItem label="How to submit">{listing.submission}</ListingItem>
+          <ListingItem label="Evaluation criteria">
+            <ul className="list-disc space-y-1 pl-5">
+              {listing.evaluationCriteria.map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
+          </ListingItem>
+          <ListingItem label="Enquiries">
+            {listing.enquiriesName} ·{" "}
+            <a href={`mailto:${listing.enquiriesEmail}`} className="underline underline-offset-2">
+              {listing.enquiriesEmail}
+            </a>
+          </ListingItem>
+        </dl>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ListingItem({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
+const TENDER_DOC_ACCEPT = ".pdf,.docx,.xlsx,.png,.jpg,.jpeg";
+
+function ReleasedDocumentsCard({ detail }: { detail: Detail }) {
+  const upload = useUploadFile();
+  const add = useMutation(api.enterprise.addOpportunityDocument);
+  const remove = useMutation(api.enterprise.removeOpportunityDocument);
+  const [label, setLabel] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [pending, setPending] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!file) return toast.error("Choose a file to upload.");
+    setPending(true);
+    try {
+      await add({ opportunityId: detail.id, label: label || file.name.replace(/\.[^.]+$/, ""), file: await upload(file) });
+      toast.success(`${file.name} added`);
+      setLabel("");
+      setFile(null);
+      if (fileInput.current) fileInput.current.value = "";
+    } catch (error) {
+      toast.error(errorMessage(error, "Couldn’t upload the document."));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Documents released with this opportunity</CardTitle>
+        <CardDescription>The documents SMEs download to respond: the RFQ or terms of reference, specifications, pricing schedules and forms.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5 px-0">
+        {detail.documents.length === 0 ? (
+          <p className="px-6 text-sm text-muted-foreground">No documents released yet.</p>
+        ) : (
+          <ul className="divide-y border-y">
+            {detail.documents.map((doc) => (
+              <li key={doc.id} className="flex flex-col gap-2 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{doc.label}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {doc.name} · {formatBytes(doc.size)} · added {formatDateTime(doc.uploadedAt)} by {doc.uploadedBy}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  {doc.url && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={doc.url} target="_blank" rel="noreferrer">
+                        Open
+                      </a>
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => runMutation(`${doc.label} removed`, () => remove({ documentId: doc.id }))}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <form onSubmit={submit} className="flex flex-col gap-2 px-6 sm:flex-row sm:items-end">
+          <div className="flex-1 space-y-1.5">
+            <Label htmlFor="tender-doc-label">Add a document</Label>
+            <Input
+              id="tender-doc-label"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="What is it? e.g. Pricing schedule"
             />
           </div>
-          {visible.length === 0 ? (
-            <p className="px-6 py-6 text-sm text-muted-foreground">
-              {detail.applicants.length === 0 ? "No SMEs have applied yet." : "No applicants in this group."}
-            </p>
-          ) : (
-            <ApplicantTable
-              opportunityId={detail.id}
-              applicants={visible}
-              ranks={new Map(detail.applicants.map((a, i) => [a.id, i + 1]))}
-            />
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          <Input
+            ref={fileInput}
+            type="file"
+            accept={TENDER_DOC_ACCEPT}
+            aria-label="Choose a file"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="sm:w-64"
+          />
+          <Button type="submit" disabled={pending || !file}>
+            {pending && <Spinner />}
+            Upload
+          </Button>
+        </form>
+        <p className="px-6 text-xs text-muted-foreground">PDF, Word, Excel or images, up to 10 MB.</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function activityText(entry: { action: string; detail: string | null }) {
+  switch (entry.action) {
+    case "viewed":
+      return "viewed the application";
+    case "shortlisted":
+      return "shortlisted";
+    case "unshortlisted":
+      return "removed from the shortlist";
+    case "declined":
+      return "declined";
+    case "document_opened":
+      return `opened ${entry.detail ?? "a document"}`;
+    default:
+      return entry.action;
+  }
+}
+
+function OpportunityActivityCard({ opportunityId }: { opportunityId: Detail["id"] }) {
+  const entries = useQuery(api.enterprise.opportunityActivity, { opportunityId });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Activity</CardTitle>
+        <CardDescription>Who in your organisation viewed, shortlisted or opened documents for each applicant.</CardDescription>
+      </CardHeader>
+      <CardContent className="px-0">
+        {entries === undefined ? (
+          <Spinner className="mx-auto my-6" />
+        ) : !entries || entries.length === 0 ? (
+          <p className="px-6 text-sm text-muted-foreground">No activity yet. Viewing an applicant is recorded here.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-6">When</TableHead>
+                <TableHead>Who</TableHead>
+                <TableHead className="pr-6">What</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {entries.map((entry) => (
+                <TableRow key={entry.id}>
+                  <TableCell className="pl-6 text-sm whitespace-nowrap text-muted-foreground">{formatDateTime(entry.at)}</TableCell>
+                  <TableCell className="text-sm font-medium">{entry.actorName}</TableCell>
+                  <TableCell className="pr-6 text-sm">
+                    {activityText(entry)} <span className="text-muted-foreground">· {entry.companyName}</span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -274,6 +514,9 @@ function ApplicantTable({
   ranks: Map<string, number>;
 }) {
   const [open, setOpen] = useState<string | null>(null);
+  const recordView = useMutation(api.enterprise.recordApplicationView);
+  // Logging a view is best effort; it must never get in the way of reading the application
+  const viewed = (applicant: Applicant) => void recordView({ applicationId: applicant.id }).catch(() => {});
 
   return (
     <Table>
@@ -315,6 +558,9 @@ function ApplicantTable({
                 </TableCell>
                 <TableCell>
                   {a.evaluation.qualifies ? <Pill tone="success">Qualifies</Pill> : <Pill tone="danger">Doesn’t qualify</Pill>}
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {a.lastViewed ? `Viewed by ${a.lastViewed.by}, ${formatDateTime(a.lastViewed.at)}` : "Not viewed yet"}
+                  </span>
                 </TableCell>
                 <TableCell className="pr-6">
                   <div className="flex items-center justify-end gap-1.5">
@@ -322,12 +568,17 @@ function ApplicantTable({
                       variant="ghost"
                       size="sm"
                       aria-expanded={expanded}
-                      onClick={() => setOpen(expanded ? null : a.id)}
+                      onClick={() => {
+                        if (!expanded) viewed(a);
+                        setOpen(expanded ? null : a.id);
+                      }}
                     >
                       {expanded ? "Hide" : "Why"}
                     </Button>
                     <Button variant="outline" size="sm" asChild>
-                      <Link href={`/dashboard/suppliers?id=${a.sme.id}&from=${opportunityId}`}>View business</Link>
+                      <Link href={`/dashboard/suppliers?id=${a.sme.id}&from=${opportunityId}`} onClick={() => viewed(a)}>
+                        View business
+                      </Link>
                     </Button>
                     <ShortlistButton applicant={a} />
                   </div>
@@ -383,11 +634,35 @@ function ApplicantChecks({ applicant }: { applicant: Applicant }) {
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Applied {formatDate(applicant.submittedAt)} · checked {formatDate(evaluation.evaluatedAt)}
-        {applicant.status === "shortlisted" &&
-          applicant.statusChangedAt &&
-          ` · shortlisted ${applicant.statusChangedBy ? `by ${applicant.statusChangedBy} ` : ""}on ${formatDate(applicant.statusChangedAt)}`}
+        Applied {formatDateTime(applicant.submittedAt)} · checked {formatDateTime(evaluation.evaluatedAt)} by{" "}
+        {evaluation.engine === "jev" ? "Jev" : "YES Hub’s eligibility rules"}
       </p>
+      <ApplicationLog applicationId={applicant.id} />
+    </div>
+  );
+}
+
+/** Who in the organisation did what with one application, newest first. */
+function ApplicationLog({ applicationId }: { applicationId: Applicant["id"] }) {
+  const entries = useQuery(api.enterprise.applicationActivity, { applicationId });
+  if (!entries || entries.length === 0) return null;
+
+  return (
+    <div className="border-t pt-3">
+      <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Activity</p>
+      <ul className="space-y-1 text-sm">
+        {entries.slice(0, 8).map((entry) => (
+          <li key={entry.id} className="flex flex-wrap gap-x-2">
+            <span className="text-muted-foreground tabular-nums">{formatDateTime(entry.at)}</span>
+            <span>
+              <span className="font-medium">{entry.actorName}</span> {activityText(entry)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {entries.length > 8 && (
+        <p className="mt-1 text-xs text-muted-foreground">Showing the latest 8. The Activity tab has the full log.</p>
+      )}
     </div>
   );
 }

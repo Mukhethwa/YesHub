@@ -124,6 +124,29 @@ export const evaluation = v.object({
   evaluatedAt: v.number(),
 });
 
+/** The published details of an opportunity, as a buyer would put in a tender notice. */
+export const opportunityListing = v.object({
+  scope: v.string(),
+  contractPeriod: v.string(),
+  /** Compulsory or optional briefing session, or empty when there's none. */
+  briefing: v.string(),
+  submission: v.string(),
+  evaluationCriteria: v.array(v.string()),
+  enquiriesName: v.string(),
+  enquiriesEmail: v.string(),
+  publishedAt: v.number(),
+});
+
+export const activityAction = v.union(
+  v.literal("viewed"),
+  v.literal("shortlisted"),
+  v.literal("unshortlisted"),
+  v.literal("declined"),
+  v.literal("document_opened"),
+);
+
+export type OpportunityListing = Infer<typeof opportunityListing>;
+export type ActivityAction = Infer<typeof activityAction>;
 export type OpportunityKind = Infer<typeof opportunityKind>;
 export type OpportunityStatus = Infer<typeof opportunityStatus>;
 export type ApplicationStatus = Infer<typeof applicationStatus>;
@@ -174,8 +197,37 @@ export default defineSchema({
     /** ISO yyyy-mm-dd. */
     closesAt: v.string(),
     status: opportunityStatus,
+    /** The published notice. Missing on opportunities created before listings existed. */
+    listing: v.optional(opportunityListing),
     isDemo: v.optional(v.boolean()),
   }).index("by_organization", ["organizationId"]),
+
+  /** Documents released with an opportunity: the RFQ itself, specifications, pricing schedules, forms. */
+  opportunityDocuments: defineTable({
+    opportunityId: v.id("opportunities"),
+    organizationId: v.string(),
+    storageId: v.id("_storage"),
+    /** What the document is, e.g. "Terms of reference". */
+    label: v.string(),
+    name: v.string(),
+    size: v.number(),
+    type: v.string(),
+    uploadedBy: v.string(),
+  }).index("by_opportunity", ["opportunityId"]),
+
+  /** Who in the organisation did what with an application: viewed it, shortlisted it, opened a document. */
+  applicationActivity: defineTable({
+    applicationId: v.id("applications"),
+    opportunityId: v.id("opportunities"),
+    organizationId: v.string(),
+    actorId: v.string(),
+    actorName: v.string(),
+    action: activityAction,
+    /** e.g. the document that was opened. */
+    detail: v.optional(v.string()),
+  })
+    .index("by_application", ["applicationId"])
+    .index("by_opportunity", ["opportunityId"]),
 
   /** An SME's application to an opportunity, with how well it fits. */
   applications: defineTable({
