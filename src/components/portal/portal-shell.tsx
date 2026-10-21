@@ -35,7 +35,8 @@ export function PortalShell({
     <SidebarProvider>
       <PortalSidebar label={label} homeHref={homeHref} nav={nav} />
 
-      <SidebarInset>
+      {/* min-w-0 lets wide content (tables) scroll inside the page instead of widening it */}
+      <SidebarInset className="min-w-0">
         <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b bg-background px-4">
           <SidebarTrigger className="-ml-1 md:hidden" />
 

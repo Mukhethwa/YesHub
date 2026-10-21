@@ -1,6 +1,12 @@
-import { ENTERPRISE_NAV } from "@/components/enterprise/nav";
-import { ComingSoon } from "@/components/portal/coming-soon";
+import { Suspense } from "react";
+
+import { OpportunitiesView } from "@/components/enterprise/opportunities-view";
 
 export default function Page() {
-  return <ComingSoon title={ENTERPRISE_NAV.opportunities.label} icon={ENTERPRISE_NAV.opportunities.icon} />;
+  // OpportunitiesView reads ?id= to open one opportunity, which needs a Suspense boundary
+  return (
+    <Suspense>
+      <OpportunitiesView />
+    </Suspense>
+  );
 }

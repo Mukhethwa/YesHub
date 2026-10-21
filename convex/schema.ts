@@ -90,6 +90,45 @@ export const smeDetailsValidator = v.object(smeDetails);
 export type SmeDetails = Infer<typeof smeDetailsValidator>;
 export type SmeSettings = Infer<typeof smeSettings>;
 
+export const opportunityKind = v.union(v.literal("tender"), v.literal("rfq"), v.literal("grant"));
+export const opportunityStatus = v.union(v.literal("draft"), v.literal("open"), v.literal("closed"), v.literal("awarded"));
+export const applicationStatus = v.union(
+  v.literal("submitted"),
+  v.literal("shortlisted"),
+  v.literal("declined"),
+  v.literal("awarded"),
+);
+
+/** One eligibility or ranking check on an application, written for buyers to read. */
+const evaluationCheck = v.object({
+  id: v.string(),
+  label: v.string(),
+  passed: v.boolean(),
+  /** Required checks decide whether the SME qualifies; the others only move the score. */
+  required: v.boolean(),
+  detail: v.string(),
+});
+
+/**
+ * How well an application fits its opportunity. Written when the SME applies (or is re-checked), never
+ * computed in a query, because checks such as document expiry depend on today's date.
+ */
+export const evaluation = v.object({
+  /** "rules" is YES Hub's built-in eligibility check (convex/lib/evaluation.ts); "jev" once Jev ranks it. */
+  engine: v.union(v.literal("rules"), v.literal("jev")),
+  qualifies: v.boolean(),
+  /** 0 to 100. Applicants are ranked by qualifying first, then score. */
+  score: v.number(),
+  summary: v.string(),
+  checks: v.array(evaluationCheck),
+  evaluatedAt: v.number(),
+});
+
+export type OpportunityKind = Infer<typeof opportunityKind>;
+export type OpportunityStatus = Infer<typeof opportunityStatus>;
+export type ApplicationStatus = Infer<typeof applicationStatus>;
+export type Evaluation = Infer<typeof evaluation>;
+
 export default defineSchema({
   smes: defineTable({
     ...smeDetails,
@@ -109,6 +148,48 @@ export default defineSchema({
     suspendedAt: v.optional(v.number()),
     suspendedReason: v.optional(v.string()),
   }).index("by_user", ["userId"]),
+
+  /** Tenders, RFQs and grants an enterprise or funder publishes. */
+  opportunities: defineTable({
+    /** Better Auth organisation that owns it. */
+    organizationId: v.string(),
+    createdBy: v.string(),
+    kind: opportunityKind,
+    title: v.string(),
+    /** The buyer's own reference, e.g. "CAP-FAC-2026-014". */
+    reference: v.string(),
+    description: v.string(),
+    /** One of INDUSTRIES, or empty when any industry may apply. */
+    industry: v.string(),
+    /** Services the work needs, matched against SME services. */
+    services: v.array(v.string()),
+    /** Where the work is. Empty means nationwide. */
+    provinces: v.array(v.string()),
+    /** Highest acceptable B-BBEE level number (1 is best), or absent when there's no minimum. */
+    minBbbeeLevel: v.optional(v.number()),
+    /** DocKey values (see smeDocuments) an applicant must hold, valid and not expired. */
+    requiredDocuments: v.array(v.string()),
+    /** Estimated contract or grant value in rand. */
+    value: v.optional(v.number()),
+    /** ISO yyyy-mm-dd. */
+    closesAt: v.string(),
+    status: opportunityStatus,
+    isDemo: v.optional(v.boolean()),
+  }).index("by_organization", ["organizationId"]),
+
+  /** An SME's application to an opportunity, with how well it fits. */
+  applications: defineTable({
+    opportunityId: v.id("opportunities"),
+    /** Copied from the opportunity so an organisation's applications can be found without a join. */
+    organizationId: v.string(),
+    smeId: v.id("smes"),
+    status: applicationStatus,
+    submittedAt: v.number(),
+    evaluation,
+  })
+    .index("by_opportunity", ["opportunityId"])
+    .index("by_sme_and_opportunity", ["smeId", "opportunityId"])
+    .index("by_organization", ["organizationId"]),
 
   /** Every action YES Hub staff take in the admin area, newest first by _creationTime. */
   auditLog: defineTable({

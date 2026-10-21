@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
+import { deleteApplicationsForSme } from "./lib/opportunities";
 import { type DocKey, type DocRef, type SmeDetails, smeDetails, smeDetailsValidator, smeSettings } from "./schema";
 
 async function getOwnSme(ctx: QueryCtx) {
@@ -213,6 +214,7 @@ async function deleteSme(ctx: MutationCtx, sme: Doc<"smes">) {
   for (const doc of Object.values(sme.documents)) {
     if (doc?.storageId) await ctx.storage.delete(doc.storageId);
   }
+  await deleteApplicationsForSme(ctx, sme._id);
   await ctx.db.delete("smes", sme._id);
 }
 

@@ -29,6 +29,10 @@ const PEOPLE = {
   smeSiyakha: { name: "Bongani Zulu", email: "bongani@siyakhabuild.test" },
   smeMzansi: { name: "Fatima Patel", email: "fatima@mzansiit.test" },
   smeKaroo: { name: "Pieter Botha", email: "pieter@karoologistics.test" },
+  smeImbali: { name: "Nomsa Shabalala", email: "nomsa@imbalicleaning.test" },
+  smeThuso: { name: "Tebogo Maluleke", email: "tebogo@thusoprojects.test" },
+  smeKasi: { name: "Ayesha Jacobs", email: "ayesha@kasikitchen.test" },
+  smeIziko: { name: "Sibusiso Ngcobo", email: "sibusiso@izikosecurity.test" },
   // A test super admin, so the full admin area can be tried without a real account
   staffOwner: { name: "Naledi Dube", email: "naledi@yeshub.test" },
   staffAdmin: { name: "Musa Khoza", email: "musa@yeshub.test" },
@@ -193,6 +197,118 @@ const SMES: { owner: Person; details: Omit<SmeDetails, "contactName" | "email">;
       phone: "0538001122",
     },
   },
+  // Applicants for the sample tenders (see convex/lib/opportunities.ts): a mix that qualifies and doesn't
+  {
+    owner: "smeImbali",
+    verified: true,
+    docs: ["bbbeeCertificate", "taxCertificate", "cipcCertificate", "companyProfile", "csdReport"],
+    details: {
+      companyName: "Imbali Cleaning Co-operative",
+      registrationNumber: "2018/445566/07",
+      csdNumber: "MAAA0234567",
+      industry: "Cleaning & Facilities Management",
+      yearsTrading: "6–10 years",
+      employees: "51–200",
+      address: "88 Vilakazi Street",
+      city: "Soweto",
+      hqProvince: "Gauteng",
+      services: ["Office cleaning", "Hygiene services", "Garden services"],
+      capabilities: "A 70-member cleaning co-operative serving office parks in Johannesburg and Midrand since 2018.",
+      accreditations: [],
+      nationwide: false,
+      provinces: ["Gauteng"],
+      serviceAreas: ["City of Johannesburg", "Ekurhuleni"],
+      bbbeeLevel: "Level 1",
+      bbbeeExpiry: isoDate(180),
+      taxExpiry: isoDate(240),
+      website: "www.imbalicleaning.co.za",
+      contactRole: "Managing Director",
+      phone: "0114567890",
+    },
+  },
+  {
+    owner: "smeThuso",
+    docs: ["bbbeeCertificate", "taxCertificate", "cipcCertificate"],
+    details: {
+      companyName: "Thuso Projects",
+      registrationNumber: "2017/334455/07",
+      csdNumber: "MAAA0345678",
+      industry: "Construction & Built Environment",
+      yearsTrading: "6–10 years",
+      employees: "21–50",
+      address: "14 Market Street",
+      city: "Polokwane",
+      hqProvince: "Limpopo",
+      services: ["General building", "Painting & renovations"],
+      capabilities: "CIDB 4GB contractor for school and office refurbishments across Limpopo and Gauteng.",
+      accreditations: ["CIDB 4GB"],
+      nationwide: false,
+      provinces: ["Limpopo", "Gauteng"],
+      serviceAreas: ["Polokwane", "Tshwane"],
+      bbbeeLevel: "Level 3",
+      bbbeeExpiry: isoDate(120),
+      taxExpiry: isoDate(90),
+      website: "",
+      contactRole: "Director",
+      phone: "0152223344",
+    },
+  },
+  {
+    owner: "smeKasi",
+    verified: true,
+    docs: ["bbbeeCertificate", "taxCertificate", "cipcCertificate", "companyProfile"],
+    details: {
+      companyName: "Kasi Kitchen Caterers",
+      registrationNumber: "2021/556677/07",
+      csdNumber: "MAAA0567890",
+      industry: "Hospitality, Catering & Events",
+      yearsTrading: "3–5 years",
+      employees: "21–50",
+      address: "3 Lansdowne Road",
+      city: "Cape Town",
+      hqProvince: "Western Cape",
+      services: ["Corporate catering", "Event management"],
+      capabilities: "Daily staff canteens for two Cape Town head offices, halaal certified, 400 meals a day.",
+      accreditations: ["Halaal certified"],
+      nationwide: false,
+      provinces: ["Western Cape"],
+      serviceAreas: ["Cape Town", "Stellenbosch"],
+      bbbeeLevel: "Level 2",
+      bbbeeExpiry: isoDate(210),
+      taxExpiry: isoDate(160),
+      website: "www.kasikitchen.co.za",
+      contactRole: "Owner / Founder",
+      phone: "0213334455",
+    },
+  },
+  {
+    owner: "smeIziko",
+    docs: ["bbbeeCertificate", "taxCertificate", "cipcCertificate"],
+    details: {
+      companyName: "Iziko Security Services",
+      registrationNumber: "2016/667788/07",
+      csdNumber: "MAAA0678901",
+      industry: "Security Services",
+      yearsTrading: "6–10 years",
+      employees: "51–200",
+      address: "21 Field Street",
+      city: "Durban",
+      hqProvince: "KwaZulu-Natal",
+      services: ["Guarding", "Armed response", "Access control"],
+      capabilities: "PSIRA-registered guarding for retail centres and banks in eThekwini, 140 grade C guards.",
+      accreditations: ["PSIRA"],
+      nationwide: false,
+      provinces: ["KwaZulu-Natal", "Gauteng"],
+      serviceAreas: ["eThekwini"],
+      bbbeeLevel: "Level 5",
+      bbbeeExpiry: isoDate(90),
+      // Lapsed, so it fails the document check as well as the B-BBEE minimum
+      taxExpiry: isoDate(-20),
+      website: "",
+      contactRole: "Operations Manager",
+      phone: "0315556677",
+    },
+  },
 ];
 
 /** Inserts the SME profiles for already-created accounts. */
@@ -306,6 +422,16 @@ export const devData = internalAction({
       banned: [{ userId: id("spammer"), reason: "Posting fake tender adverts with payment links." }],
     });
 
-    return { accounts: Object.keys(ids).length, password: "see SEED_PASSWORD in convex/seed.ts" };
+    // Capitec (verified) gets sample tenders with applications from the seeded SMEs
+    const [capitec] = await ctx.runQuery(components.betterAuth.organizations.forUser, { userId: id("capitecOwner") });
+    const opportunities: number = capitec
+      ? await ctx.runMutation(internal.enterprise.seedSampleOpportunities, {
+          organizationId: capitec.id,
+          organizationName: capitec.name,
+          createdBy: id("capitecOwner"),
+        })
+      : 0;
+
+    return { accounts: Object.keys(ids).length, opportunities, password: "see SEED_PASSWORD in convex/seed.ts" };
   },
 });

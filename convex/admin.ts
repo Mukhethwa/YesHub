@@ -4,6 +4,7 @@ import { isStaffRole } from "../src/lib/permissions";
 import { components } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { audit } from "./audit";
+import { deleteOpportunitiesForOrganization } from "./lib/opportunities";
 import { getStaff, requireStaff } from "./lib/staff";
 import { deleteAppData } from "./platform";
 
@@ -254,6 +255,7 @@ export const deleteOrganization = mutation({
     const staff = await requireStaff(ctx, { organization: ["delete"] });
     const name = await ctx.runMutation(components.betterAuth.organizations.remove, args);
     if (!name) throw new ConvexError("That organisation can’t be deleted.");
+    await deleteOpportunitiesForOrganization(ctx, args.organizationId);
     await audit(ctx, staff, {
       action: "organization.delete",
       targetType: "organization",
