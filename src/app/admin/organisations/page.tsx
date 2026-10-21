@@ -1,6 +1,5 @@
-import { ADMIN_NAV } from "@/components/admin/nav";
-import { ComingSoon } from "@/components/portal/coming-soon";
+import { OrganisationsTable } from "@/components/admin/organisations-table";
 
 export default function Page() {
-  return <ComingSoon title={ADMIN_NAV.organisations.label} icon={ADMIN_NAV.organisations.icon} />;
+  return <OrganisationsTable />;
 }

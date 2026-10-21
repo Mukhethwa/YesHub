@@ -76,3 +76,97 @@ export const organizationsForUser = query({
     return organizations;
   },
 });
+
+const userSummary = v.object({
+  id: v.string(),
+  name: v.string(),
+  email: v.string(),
+  emailVerified: v.boolean(),
+  image: v.optional(v.union(v.null(), v.string())),
+  role: v.optional(v.union(v.null(), v.string())),
+  banned: v.optional(v.union(v.null(), v.boolean())),
+  banReason: v.optional(v.union(v.null(), v.string())),
+  banExpires: v.optional(v.union(v.null(), v.number())),
+  createdAt: v.number(),
+});
+
+/** Newest accounts first, for the admin area. Bounded: callers pass a limit. */
+export const listUsers = query({
+  args: { limit: v.number() },
+  returns: v.array(userSummary),
+  handler: async (ctx, args) => {
+    const users = await ctx.db.query("user").order("desc").take(args.limit);
+    return users.map((u) => ({
+      id: u._id,
+      name: u.name,
+      email: u.email,
+      emailVerified: u.emailVerified,
+      image: u.image,
+      role: u.role,
+      banned: u.banned,
+      banReason: u.banReason,
+      banExpires: u.banExpires,
+      createdAt: u.createdAt,
+    }));
+  },
+});
+
+/** Look up several accounts by id (e.g. the owners of SME profiles). */
+export const usersById = query({
+  args: { ids: v.array(v.string()) },
+  returns: v.array(v.object({ id: v.string(), name: v.string(), email: v.string() })),
+  handler: async (ctx, args) => {
+    const users = [];
+    for (const id of args.ids) {
+      const userId = ctx.db.normalizeId("user", id);
+      const user = userId && (await ctx.db.get("user", userId));
+      if (user) users.push({ id: user._id, name: user.name, email: user.email });
+    }
+    return users;
+  },
+});
+
+/** Newest organisations first, with member counts, for the admin area. */
+export const listOrganizations = query({
+  args: { limit: v.number() },
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      name: v.string(),
+      slug: v.string(),
+      logo: v.optional(v.union(v.null(), v.string())),
+      createdAt: v.number(),
+      memberCount: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const organizations = await ctx.db.query("organization").order("desc").take(args.limit);
+    const result = [];
+    for (const org of organizations) {
+      // Bounded: organisations on YES Hub are teams, not crowds
+      const members = await ctx.db
+        .query("member")
+        .withIndex("organizationId", (q) => q.eq("organizationId", org._id))
+        .take(500);
+      result.push({
+        id: org._id,
+        name: org.name,
+        slug: org.slug,
+        logo: org.logo,
+        createdAt: org.createdAt,
+        memberCount: members.length,
+      });
+    }
+    return result;
+  },
+});
+
+/** Ids of users who belong to at least one organisation (bounded), to label enterprise accounts. */
+export const memberUserIds = query({
+  args: { limit: v.number() },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    const members = await ctx.db.query("member").take(args.limit);
+    return [...new Set(members.map((m) => m.userId))];
+  },
+});

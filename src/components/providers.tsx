@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import type { ReactNode } from "react";
 
+import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -47,7 +48,10 @@ export function Providers({ children }: { children: ReactNode }) {
             }
             Link={Link}
           >
-            <TooltipProvider>{children}</TooltipProvider>
+            <TooltipProvider>
+              <ImpersonationBanner />
+              {children}
+            </TooltipProvider>
             <Toaster />
           </AuthProvider>
         </QueryClientProvider>

@@ -1811,6 +1811,45 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         null | string,
         Name
       >;
+      listOrganizations: FunctionReference<
+        "query",
+        "internal",
+        { limit: number },
+        Array<{
+          createdAt: number;
+          id: string;
+          logo?: null | string;
+          memberCount: number;
+          name: string;
+          slug: string;
+        }>,
+        Name
+      >;
+      listUsers: FunctionReference<
+        "query",
+        "internal",
+        { limit: number },
+        Array<{
+          banExpires?: null | number;
+          banReason?: null | string;
+          banned?: null | boolean;
+          createdAt: number;
+          email: string;
+          emailVerified: boolean;
+          id: string;
+          image?: null | string;
+          name: string;
+          role?: null | string;
+        }>,
+        Name
+      >;
+      memberUserIds: FunctionReference<
+        "query",
+        "internal",
+        { limit: number },
+        Array<string>,
+        Name
+      >;
       organizationsForUser: FunctionReference<
         "query",
         "internal",
@@ -1823,6 +1862,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "internal",
         { email: string; role: "admin" | "user" },
         null | string,
+        Name
+      >;
+      usersById: FunctionReference<
+        "query",
+        "internal",
+        { ids: Array<string> },
+        Array<{ email: string; id: string; name: string }>,
         Name
       >;
     };
