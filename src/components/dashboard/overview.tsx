@@ -54,7 +54,7 @@ export function Overview({ sme }: { sme: SmeProfile }) {
               {done.map((c) => (
                 <li key={c.id} className="flex items-center justify-between gap-3 py-2.5 text-sm text-muted-foreground">
                   {c.label}
-                  <CheckIcon className="size-4 shrink-0 text-foreground" aria-label="Done" />
+                  <CheckIcon className="size-4 shrink-0 text-success" aria-label="Done" />
                 </li>
               ))}
             </ul>

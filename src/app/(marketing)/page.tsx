@@ -2,7 +2,7 @@ import { ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 
 import { HeroPreview } from "@/components/landing/hero-preview";
-import { CtaDither, HeroContours } from "@/components/landing/shader-backdrops";
+import { CtaDither } from "@/components/landing/shader-backdrops";
 import { Button } from "@/components/ui/button";
 import { DOCUMENTS } from "@/lib/sme/documents";
 
@@ -84,10 +84,8 @@ export default function LandingPage() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      <HeroContours />
-
-      <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 pt-16 pb-20 md:px-6 md:pt-24 md:pb-28 lg:grid-cols-[1.1fr_1fr]">
+    <section>
+      <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 pt-16 pb-20 md:px-6 md:pt-24 md:pb-28 lg:grid-cols-[1.1fr_1fr]">
         <div>
           <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
             Connecting enterprise tenders with the right SME providers
@@ -105,7 +103,7 @@ function Hero() {
                 <ArrowRightIcon />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="bg-background" asChild>
+            <Button size="lg" variant="outline" asChild>
               <a href="#how-it-works">See how it works</a>
             </Button>
           </div>
@@ -246,7 +244,7 @@ function FinalCta() {
               Register your SME, close the gaps in your profile and start getting matched to opportunities in your area.
             </p>
           </div>
-          <Button size="lg" variant="secondary" className="shrink-0" asChild>
+          <Button size="lg" className="shrink-0 bg-white text-primary hover:bg-white/90" asChild>
             <Link href="/auth/sign-up">
               Register your business
               <ArrowRightIcon />

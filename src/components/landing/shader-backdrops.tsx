@@ -1,8 +1,7 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { useState, useSyncExternalStore } from "react";
-import { ContourLines, Dither, Shader, SimplexNoise } from "shaders/react";
+import { Dither, Shader, SimplexNoise } from "shaders/react";
 
 import { useIsHydrated } from "@/components/auth/use-is-hydrated";
 import { cn } from "@/lib/utils";
@@ -40,29 +39,13 @@ function Backdrop({ className, children }: { className?: string; children: React
   );
 }
 
-/** Slowly drifting contour lines, like a survey map. Kept faint so it never competes with the copy. */
-export function HeroContours() {
-  const { resolvedTheme } = useTheme();
-  const reducedMotion = usePrefersReducedMotion();
-  const dark = resolvedTheme === "dark";
-
-  return (
-    // Solid line colours just off each theme's background, so the lines stay faint without canvas opacity
-    <Backdrop>
-      <ContourLines levels={14} lineWidth={1} colorMode="custom" lineColor={dark ? "#272727" : "#e4e4e4"}>
-        <SimplexNoise scale={3} speed={reducedMotion ? 0 : 0.08} seed={7} />
-      </ContourLines>
-    </Backdrop>
-  );
-}
-
-/** Two-tone ordered dither in the brand indigo, for the closing call to action. */
+/** Two close tones of the brand blue as an ordered dither: a quiet texture for the closing call to action. */
 export function CtaDither({ className }: { className?: string }) {
   const reducedMotion = usePrefersReducedMotion();
 
   return (
     <Backdrop className={className}>
-      <Dither pattern="bayer8" pixelSize={3} colorA="#3d3cc2" colorB="#5657ea">
+      <Dither pattern="bayer8" pixelSize={3} colorA="#1766c2" colorB="#1a6fd1">
         <SimplexNoise scale={2.5} speed={reducedMotion ? 0 : 0.12} seed={3} />
       </Dither>
     </Backdrop>

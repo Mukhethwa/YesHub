@@ -22,11 +22,11 @@ export function HeroPreview() {
           <ul className="flex-1 space-y-2 text-sm">
             <li className="flex justify-between gap-2">
               <span>Valid B-BBEE certificate</span>
-              <span className="text-xs text-muted-foreground">Done</span>
+              <span className="text-xs text-success">Done</span>
             </li>
             <li className="flex justify-between gap-2">
               <span>Registered on the CSD</span>
-              <span className="text-xs text-muted-foreground">Done</span>
+              <span className="text-xs text-success">Done</span>
             </li>
             <li className="flex justify-between gap-2">
               <span>Tax compliance status</span>
