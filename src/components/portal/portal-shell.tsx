@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuthenticate } from "@better-auth-ui/react";
 import { SearchIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -8,7 +7,7 @@ import { UserButton } from "@/components/auth/user/user-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
+import { useRequireSession } from "@/hooks/use-require-session";
 import { PortalGuard } from "./portal-guard";
 import { PortalSidebar } from "./portal-sidebar";
 import type { PortalArea, PortalNavItem } from "./types";
@@ -30,7 +29,7 @@ export function PortalShell({
   children: ReactNode;
 }) {
   // Redirects to sign-in when there's no session (and if it ends while the page is open)
-  useAuthenticate(authClient);
+  useRequireSession();
 
   return (
     <SidebarProvider>

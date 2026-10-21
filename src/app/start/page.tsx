@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuthenticate } from "@better-auth-ui/react";
 import { ArrowRightIcon, Building2Icon, StoreIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,7 +7,7 @@ import { useEffect } from "react";
 
 import { Spinner } from "@/components/ui/spinner";
 import { homeFor, useAccount } from "@/hooks/use-account";
-import { authClient } from "@/lib/auth-client";
+import { useRequireSession } from "@/hooks/use-require-session";
 
 const CHOICES = [
   {
@@ -29,7 +28,7 @@ const CHOICES = [
 export default function StartPage() {
   const router = useRouter();
   // Redirects to sign-in when signed out
-  const { data: session } = useAuthenticate(authClient);
+  const { data: session } = useRequireSession();
   const account = useAccount();
   const home = account ? homeFor(account) : null;
 
