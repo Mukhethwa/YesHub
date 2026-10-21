@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 /**
  * Sets a user's platform role (e.g. "admin" for YES Hub staff).
@@ -54,5 +54,25 @@ export const deleteUserByEmail = mutation({
     }
     await ctx.db.delete("user", userId);
     return userId;
+  },
+});
+
+/** The organisations a user belongs to, with their role in each. */
+export const organizationsForUser = query({
+  args: { userId: v.string() },
+  returns: v.array(v.object({ id: v.string(), name: v.string(), slug: v.string(), role: v.string() })),
+  handler: async (ctx, args) => {
+    const memberships = await ctx.db
+      .query("member")
+      .withIndex("userId", (q) => q.eq("userId", args.userId))
+      .take(50);
+
+    const organizations = [];
+    for (const member of memberships) {
+      const orgId = ctx.db.normalizeId("organization", member.organizationId);
+      const org = orgId && (await ctx.db.get("organization", orgId));
+      if (org) organizations.push({ id: org._id, name: org.name, slug: org.slug, role: member.role });
+    }
+    return organizations;
   },
 });

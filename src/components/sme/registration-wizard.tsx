@@ -120,7 +120,7 @@ export function RegistrationWizard({ name, email }: { name: string; email: strin
       setSubmitting("saving");
       const details = pickDetails(form, Object.keys(EMPTY_DETAILS) as (keyof typeof EMPTY_DETAILS)[]);
       await register({ details, documents: { bbbeeCertificate, taxCertificate, companyProfile } });
-      router.push("/dashboard?welcome=1");
+      router.push("/sme?welcome=1");
     } catch (error) {
       setSubmitError(errorMessage(error, "We couldn’t create your profile. Please try again."));
       setSubmitting(null);
@@ -252,7 +252,7 @@ export function RegistrationWizard({ name, email }: { name: string; email: strin
                 </Button>
               ) : (
                 <Button type="button" variant="ghost" asChild>
-                  <Link href="/dashboard">Cancel</Link>
+                  <Link href="/start">Cancel</Link>
                 </Button>
               )}
               <Button type="submit" disabled={!!submitting} className="min-w-36">

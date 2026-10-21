@@ -1,6 +1,6 @@
 import { ClockIcon, MapPinIcon } from "lucide-react";
 
-import { ScoreRing } from "@/components/dashboard/score-ring";
+import { ScoreRing } from "@/components/sme-portal/score-ring";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 

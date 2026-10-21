@@ -1811,6 +1811,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         null | string,
         Name
       >;
+      organizationsForUser: FunctionReference<
+        "query",
+        "internal",
+        { userId: string },
+        Array<{ id: string; name: string; role: string; slug: string }>,
+        Name
+      >;
       setRoleByEmail: FunctionReference<
         "mutation",
         "internal",

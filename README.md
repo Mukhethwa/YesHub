@@ -53,7 +53,7 @@ In a second terminal:
 pnpm dev
 ```
 
-Open http://localhost:3000 and sign up at `/auth/sign-up`. In development, the dashboard has a
+Open http://localhost:3000 and sign up at `/auth/sign-up`. In development, the SME portal has a
 **Dev: fill in a sample business** button that creates a sample SME profile for your account.
 
 ### YES Hub admins
@@ -141,9 +141,14 @@ sign-in to work.
 | `convex/http.ts` | Mounts the Better Auth HTTP routes on Convex |
 | `src/app/api/auth/[...all]/route.ts` | Proxies `/api/auth/*` from Next.js to Convex |
 | `src/app/auth/` | Auth screens with their own layout |
-| `src/app/dashboard/` | SME dashboard (Overview and section routes) |
-| `src/app/(app)/` | Landing page and account settings, with the app header |
-| `src/components/dashboard/` | Dashboard shell, sidebar and Overview widgets |
+| `src/app/(marketing)/` | Landing page (`/`) |
+| `src/app/start/` | Where sign-in lands: sends each account to its portal, or asks new accounts if they're an SME or an enterprise |
+| `src/app/sme/` | SME portal (`/sme`) and the registration wizard (`/sme/register`) |
+| `src/app/dashboard/` | Enterprise dashboard (`/dashboard`), for organisation members |
+| `src/app/admin/` | YES Hub admin (`/admin`), for accounts with the `admin` role |
+| `src/app/(app)/` | Account settings, with the app header |
+| `src/components/portal/` | Shared portal shell, sidebar and access guard |
+| `src/components/sme-portal/`, `enterprise/`, `admin/` | Each portal's navigation and screens |
 | `src/lib/sme/` | SME domain logic shared by the UI: profile readiness, document status |
 | `src/components/auth/**`, `src/components/ui/**` | Better Auth UI and shadcn/ui components (owned code, from registries) |
 

@@ -38,7 +38,8 @@ export function Providers({ children }: { children: ReactNode }) {
         <QueryClientProvider client={queryClient}>
           <AuthProvider
             authClient={authClient}
-            redirectTo="/dashboard"
+            // After sign-in or sign-up, /start sends each account to its portal
+            redirectTo="/start"
             // Must match convex/auth.ts: sign-up goes straight in instead of to "check your email"
             emailAndPassword={{ requireEmailVerification: false }}
             navigate={({ to, replace }) =>

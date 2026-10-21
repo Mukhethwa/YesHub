@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { EnterpriseShell } from "@/components/enterprise/enterprise-shell";
 
 export const metadata: Metadata = {
   title: "Dashboard · YES Hub",
 };
 
-export default function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
-  return <DashboardShell>{children}</DashboardShell>;
+export default function EnterpriseLayout({ children }: LayoutProps<"/dashboard">) {
+  return <EnterpriseShell>{children}</EnterpriseShell>;
 }

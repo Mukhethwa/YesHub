@@ -1,8 +1,6 @@
-"use client";
+import { ENTERPRISE_NAV } from "@/components/enterprise/nav";
+import { ComingSoon } from "@/components/portal/coming-soon";
 
-import { RequireSme } from "@/components/dashboard/require-sme";
-import { SettingsSection } from "@/components/dashboard/settings-section";
-
-export default function SettingsPage() {
-  return <RequireSme>{(sme) => <SettingsSection key={sme._id} sme={sme} />}</RequireSme>;
+export default function Page() {
+  return <ComingSoon title={ENTERPRISE_NAV.settings.label} icon={ENTERPRISE_NAV.settings.icon} />;
 }

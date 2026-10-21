@@ -1,5 +1,6 @@
-import { ComingSoon } from "@/components/dashboard/coming-soon";
+import { ENTERPRISE_NAV } from "@/components/enterprise/nav";
+import { ComingSoon } from "@/components/portal/coming-soon";
 
 export default function Page() {
-  return <ComingSoon href="/dashboard/opportunities" />;
+  return <ComingSoon title={ENTERPRISE_NAV.opportunities.label} icon={ENTERPRISE_NAV.opportunities.icon} />;
 }

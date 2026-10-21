@@ -3,6 +3,7 @@ import { DOC_MAX_MB, DOC_MIME_TYPES } from "../src/lib/sme/constants";
 import { normaliseDetails, validateProfile } from "../src/lib/sme/validation";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
 import { type DocKey, type DocRef, type SmeDetails, smeDetails, smeDetailsValidator, smeSettings } from "./schema";
 
@@ -95,6 +96,10 @@ export const register = mutation({
   handler: async (ctx, args) => {
     const user = await authComponent.getAuthUser(ctx);
     if (await getOwnSme(ctx)) throw new ConvexError("You’ve already registered a business.");
+    // An account is either an SME or an enterprise member, never both
+    if ((await organizationsFor(ctx, user._id)).length > 0) {
+      throw new ConvexError("This account belongs to an enterprise. Use a separate account to register an SME.");
+    }
 
     // The contact email is the account's sign-in email
     const details = normaliseDetails({ ...args.details, email: user.email });
