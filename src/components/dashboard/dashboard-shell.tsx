@@ -5,6 +5,7 @@ import { SearchIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { UserButton } from "@/components/auth/user/user-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
@@ -30,7 +31,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <InputGroupInput type="search" placeholder="Search opportunities" aria-label="Search opportunities" />
           </InputGroup>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <ThemeToggle />
             <UserButton size="icon" align="end" />
           </div>
         </header>

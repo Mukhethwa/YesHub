@@ -86,6 +86,10 @@ export const smeDetails = {
   phone: v.string(),
 };
 
+export const smeDetailsValidator = v.object(smeDetails);
+export type SmeDetails = Infer<typeof smeDetailsValidator>;
+export type SmeSettings = Infer<typeof smeSettings>;
+
 export default defineSchema({
   smes: defineTable({
     ...smeDetails,

@@ -1,5 +1,8 @@
-import { ComingSoon } from "@/components/dashboard/coming-soon";
+"use client";
 
-export default function Page() {
-  return <ComingSoon href="/dashboard/documents" />;
+import { DocumentsSection } from "@/components/dashboard/documents-section";
+import { RequireSme } from "@/components/dashboard/require-sme";
+
+export default function DocumentsPage() {
+  return <RequireSme>{(sme) => <DocumentsSection sme={sme} />}</RequireSme>;
 }

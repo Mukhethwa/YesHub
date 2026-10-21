@@ -2,12 +2,14 @@
 
 import { useMutation } from "convex/react";
 import { Building2Icon } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { errorMessage } from "@/lib/errors";
 import { api } from "../../../convex/_generated/api";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -25,8 +27,9 @@ export function SetupProfile() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-3">
-        {/* Registration hasn't been migrated from YesHub yet */}
-        <Button disabled>Register your business (coming soon)</Button>
+        <Button asChild>
+          <Link href="/onboarding">Register your business</Link>
+        </Button>
         {isDev && <SeedDemoButton />}
       </CardContent>
     </Card>
@@ -46,7 +49,7 @@ function SeedDemoButton() {
         try {
           await seed();
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Couldn’t create the sample profile.");
+          toast.error(errorMessage(error, "Couldn’t create the sample profile."));
         } finally {
           setPending(false);
         }

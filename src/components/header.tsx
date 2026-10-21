@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { UserButton } from "@/components/auth/user/user-button";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Header() {
   return (
@@ -11,7 +12,10 @@ export function Header() {
           <Logo />
         </Link>
 
-        <UserButton size="icon" />
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <UserButton size="icon" />
+        </div>
       </div>
     </header>
   );

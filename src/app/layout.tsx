@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Google_Sans_Flex } from "next/font/google";
 import "./globals.css";
 
 import { Providers } from "@/components/providers";
 
-const geistSans = Geist({
+// The theme in globals.css names Google Sans Flex; next/font self-hosts it and exposes it as --font-sans
+const googleSansFlex = Google_Sans_Flex({
   variable: "--font-sans",
   subsets: ["latin"],
 });
@@ -24,7 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full font-sans antialiased`}
+      className={`${googleSansFlex.variable} ${geistMono.variable} h-full font-sans antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>

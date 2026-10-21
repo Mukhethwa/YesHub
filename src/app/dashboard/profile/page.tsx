@@ -1,5 +1,8 @@
-import { ComingSoon } from "@/components/dashboard/coming-soon";
+"use client";
 
-export default function Page() {
-  return <ComingSoon href="/dashboard/profile" />;
+import { ProfileSection } from "@/components/dashboard/profile-section";
+import { RequireSme } from "@/components/dashboard/require-sme";
+
+export default function ProfilePage() {
+  return <RequireSme>{(sme) => <ProfileSection sme={sme} />}</RequireSme>;
 }
