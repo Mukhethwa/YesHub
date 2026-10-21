@@ -12,6 +12,12 @@ import type { DocKey, Evaluation } from "../schema";
 
 type Check = Evaluation["checks"][number];
 
+/** What the check reads from an opportunity, so the SME portal can preview fit in the browser too. */
+export type EvaluableOpportunity = Pick<
+  Doc<"opportunities">,
+  "provinces" | "minBbbeeLevel" | "requiredDocuments" | "industry" | "services"
+>;
+
 /** "Level 3" → 3. Null for "Non-compliant" or anything unrecognised. */
 export function bbbeeLevelNumber(level: string) {
   const match = /^Level ([1-8])$/.exec(level.trim());
@@ -26,7 +32,7 @@ function listJoin(items: string[]) {
   return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
 }
 
-function provinceCheck(opportunity: Doc<"opportunities">, sme: Doc<"smes">): Check {
+function provinceCheck(opportunity: EvaluableOpportunity, sme: Doc<"smes">): Check {
   const base = { id: "province", label: "Delivers where the work is", required: true };
   if (opportunity.provinces.length === 0) return { ...base, passed: true, detail: "Nationwide opportunity" };
   if (sme.nationwide) return { ...base, passed: true, detail: "Delivers nationwide" };
@@ -36,7 +42,7 @@ function provinceCheck(opportunity: Doc<"opportunities">, sme: Doc<"smes">): Che
     : { ...base, passed: false, detail: `Doesn’t deliver in ${listJoin(opportunity.provinces)}` };
 }
 
-function bbbeeCheck(opportunity: Doc<"opportunities">, sme: Doc<"smes">): Check | null {
+function bbbeeCheck(opportunity: EvaluableOpportunity, sme: Doc<"smes">): Check | null {
   if (opportunity.minBbbeeLevel === undefined) return null;
   const base = { id: "bbbee", label: `B-BBEE Level ${opportunity.minBbbeeLevel} or better`, required: true };
   const level = bbbeeLevelNumber(sme.bbbeeLevel);
@@ -46,7 +52,7 @@ function bbbeeCheck(opportunity: Doc<"opportunities">, sme: Doc<"smes">): Check 
     : { ...base, passed: false, detail: `${sme.bbbeeLevel} is below the Level ${opportunity.minBbbeeLevel} minimum` };
 }
 
-function documentsCheck(opportunity: Doc<"opportunities">, sme: Doc<"smes">): Check | null {
+function documentsCheck(opportunity: EvaluableOpportunity, sme: Doc<"smes">): Check | null {
   if (opportunity.requiredDocuments.length === 0) return null;
   const base = { id: "documents", label: "Required documents valid", required: true };
   const problems = opportunity.requiredDocuments.flatMap((key) => {
@@ -60,7 +66,7 @@ function documentsCheck(opportunity: Doc<"opportunities">, sme: Doc<"smes">): Ch
     : { ...base, passed: false, detail: problems.join("; ").replace(/^./, (c) => c.toUpperCase()) };
 }
 
-function sectorCheck(opportunity: Doc<"opportunities">, sme: Doc<"smes">, serviceMatches: string[]): Check {
+function sectorCheck(opportunity: EvaluableOpportunity, sme: Doc<"smes">, serviceMatches: string[]): Check {
   const base = { id: "sector", label: "Works in this field", required: true };
   if (!opportunity.industry) return { ...base, passed: true, detail: "Open to all industries" };
   if (sme.industry === opportunity.industry) return { ...base, passed: true, detail: sme.industry };
@@ -69,7 +75,7 @@ function sectorCheck(opportunity: Doc<"opportunities">, sme: Doc<"smes">, servic
 }
 
 /** Evaluates one SME against one opportunity. Call from mutations only: expiry checks read today's date. */
-export function evaluateApplication(opportunity: Doc<"opportunities">, sme: Doc<"smes">): Evaluation {
+export function evaluateApplication(opportunity: EvaluableOpportunity, sme: Doc<"smes">): Evaluation {
   const wanted = lower(opportunity.services);
   const serviceMatches = sme.services.filter((s) => wanted.includes(s.trim().toLowerCase()));
 

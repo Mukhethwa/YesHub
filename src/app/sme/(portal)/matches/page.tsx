@@ -1,6 +1,8 @@
-import { ComingSoon } from "@/components/portal/coming-soon";
-import { SME_NAV } from "@/components/sme-portal/nav";
+"use client";
 
-export default function Page() {
-  return <ComingSoon title={SME_NAV.matches.label} icon={SME_NAV.matches.icon} />;
+import { MatchesView } from "@/components/sme-portal/matches-view";
+import { RequireSme } from "@/components/sme-portal/require-sme";
+
+export default function MatchesPage() {
+  return <RequireSme>{(sme) => <MatchesView sme={sme} />}</RequireSme>;
 }

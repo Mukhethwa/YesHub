@@ -241,7 +241,9 @@ export default defineSchema({
     /** The department (Better Auth team) that owns it, or absent when it's unassigned. */
     teamId: v.optional(v.string()),
     isDemo: v.optional(v.boolean()),
-  }).index("by_organization", ["organizationId"]),
+  })
+    .index("by_organization", ["organizationId"])
+    .index("by_status", ["status"]),
 
   /** Settings an enterprise's owners and admins choose for the whole organisation. One row per organisation. */
   organizationSettings: defineTable({

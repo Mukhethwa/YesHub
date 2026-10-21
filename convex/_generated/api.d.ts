@@ -22,6 +22,7 @@ import type * as lib_samplePdf from "../lib/samplePdf.js";
 import type * as lib_staff from "../lib/staff.js";
 import type * as platform from "../platform.js";
 import type * as seed from "../seed.js";
+import type * as smeOpportunities from "../smeOpportunities.js";
 import type * as smes from "../smes.js";
 
 import type {
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   "lib/staff": typeof lib_staff;
   platform: typeof platform;
   seed: typeof seed;
+  smeOpportunities: typeof smeOpportunities;
   smes: typeof smes;
 }>;
 

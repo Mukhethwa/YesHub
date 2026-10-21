@@ -12,7 +12,10 @@ import { DOCUMENTS, docStatus } from "@/lib/sme/documents";
 import { getReadiness } from "@/lib/sme/readiness";
 import type { SmeProfile } from "@/lib/sme/types";
 import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 import { DocumentProgress } from "./document-progress";
+import { MatchCard } from "./matches-view";
+import { useMatches } from "./opportunities-shared";
 import { ScoreRing } from "./score-ring";
 
 export function Overview({ sme }: { sme: SmeProfile }) {
@@ -111,24 +114,48 @@ export function Overview({ sme }: { sme: SmeProfile }) {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Latest matches</CardTitle>
-          <CardAction>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/sme/opportunities">Browse all</Link>
-            </Button>
-          </CardAction>
-        </CardHeader>
+      <LatestMatches sme={sme} />
+    </div>
+  );
+}
+
+/** The best open matches the SME hasn't applied to yet. */
+function LatestMatches({ sme }: { sme: SmeProfile }) {
+  const matches = useMatches(sme);
+  const top = (matches ?? []).filter((m) => !m.application && m.reach !== "outside").slice(0, 3);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Latest matches</CardTitle>
+        <CardAction>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/sme/matches">See all matches</Link>
+          </Button>
+        </CardAction>
+      </CardHeader>
+      {matches === undefined ? (
+        <CardContent className="py-6">
+          <Spinner className="mx-auto" />
+        </CardContent>
+      ) : top.length === 0 ? (
         <CardContent className="px-4 py-10 text-center">
-          <p className="font-medium">No matches yet</p>
+          <p className="font-medium">No new matches right now</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
             When a corporate or funder posts a tender, RFQ or grant that fits {sme.companyName}, it’ll appear here and
             we’ll alert you at {sme.email}.
           </p>
         </CardContent>
-      </Card>
-    </div>
+      ) : (
+        <CardContent>
+          <ul className="space-y-3">
+            {top.map((m) => (
+              <MatchCard key={m.id} match={m} sme={sme} />
+            ))}
+          </ul>
+        </CardContent>
+      )}
+    </Card>
   );
 }
 
