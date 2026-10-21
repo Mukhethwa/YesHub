@@ -1,6 +1,12 @@
-import { ENTERPRISE_NAV } from "@/components/enterprise/nav";
-import { ComingSoon } from "@/components/portal/coming-soon";
+import { Suspense } from "react";
+
+import { SuppliersView } from "@/components/enterprise/suppliers-view";
 
 export default function Page() {
-  return <ComingSoon title={ENTERPRISE_NAV.suppliers.label} icon={ENTERPRISE_NAV.suppliers.icon} />;
+  // SuppliersView reads ?id= to open one supplier, which needs a Suspense boundary
+  return (
+    <Suspense>
+      <SuppliersView />
+    </Suspense>
+  );
 }

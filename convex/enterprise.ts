@@ -1,10 +1,12 @@
 import { ConvexError, v } from "convex/values";
 
+import { getSettings } from "../src/lib/sme/settings";
 import type { Doc } from "./_generated/dataModel";
 import { internalMutation, mutation, type QueryCtx, query } from "./_generated/server";
 import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
 import { evaluateApplication } from "./lib/evaluation";
+import type { DocKey, DocRef } from "./schema";
 import {
   APPLICATION_LIMIT,
   deleteOpportunitiesForOrganization,
@@ -101,6 +103,8 @@ export const opportunity = query({
         id: application._id,
         status: application.status,
         submittedAt: application.submittedAt,
+        statusChangedAt: application.statusChangedAt ?? null,
+        statusChangedBy: application.statusChangedBy ?? null,
         evaluation: application.evaluation,
         sme: {
           id: sme._id,
@@ -128,6 +132,237 @@ export const opportunity = query({
       minBbbeeLevel: opportunity.minBbbeeLevel ?? null,
       requiredDocuments: opportunity.requiredDocuments,
       applicants,
+    };
+  },
+});
+
+/* ------------------------------------------------------------------------------------------------------ */
+/* Shortlisting                                                                                           */
+/* ------------------------------------------------------------------------------------------------------ */
+
+/** Shortlists, declines or resets an applicant to one of the organisation's opportunities. */
+export const setApplicationStatus = mutation({
+  args: {
+    applicationId: v.id("applications"),
+    status: v.union(v.literal("submitted"), v.literal("shortlisted"), v.literal("declined")),
+  },
+  handler: async (ctx, args) => {
+    const enterprise = await getEnterprise(ctx);
+    if (!enterprise) throw new ConvexError("You need an organisation to review applicants.");
+    const application = await ctx.db.get("applications", args.applicationId);
+    if (!application || application.organizationId !== enterprise.organization.id) {
+      throw new ConvexError("That application isn’t available.");
+    }
+    if (application.status === "awarded") throw new ConvexError("This application has already been awarded.");
+
+    await ctx.db.patch("applications", application._id, {
+      status: args.status,
+      statusChangedAt: Date.now(),
+      statusChangedBy: enterprise.user.name,
+    });
+    return null;
+  },
+});
+
+/** Every SME the organisation has shortlisted, across all its opportunities, most recent first. */
+export const shortlist = query({
+  args: {},
+  handler: async (ctx) => {
+    const enterprise = await getEnterprise(ctx);
+    if (!enterprise) return null;
+
+    const applications = await ctx.db
+      .query("applications")
+      .withIndex("by_organization_and_status", (q) =>
+        q.eq("organizationId", enterprise.organization.id).eq("status", "shortlisted"),
+      )
+      .take(APPLICATION_LIMIT);
+
+    const rows = [];
+    for (const application of applications) {
+      const [opportunity, sme] = await Promise.all([
+        ctx.db.get("opportunities", application.opportunityId),
+        ctx.db.get("smes", application.smeId),
+      ]);
+      if (!opportunity || !sme) continue;
+      rows.push({
+        applicationId: application._id,
+        shortlistedAt: application.statusChangedAt ?? application.submittedAt,
+        shortlistedBy: application.statusChangedBy ?? null,
+        score: application.evaluation.score,
+        qualifies: application.evaluation.qualifies,
+        opportunity: {
+          id: opportunity._id,
+          title: opportunity.title,
+          reference: opportunity.reference,
+          kind: opportunity.kind,
+          closesAt: opportunity.closesAt,
+          status: opportunity.status,
+        },
+        // Shortlisting is when SMEs agree to share contact details
+        sme: { ...supplierSummary(sme), ...contactOf(sme) },
+      });
+    }
+    rows.sort((a, b) => b.shortlistedAt - a.shortlistedAt);
+    return rows;
+  },
+});
+
+/* ------------------------------------------------------------------------------------------------------ */
+/* Suppliers                                                                                              */
+/* ------------------------------------------------------------------------------------------------------ */
+
+/** Most SME profiles the supplier directory reads. */
+const SUPPLIER_LIMIT = 300;
+
+function supplierSummary(sme: Doc<"smes">) {
+  return {
+    id: sme._id,
+    companyName: sme.companyName,
+    industry: sme.industry,
+    city: sme.city,
+    hqProvince: sme.hqProvince,
+    nationwide: sme.nationwide,
+    provinces: sme.provinces,
+    services: sme.services,
+    bbbeeLevel: sme.bbbeeLevel,
+    verified: !!sme.verifiedAt,
+  };
+}
+
+function contactOf(sme: Doc<"smes">) {
+  return { contactName: sme.contactName, contactRole: sme.contactRole, email: sme.email, phone: sme.phone };
+}
+
+/** What the document check needs: which documents are on file and the two expiry dates. */
+function documentState(sme: Doc<"smes">) {
+  return {
+    documentKeys: Object.entries(sme.documents)
+      .filter(([, doc]) => !!doc)
+      .map(([key]) => key),
+    bbbeeExpiry: sme.bbbeeExpiry,
+    taxExpiry: sme.taxExpiry,
+  };
+}
+
+/** How many times each SME has applied to the organisation's opportunities. */
+async function applicationCountsFor(ctx: QueryCtx, organizationId: string) {
+  const counts = new Map<string, number>();
+  const applications = await ctx.db
+    .query("applications")
+    .withIndex("by_organization_and_status", (q) => q.eq("organizationId", organizationId))
+    .take(2000);
+  for (const a of applications) counts.set(a.smeId, (counts.get(a.smeId) ?? 0) + 1);
+  return counts;
+}
+
+/**
+ * The supplier directory: SMEs that let corporates see their profile, and any that applied to this
+ * organisation. Suspended SMEs are left out unless they applied.
+ */
+export const suppliers = query({
+  args: {},
+  handler: async (ctx) => {
+    const enterprise = await getEnterprise(ctx);
+    if (!enterprise) return null;
+
+    const [smes, applied] = await Promise.all([
+      ctx.db.query("smes").order("desc").take(SUPPLIER_LIMIT),
+      applicationCountsFor(ctx, enterprise.organization.id),
+    ]);
+    return smes
+      .filter((sme) => applied.has(sme._id) || (getSettings(sme).profileVisible && !sme.suspendedAt))
+      .map((sme) => ({
+        ...supplierSummary(sme),
+        ...documentState(sme),
+        applications: applied.get(sme._id) ?? 0,
+      }));
+  },
+});
+
+/**
+ * One supplier's full profile for the organisation. Documents can be opened only when the SME applied to
+ * one of the organisation's opportunities (that's when it submitted them); contact details follow the
+ * SME's own setting, which by default shares them once the organisation shortlists it.
+ */
+export const supplier = query({
+  args: { smeId: v.string() },
+  handler: async (ctx, args) => {
+    const enterprise = await getEnterprise(ctx);
+    if (!enterprise) return null;
+
+    const id = ctx.db.normalizeId("smes", args.smeId);
+    const sme = id ? await ctx.db.get("smes", id) : null;
+    if (!sme) return null;
+
+    const ours = (
+      await ctx.db
+        .query("applications")
+        .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", sme._id))
+        .take(APPLICATION_LIMIT)
+    ).filter((a) => a.organizationId === enterprise.organization.id);
+
+    const settings = getSettings(sme);
+    const applied = ours.length > 0;
+    // A hidden or suspended profile looks the same as one that doesn't exist, unless it applied to you
+    if (!applied && (!settings.profileVisible || sme.suspendedAt)) return null;
+
+    const shortlisted = ours.some((a) => a.status === "shortlisted" || a.status === "awarded");
+    const contactVisible = !settings.shareContactAfterShortlist || shortlisted;
+
+    const history = [];
+    for (const application of ours) {
+      const opportunity = await ctx.db.get("opportunities", application.opportunityId);
+      if (!opportunity) continue;
+      history.push({
+        applicationId: application._id,
+        opportunityId: opportunity._id,
+        title: opportunity.title,
+        reference: opportunity.reference,
+        kind: opportunity.kind,
+        status: application.status,
+        submittedAt: application.submittedAt,
+        qualifies: application.evaluation.qualifies,
+        score: application.evaluation.score,
+        summary: application.evaluation.summary,
+      });
+    }
+    history.sort((a, b) => b.submittedAt - a.submittedAt);
+
+    const documents = [];
+    for (const [key, doc] of Object.entries(sme.documents) as [DocKey, DocRef | undefined][]) {
+      if (!doc) continue;
+      documents.push({
+        key,
+        name: doc.name,
+        size: doc.size,
+        uploadedAt: doc.uploadedAt,
+        // Signed links only for SMEs that submitted their documents to this organisation
+        url: applied && doc.storageId ? await ctx.storage.getUrl(doc.storageId) : null,
+      });
+    }
+
+    return {
+      ...supplierSummary(sme),
+      registrationNumber: sme.registrationNumber,
+      csdNumber: sme.csdNumber,
+      yearsTrading: sme.yearsTrading,
+      employees: sme.employees,
+      address: sme.address,
+      serviceAreas: sme.serviceAreas,
+      capabilities: sme.capabilities,
+      accreditations: sme.accreditations,
+      website: sme.website,
+      bbbeeExpiry: sme.bbbeeExpiry,
+      taxExpiry: sme.taxExpiry,
+      memberSince: sme._creationTime,
+      verifiedAt: sme.verifiedAt ?? null,
+      suspended: !!sme.suspendedAt,
+      organizationName: enterprise.organization.name,
+      canViewDocuments: applied,
+      documents,
+      contact: contactVisible ? contactOf(sme) : null,
+      history,
     };
   },
 });

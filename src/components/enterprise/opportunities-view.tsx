@@ -1,13 +1,13 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { AdminPageHeader, Pill } from "@/components/admin/page-header";
-import { FilterTabs, TablePagination, usePagination } from "@/components/admin/shared";
+import { FilterTabs, runMutation, TablePagination, usePagination } from "@/components/admin/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -226,7 +226,11 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
               {detail.applicants.length === 0 ? "No SMEs have applied yet." : "No applicants in this group."}
             </p>
           ) : (
-            <ApplicantTable applicants={visible} ranks={new Map(detail.applicants.map((a, i) => [a.id, i + 1]))} />
+            <ApplicantTable
+              opportunityId={detail.id}
+              applicants={visible}
+              ranks={new Map(detail.applicants.map((a, i) => [a.id, i + 1]))}
+            />
           )}
         </CardContent>
       </Card>
@@ -234,7 +238,41 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
   );
 }
 
-function ApplicantTable({ applicants, ranks }: { applicants: Applicant[]; ranks: Map<string, number> }) {
+function ShortlistButton({ applicant }: { applicant: Applicant }) {
+  const setStatus = useMutation(api.enterprise.setApplicationStatus);
+  const [pending, setPending] = useState(false);
+  const shortlisted = applicant.status === "shortlisted";
+  if (applicant.status === "awarded") return null;
+
+  return (
+    <Button
+      variant={shortlisted ? "outline" : "default"}
+      size="sm"
+      disabled={pending}
+      onClick={async () => {
+        setPending(true);
+        await runMutation(
+          shortlisted ? `${applicant.sme.companyName} removed from the shortlist` : `${applicant.sme.companyName} shortlisted`,
+          () => setStatus({ applicationId: applicant.id, status: shortlisted ? "submitted" : "shortlisted" }),
+        );
+        setPending(false);
+      }}
+    >
+      {pending && <Spinner />}
+      {shortlisted ? "Remove from shortlist" : "Shortlist"}
+    </Button>
+  );
+}
+
+function ApplicantTable({
+  opportunityId,
+  applicants,
+  ranks,
+}: {
+  opportunityId: string;
+  applicants: Applicant[];
+  ranks: Map<string, number>;
+}) {
   const [open, setOpen] = useState<string | null>(null);
 
   return (
@@ -247,7 +285,7 @@ function ApplicantTable({ applicants, ranks }: { applicants: Applicant[]; ranks:
           <TableHead>Score</TableHead>
           <TableHead>Result</TableHead>
           <TableHead className="pr-6 text-right">
-            <span className="sr-only">Details</span>
+            <span className="sr-only">Actions</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -278,15 +316,21 @@ function ApplicantTable({ applicants, ranks }: { applicants: Applicant[]; ranks:
                 <TableCell>
                   {a.evaluation.qualifies ? <Pill tone="success">Qualifies</Pill> : <Pill tone="danger">Doesn’t qualify</Pill>}
                 </TableCell>
-                <TableCell className="pr-6 text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-expanded={expanded}
-                    onClick={() => setOpen(expanded ? null : a.id)}
-                  >
-                    {expanded ? "Hide" : "Why"}
-                  </Button>
+                <TableCell className="pr-6">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-expanded={expanded}
+                      onClick={() => setOpen(expanded ? null : a.id)}
+                    >
+                      {expanded ? "Hide" : "Why"}
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/dashboard/suppliers?id=${a.sme.id}&from=${opportunityId}`}>View business</Link>
+                    </Button>
+                    <ShortlistButton applicant={a} />
+                  </div>
                 </TableCell>
               </TableRow>
               {expanded && (
@@ -340,6 +384,9 @@ function ApplicantChecks({ applicant }: { applicant: Applicant }) {
       </div>
       <p className="text-xs text-muted-foreground">
         Applied {formatDate(applicant.submittedAt)} · checked {formatDate(evaluation.evaluatedAt)}
+        {applicant.status === "shortlisted" &&
+          applicant.statusChangedAt &&
+          ` · shortlisted ${applicant.statusChangedBy ? `by ${applicant.statusChangedBy} ` : ""}on ${formatDate(applicant.statusChangedAt)}`}
       </p>
     </div>
   );

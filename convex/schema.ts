@@ -185,11 +185,14 @@ export default defineSchema({
     smeId: v.id("smes"),
     status: applicationStatus,
     submittedAt: v.number(),
+    /** Who in the organisation last shortlisted or declined it, and when. */
+    statusChangedAt: v.optional(v.number()),
+    statusChangedBy: v.optional(v.string()),
     evaluation,
   })
     .index("by_opportunity", ["opportunityId"])
     .index("by_sme_and_opportunity", ["smeId", "opportunityId"])
-    .index("by_organization", ["organizationId"]),
+    .index("by_organization_and_status", ["organizationId", "status"]),
 
   /** Every action YES Hub staff take in the admin area, newest first by _creationTime. */
   auditLog: defineTable({
