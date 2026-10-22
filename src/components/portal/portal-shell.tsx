@@ -2,7 +2,7 @@
 
 import { SearchIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useRequireSession } from "@/hooks/use-require-session";
 import { cn } from "@/lib/utils";
+import { BreadcrumbProvider, Breadcrumbs } from "./breadcrumbs";
 import { PortalGuard } from "./portal-guard";
 import { activeNavItem, PortalSidebar } from "./portal-sidebar";
 import type { PortalArea, PortalNavItem } from "./types";
@@ -38,7 +39,7 @@ export function PortalShell({
   // Redirects to sign-in when there's no session (and if it ends while the page is open)
   useRequireSession();
   const pathname = usePathname();
-  const title = activeNavItem(nav, pathname)?.label ?? label;
+  const page = activeNavItem(nav, pathname);
 
   // Prerendered open; the browser then applies the saved state
   const saved = useSyncExternalStore(subscribe, sidebarOpenFromCookie, () => true);
@@ -54,35 +55,41 @@ export function PortalShell({
     <SidebarProvider
       open={chosen ?? saved}
       onOpenChange={setChosen}
+      // The nav labels are short, so the sidebar needn't be the default 16rem
+      style={{ "--sidebar-width": "13rem" } as CSSProperties}
       className={cn(!animate && "[&_*]:transition-none!")}
     >
       <PortalSidebar label={label} homeHref={homeHref} nav={nav} />
 
       {/* min-w-0 lets wide content (tables) scroll inside the page instead of widening it */}
       <SidebarInset className="min-w-0">
-        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-1 data-vertical:h-5 data-vertical:self-center" />
-          <span className="truncate text-sm font-medium">{title}</span>
+        <BreadcrumbProvider>
+          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-1 data-vertical:h-5 data-vertical:self-center" />
+            <Breadcrumbs
+              crumbs={[{ label, href: homeHref }, ...(page ? [{ label: page.label, href: page.href }] : [])]}
+            />
 
-          {searchPlaceholder && (
-            <InputGroup className="ml-4 hidden max-w-md md:flex">
-              <InputGroupAddon>
-                <SearchIcon />
-              </InputGroupAddon>
-              <InputGroupInput type="search" placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
-            </InputGroup>
-          )}
+            {searchPlaceholder && (
+              <InputGroup className="ml-4 hidden max-w-md md:flex">
+                <InputGroupAddon>
+                  <SearchIcon />
+                </InputGroupAddon>
+                <InputGroupInput type="search" placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
+              </InputGroup>
+            )}
 
-          <div className="ml-auto flex items-center gap-1">
-            <ThemeToggle />
+            <div className="ml-auto flex items-center gap-1">
+              <ThemeToggle />
+            </div>
+          </header>
+
+          {/* SidebarInset is the <main> element */}
+          <div className="mx-auto w-full max-w-7xl flex-1 p-4 md:p-6 lg:p-8">
+            <PortalGuard area={area}>{children}</PortalGuard>
           </div>
-        </header>
-
-        {/* SidebarInset is the <main> element */}
-        <div className="mx-auto w-full max-w-7xl flex-1 p-4 md:p-6 lg:p-8">
-          <PortalGuard area={area}>{children}</PortalGuard>
-        </div>
+        </BreadcrumbProvider>
       </SidebarInset>
     </SidebarProvider>
   );

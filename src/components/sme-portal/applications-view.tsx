@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { FilterTabs, formatDateTime } from "@/components/admin/shared";
+import { useBreadcrumb } from "@/components/portal/breadcrumbs";
 import { closingLabel, formatRand, KIND_LABELS, PhasePill, phaseOf } from "@/components/enterprise/tenders";
 import { CriteriaList, DecisionPill, ReviewStatus } from "@/components/review/review-parts";
 import { Button } from "@/components/ui/button";
@@ -241,6 +242,7 @@ const docLabel = (key: string) => DOCUMENTS.find((d) => d.key === key)?.label ??
 
 function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme: SmeProfile }) {
   const o = useQuery(api.smeOpportunities.opportunity, { opportunityId });
+  useBreadcrumb(o?.title);
   // A live check for SMEs that haven't applied, so they see their fit before applying
   const preview = useMemo(
     () => (o && !o.application ? evaluateApplication(o as EvaluableOpportunity, sme) : null),

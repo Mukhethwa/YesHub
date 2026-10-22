@@ -8,6 +8,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AdminPageHeader, Pill } from "@/components/admin/page-header";
+import { useBreadcrumb } from "@/components/portal/breadcrumbs";
 import { FilterTabs, formatDateTime, runMutation, TablePagination, usePagination } from "@/components/admin/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -188,6 +189,7 @@ function Stat({ label, value, note }: { label: string; value: number; note?: str
 
 function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
   const detail = useQuery(api.enterprise.opportunity, { opportunityId });
+  useBreadcrumb(detail?.title);
   // Null until the user picks a filter, so it starts from the organisation's chosen default
   const [chosenFilter, setFilter] = useState<ApplicantFilter | null>(null);
 

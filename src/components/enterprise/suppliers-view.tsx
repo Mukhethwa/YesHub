@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { AdminPageHeader, Pill } from "@/components/admin/page-header";
+import { useBreadcrumb } from "@/components/portal/breadcrumbs";
 import { FilterTabs, TablePagination, usePagination } from "@/components/admin/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -203,6 +204,7 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
 
 function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpportunity: string | null }) {
   const profile = useQuery(api.enterprise.supplier, { smeId });
+  useBreadcrumb(profile?.companyName);
   const back = fromOpportunity
     ? { href: `/dashboard/opportunities?id=${fromOpportunity}`, label: "Back to the opportunity" }
     : { href: "/dashboard/suppliers", label: "All suppliers" };

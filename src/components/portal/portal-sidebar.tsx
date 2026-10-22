@@ -38,14 +38,15 @@ export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHre
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border px-4 group-data-[collapsible=icon]:px-2">
+      <SidebarHeader className="h-14 justify-center overflow-hidden border-b border-sidebar-border px-4 group-data-[collapsible=icon]:px-1">
         <Link
           href={homeHref}
           onClick={() => setOpenMobile(false)}
           aria-label={`${label} home`}
           className="flex items-center group-data-[collapsible=icon]:justify-center"
         >
-          {collapsed ? <LogoMark /> : <Logo />}
+          {/* The mark is wide and short, so size it by width to fit the 3rem rail */}
+          {collapsed ? <LogoMark className="h-auto w-9" /> : <Logo />}
         </Link>
       </SidebarHeader>
 
