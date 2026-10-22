@@ -61,7 +61,9 @@ export function AuditLog() {
       (e) =>
         (filter === "all" || e.targetType === filter) &&
         (!term ||
-          [e.actorName, e.targetLabel ?? "", e.details ?? "", e.action].some((field) => field.toLowerCase().includes(term))),
+          [e.actorName, e.targetLabel ?? "", e.details ?? "", e.action].some((field) =>
+            field.toLowerCase().includes(term),
+          )),
     );
   }, [entries, search, filter]);
 
@@ -82,7 +84,10 @@ export function AuditLog() {
 
   return (
     <div className="space-y-5">
-      <AdminPageHeader title="Audit log" description="Every action YES Hub staff take in the admin area, newest first." />
+      <AdminPageHeader
+        title="Audit log"
+        description="Every action YES Hub staff take in the admin area, newest first."
+      />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterTabs

@@ -64,8 +64,8 @@ export function JevDecisionCard({
       <CardHeader>
         <CardTitle>Jev’s decision</CardTitle>
         <CardDescription>
-          Jev checks every application’s documents, calculates price and B-BBEE points with the preferential
-          procurement formulas, and decides who to approve. Every step is on the record.
+          Jev checks every application’s documents, calculates price and B-BBEE points with the preferential procurement
+          formulas, and decides who to approve. Every step is on the record.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -137,9 +137,9 @@ export function JevDecisionCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Ask Jev to decide?</AlertDialogTitle>
             <AlertDialogDescription>
-              Jev approves up to {slotsValue} of {applicants} applicant{applicants === 1 ? "" : "s"}. Approved applicants
-              are marked awarded and the rest not successful, and they see the outcome with Jev’s reasons. You can change
-              any decision afterwards, with a reason that’s kept on the record.
+              Jev approves up to {slotsValue} of {applicants} applicant{applicants === 1 ? "" : "s"}. Approved
+              applicants are marked awarded and the rest not successful, and they see the outcome with Jev’s reasons.
+              You can change any decision afterwards, with a reason that’s kept on the record.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -213,7 +213,9 @@ export function ApplicantJevReview({
         </div>
       </div>
 
-      {review.decision && <DecisionBox applicationId={applicationId} decision={review.decision} companyName={companyName} />}
+      {review.decision && (
+        <DecisionBox applicationId={applicationId} decision={review.decision} companyName={companyName} />
+      )}
 
       {evaluation.engine === "jev" && (
         <div className="space-y-3">
@@ -349,7 +351,9 @@ function DecisionBox({
               onClick={async (e) => {
                 e.preventDefault();
                 setPending(true);
-                const ok = await runMutation("Decision changed", () => override({ applicationId, outcome: target, reason }));
+                const ok = await runMutation("Decision changed", () =>
+                  override({ applicationId, outcome: target, reason }),
+                );
                 setPending(false);
                 if (ok) {
                   setReason("");

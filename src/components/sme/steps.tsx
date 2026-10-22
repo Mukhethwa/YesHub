@@ -32,7 +32,12 @@ export interface StepProps {
 export function CompanyStep({ form, errors, update }: StepProps) {
   return (
     <div className="grid gap-5 md:grid-cols-2">
-      <FormField label="Registered company name" htmlFor="companyName" error={errors.companyName} className="md:col-span-2">
+      <FormField
+        label="Registered company name"
+        htmlFor="companyName"
+        error={errors.companyName}
+        className="md:col-span-2"
+      >
         <Input
           id="companyName"
           value={form.companyName}
@@ -150,7 +155,12 @@ export function OfferingStep({ form, errors, update }: StepProps) {
 
   return (
     <div className="space-y-7">
-      <FormField label="Services you offer" htmlFor="services" error={errors.services} hint="Press Enter after each service.">
+      <FormField
+        label="Services you offer"
+        htmlFor="services"
+        error={errors.services}
+        hint="Press Enter after each service."
+      >
         <TagInput
           id="services"
           value={form.services}
@@ -167,7 +177,9 @@ export function OfferingStep({ form, errors, update }: StepProps) {
         error={errors.capabilities}
         hint={
           <span className="flex justify-between gap-4">
-            <span>Capacity, equipment, team skills and past clients. Plain language is fine. This is what our AI matches on.</span>
+            <span>
+              Capacity, equipment, team skills and past clients. Plain language is fine. This is what our AI matches on.
+            </span>
             <span className="shrink-0 tabular-nums">{length}</span>
           </span>
         }
@@ -379,7 +391,11 @@ export function DocumentsStep({ form, errors, update }: StepProps) {
           />
         </FormField>
         <FormField label="Company profile" htmlFor="companyProfile" optional>
-          <FileDrop id="companyProfile" file={form.companyProfile} onChange={(companyProfile) => update({ companyProfile })} />
+          <FileDrop
+            id="companyProfile"
+            file={form.companyProfile}
+            onChange={(companyProfile) => update({ companyProfile })}
+          />
         </FormField>
       </DocSection>
     </div>
@@ -429,7 +445,12 @@ export function ContactStep({ form, errors, update }: StepProps) {
         <Input id="email" type="email" value={form.email} disabled readOnly />
       </FormField>
 
-      <FormField label="Mobile number" htmlFor="phone" error={errors.phone} hint="For SMS & WhatsApp opportunity alerts.">
+      <FormField
+        label="Mobile number"
+        htmlFor="phone"
+        error={errors.phone}
+        hint="For SMS & WhatsApp opportunity alerts."
+      >
         <Input
           id="phone"
           type="tel"

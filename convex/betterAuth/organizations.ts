@@ -66,8 +66,14 @@ export const list = query({
     for (const org of organizations) {
       // Bounded: organisations are companies' teams, not crowds
       const [members, teams] = await Promise.all([
-        ctx.db.query("member").withIndex("organizationId", (q) => q.eq("organizationId", org._id)).take(1000),
-        ctx.db.query("team").withIndex("organizationId", (q) => q.eq("organizationId", org._id)).take(200),
+        ctx.db
+          .query("member")
+          .withIndex("organizationId", (q) => q.eq("organizationId", org._id))
+          .take(1000),
+        ctx.db
+          .query("team")
+          .withIndex("organizationId", (q) => q.eq("organizationId", org._id))
+          .take(200),
       ]);
       result.push({ ...summarize(org), memberCount: members.length, teamCount: teams.length });
     }
@@ -83,10 +89,26 @@ export const detail = query({
     v.object({
       organization: organizationSummary,
       members: v.array(
-        v.object({ id: v.string(), userId: v.string(), name: v.string(), email: v.string(), role: v.string(), createdAt: v.number(), teamIds: v.array(v.string()) }),
+        v.object({
+          id: v.string(),
+          userId: v.string(),
+          name: v.string(),
+          email: v.string(),
+          role: v.string(),
+          createdAt: v.number(),
+          teamIds: v.array(v.string()),
+        }),
       ),
       teams: v.array(v.object({ id: v.string(), name: v.string(), memberCount: v.number(), createdAt: v.number() })),
-      invitations: v.array(v.object({ id: v.string(), email: v.string(), role: v.optional(v.union(v.null(), v.string())), status: v.string(), expiresAt: v.number() })),
+      invitations: v.array(
+        v.object({
+          id: v.string(),
+          email: v.string(),
+          role: v.optional(v.union(v.null(), v.string())),
+          status: v.string(),
+          expiresAt: v.number(),
+        }),
+      ),
     }),
   ),
   handler: async (ctx, args) => {
@@ -94,15 +116,27 @@ export const detail = query({
     if (!org) return null;
 
     const [members, teams, invitations] = await Promise.all([
-      ctx.db.query("member").withIndex("organizationId", (q) => q.eq("organizationId", org._id)).take(1000),
-      ctx.db.query("team").withIndex("organizationId", (q) => q.eq("organizationId", org._id)).take(200),
-      ctx.db.query("invitation").withIndex("organizationId", (q) => q.eq("organizationId", org._id)).take(500),
+      ctx.db
+        .query("member")
+        .withIndex("organizationId", (q) => q.eq("organizationId", org._id))
+        .take(1000),
+      ctx.db
+        .query("team")
+        .withIndex("organizationId", (q) => q.eq("organizationId", org._id))
+        .take(200),
+      ctx.db
+        .query("invitation")
+        .withIndex("organizationId", (q) => q.eq("organizationId", org._id))
+        .take(500),
     ]);
 
     const teamMembers = new Map<string, string[]>();
     const teamCounts = new Map<string, number>();
     for (const team of teams) {
-      const rows = await ctx.db.query("teamMember").withIndex("teamId", (q) => q.eq("teamId", team._id)).take(1000);
+      const rows = await ctx.db
+        .query("teamMember")
+        .withIndex("teamId", (q) => q.eq("teamId", team._id))
+        .take(1000);
       teamCounts.set(team._id, rows.length);
       for (const row of rows) teamMembers.set(row.userId, [...(teamMembers.get(row.userId) ?? []), team._id]);
     }
@@ -125,7 +159,12 @@ export const detail = query({
     return {
       organization: summarize(org),
       members: memberRows,
-      teams: teams.map((t) => ({ id: t._id, name: t.name, memberCount: teamCounts.get(t._id) ?? 0, createdAt: t.createdAt })),
+      teams: teams.map((t) => ({
+        id: t._id,
+        name: t.name,
+        memberCount: teamCounts.get(t._id) ?? 0,
+        createdAt: t.createdAt,
+      })),
       invitations: invitations
         .filter((i) => i.status === "pending")
         .map((i) => ({ id: i._id, email: i.email, role: i.role, status: i.status, expiresAt: i.expiresAt })),
@@ -174,16 +213,22 @@ export const setVerification = mutation({
 });
 
 async function deleteMemberships(ctx: MutationCtx, organizationId: Id<"organization">) {
-  for await (const row of ctx.db.query("member").withIndex("organizationId", (q) => q.eq("organizationId", organizationId))) {
+  for await (const row of ctx.db
+    .query("member")
+    .withIndex("organizationId", (q) => q.eq("organizationId", organizationId))) {
     await ctx.db.delete("member", row._id);
   }
-  for await (const team of ctx.db.query("team").withIndex("organizationId", (q) => q.eq("organizationId", organizationId))) {
+  for await (const team of ctx.db
+    .query("team")
+    .withIndex("organizationId", (q) => q.eq("organizationId", organizationId))) {
     for await (const row of ctx.db.query("teamMember").withIndex("teamId", (q) => q.eq("teamId", team._id))) {
       await ctx.db.delete("teamMember", row._id);
     }
     await ctx.db.delete("team", team._id);
   }
-  for await (const row of ctx.db.query("invitation").withIndex("organizationId", (q) => q.eq("organizationId", organizationId))) {
+  for await (const row of ctx.db
+    .query("invitation")
+    .withIndex("organizationId", (q) => q.eq("organizationId", organizationId))) {
     await ctx.db.delete("invitation", row._id);
   }
 }
@@ -205,13 +250,18 @@ export const remove = mutation({
 /** Removes one member from an organisation (and its teams). */
 export const removeMember = mutation({
   args: { memberId: v.string() },
-  returns: v.union(v.null(), v.object({ userId: v.string(), organizationKind: v.string(), organizationName: v.string() })),
+  returns: v.union(
+    v.null(),
+    v.object({ userId: v.string(), organizationKind: v.string(), organizationName: v.string() }),
+  ),
   handler: async (ctx, args) => {
     const memberId = ctx.db.normalizeId("member", args.memberId);
     const member = memberId && (await ctx.db.get("member", memberId));
     if (!member) return null;
     const org = await getOrg(ctx, member.organizationId);
-    for await (const team of ctx.db.query("team").withIndex("organizationId", (q) => q.eq("organizationId", member.organizationId))) {
+    for await (const team of ctx.db
+      .query("team")
+      .withIndex("organizationId", (q) => q.eq("organizationId", member.organizationId))) {
       for await (const row of ctx.db.query("teamMember").withIndex("teamId", (q) => q.eq("teamId", team._id))) {
         if (row.userId === member.userId) await ctx.db.delete("teamMember", row._id);
       }
@@ -253,7 +303,12 @@ export const ensureStaffOwner = mutation({
     if (membership) {
       if (membership.role !== "owner") await ctx.db.patch("member", membership._id, { role: "owner" });
     } else {
-      await ctx.db.insert("member", { organizationId: org._id, userId: args.userId, role: "owner", createdAt: Date.now() });
+      await ctx.db.insert("member", {
+        organizationId: org._id,
+        userId: args.userId,
+        role: "owner",
+        createdAt: Date.now(),
+      });
     }
 
     const userId = ctx.db.normalizeId("user", args.userId);

@@ -287,7 +287,8 @@ export const apply = mutation({
   handler: async (ctx, args) => {
     const sme = await getOwnSme(ctx);
     if (!sme) throw new ConvexError("Register your business before applying.");
-    if (sme.suspendedAt) throw new ConvexError("Your profile is suspended, so you can’t apply right now. Contact YES Hub.");
+    if (sme.suspendedAt)
+      throw new ConvexError("Your profile is suspended, so you can’t apply right now. Contact YES Hub.");
 
     const opportunity = await ctx.db.get("opportunities", args.opportunityId);
     if (!opportunity || opportunity.status !== "open") throw new ConvexError("This opportunity isn’t open any more.");

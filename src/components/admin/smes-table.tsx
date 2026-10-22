@@ -21,7 +21,8 @@ import { SmeInspector, StatusPill } from "./sme-inspector";
 type Sme = NonNullable<FunctionReturnType<typeof api.admin.smes>>[number];
 type Filter = "all" | "unverified" | "verified" | "suspended" | "attention";
 
-const hasExpired = (sme: Sme) => (["bbbeeCertificate", "taxCertificate"] as const).some((k) => docStatus(sme, k) === "expired");
+const hasExpired = (sme: Sme) =>
+  (["bbbeeCertificate", "taxCertificate"] as const).some((k) => docStatus(sme, k) === "expired");
 
 function matches(sme: Sme, filter: Filter) {
   switch (filter) {
@@ -136,7 +137,9 @@ export function SmesTable() {
                     <button type="button" className="text-left" aria-label={`Open ${sme.companyName}`}>
                       <p className="font-medium">
                         {sme.companyName}
-                        {sme.isDemo && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(sample)</span>}
+                        {sme.isDemo && (
+                          <span className="ml-1.5 text-xs font-normal text-muted-foreground">(sample)</span>
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {sme.industry}
@@ -162,7 +165,9 @@ export function SmesTable() {
                       {hasExpired(sme) && <Pill tone="danger">Expired</Pill>}
                     </div>
                   </TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">{formatDate(sme._creationTime)}</TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                    {formatDate(sme._creationTime)}
+                  </TableCell>
                 </TableRow>
               );
             })}

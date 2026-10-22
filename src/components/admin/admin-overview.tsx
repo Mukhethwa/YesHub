@@ -76,7 +76,10 @@ function ListCard({
 function Row({ href, title, subtitle, meta }: { href: string; title: string; subtitle: string; meta: string }) {
   return (
     <li>
-      <Link href={href} className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5 text-sm hover:bg-muted">
+      <Link
+        href={href}
+        className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5 text-sm hover:bg-muted"
+      >
         <span className="min-w-0">
           <span className="block truncate font-medium">{title}</span>
           <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
@@ -124,7 +127,11 @@ export function AdminOverview() {
           href="/admin/organisations"
           note={`${data.pendingEnterpriseCount} awaiting review`}
         />
-        <Stat label="Awaiting review" value={data.pendingEnterpriseCount} href="/admin/organisations?status=unverified" />
+        <Stat
+          label="Awaiting review"
+          value={data.pendingEnterpriseCount}
+          href="/admin/organisations?status=unverified"
+        />
       </div>
 
       <ListCard

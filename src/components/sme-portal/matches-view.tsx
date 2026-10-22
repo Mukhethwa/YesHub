@@ -16,7 +16,15 @@ import { Switch } from "@/components/ui/switch";
 import { getSettings } from "@/lib/sme/settings";
 import type { SmeProfile } from "@/lib/sme/types";
 import type { OpportunityKind } from "../../../convex/schema";
-import { ApplyButton, FitPill, type Match, minimumValue, preferredKinds, reachLabel, useMatches } from "./opportunities-shared";
+import {
+  ApplyButton,
+  FitPill,
+  type Match,
+  minimumValue,
+  preferredKinds,
+  reachLabel,
+  useMatches,
+} from "./opportunities-shared";
 import { SectionHeader } from "./require-sme";
 
 type Area = "home" | "provinces" | "nationwide" | "all";
@@ -77,7 +85,11 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
         onChange={setArea}
         options={[
           { id: "home", label: `Near you (${sme.hqProvince})`, count: count("home") },
-          { id: "provinces", label: sme.nationwide ? "Where you deliver" : "Your provinces", count: count("provinces") },
+          {
+            id: "provinces",
+            label: sme.nationwide ? "Where you deliver" : "Your provinces",
+            count: count("provinces"),
+          },
           { id: "nationwide", label: "Nationwide", count: count("nationwide") },
           { id: "all", label: "Everywhere", count: count("all") },
         ]}
@@ -166,7 +178,11 @@ export function MatchCard({ match, sme }: { match: Match; sme: SmeProfile }) {
             <p className="text-right text-xs text-muted-foreground">
               Fit <span className="font-medium text-foreground tabular-nums">{match.evaluation.score}</span>
             </p>
-            <Progress value={match.evaluation.score} className="mt-1" aria-label={`Fit ${match.evaluation.score} out of 100`} />
+            <Progress
+              value={match.evaluation.score}
+              className="mt-1"
+              aria-label={`Fit ${match.evaluation.score} out of 100`}
+            />
           </div>
         </div>
       </div>

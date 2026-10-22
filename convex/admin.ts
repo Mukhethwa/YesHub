@@ -33,7 +33,10 @@ export const overview = query({
     const [users, organizations, smes] = await Promise.all([
       ctx.runQuery(components.betterAuth.users.listUsers, { limit: COUNT_LIMIT + 1 }),
       ctx.runQuery(components.betterAuth.organizations.list, { limit: COUNT_LIMIT + 1 }),
-      ctx.db.query("smes").order("desc").take(COUNT_LIMIT + 1),
+      ctx.db
+        .query("smes")
+        .order("desc")
+        .take(COUNT_LIMIT + 1),
     ]);
     const enterprises = organizations.filter((o) => o.kind === "enterprise");
     const pending = enterprises.filter((o) => o.verificationStatus === "unverified");
@@ -159,7 +162,9 @@ export const setSmeVerified = mutation({
     await ctx.db.patch(
       "smes",
       sme._id,
-      args.verified ? { verifiedAt: Date.now(), verifiedBy: staff.name } : { verifiedAt: undefined, verifiedBy: undefined },
+      args.verified
+        ? { verifiedAt: Date.now(), verifiedBy: staff.name }
+        : { verifiedAt: undefined, verifiedBy: undefined },
     );
     await audit(ctx, staff, {
       action: args.verified ? "sme.verify" : "sme.unverify",
@@ -181,7 +186,9 @@ export const setSmeSuspended = mutation({
     await ctx.db.patch(
       "smes",
       sme._id,
-      args.suspended ? { suspendedAt: Date.now(), suspendedReason: reason } : { suspendedAt: undefined, suspendedReason: undefined },
+      args.suspended
+        ? { suspendedAt: Date.now(), suspendedReason: reason }
+        : { suspendedAt: undefined, suspendedReason: undefined },
     );
     await audit(ctx, staff, {
       action: args.suspended ? "sme.suspend" : "sme.reinstate",
@@ -202,7 +209,12 @@ export const deleteSme = mutation({
     if (!sme) return;
 
     await deleteAppData(ctx, sme.userId);
-    await audit(ctx, staff, { action: "sme.delete", targetType: "sme", targetId: sme._id, targetLabel: sme.companyName });
+    await audit(ctx, staff, {
+      action: "sme.delete",
+      targetType: "sme",
+      targetId: sme._id,
+      targetLabel: sme.companyName,
+    });
   },
 });
 
@@ -272,7 +284,9 @@ export const removeOrganizationMember = mutation({
   args: { memberId: v.string(), memberEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const staff = await requireStaff(ctx, { organization: ["manage-members"] });
-    const removed = await ctx.runMutation(components.betterAuth.organizations.removeMember, { memberId: args.memberId });
+    const removed = await ctx.runMutation(components.betterAuth.organizations.removeMember, {
+      memberId: args.memberId,
+    });
     if (!removed) return;
     if (removed.organizationKind === "staff") {
       // Leaving the staff organisation ends staff access

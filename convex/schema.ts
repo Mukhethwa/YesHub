@@ -91,7 +91,12 @@ export type SmeDetails = Infer<typeof smeDetailsValidator>;
 export type SmeSettings = Infer<typeof smeSettings>;
 
 export const opportunityKind = v.union(v.literal("tender"), v.literal("rfq"), v.literal("grant"));
-export const opportunityStatus = v.union(v.literal("draft"), v.literal("open"), v.literal("closed"), v.literal("awarded"));
+export const opportunityStatus = v.union(
+  v.literal("draft"),
+  v.literal("open"),
+  v.literal("closed"),
+  v.literal("awarded"),
+);
 export const applicationStatus = v.union(
   v.literal("submitted"),
   v.literal("shortlisted"),

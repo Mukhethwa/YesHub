@@ -46,7 +46,8 @@ function bbbeeCheck(opportunity: EvaluableOpportunity, sme: Doc<"smes">): Check 
   if (opportunity.minBbbeeLevel === undefined) return null;
   const base = { id: "bbbee", label: `B-BBEE Level ${opportunity.minBbbeeLevel} or better`, required: true };
   const level = bbbeeLevelNumber(sme.bbbeeLevel);
-  if (level === null) return { ...base, passed: false, detail: `${sme.bbbeeLevel || "No B-BBEE level"} doesn’t meet the minimum` };
+  if (level === null)
+    return { ...base, passed: false, detail: `${sme.bbbeeLevel || "No B-BBEE level"} doesn’t meet the minimum` };
   return level <= opportunity.minBbbeeLevel
     ? { ...base, passed: true, detail: `${sme.bbbeeLevel} meets the minimum` }
     : { ...base, passed: false, detail: `${sme.bbbeeLevel} is below the Level ${opportunity.minBbbeeLevel} minimum` };

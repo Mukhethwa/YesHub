@@ -29,7 +29,12 @@ export function CreateUserDialog({ disabled }: { disabled?: boolean }) {
     e.preventDefault();
     setBusy(true);
     const ok = await runAuthAction("Account created", () =>
-      authClient.admin.createUser({ name: form.name.trim(), email: form.email.trim(), password: form.password, role: "user" }),
+      authClient.admin.createUser({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: "user",
+      }),
     );
     setBusy(false);
     if (ok) {
@@ -51,8 +56,8 @@ export function CreateUserDialog({ disabled }: { disabled?: boolean }) {
           <DialogHeader>
             <DialogTitle>Create user</DialogTitle>
             <DialogDescription>
-              The account can sign in straight away with this password. To add YES Hub staff, invite them from the
-              Staff page instead.
+              The account can sign in straight away with this password. To add YES Hub staff, invite them from the Staff
+              page instead.
             </DialogDescription>
           </DialogHeader>
           <FieldGroup className="my-6">

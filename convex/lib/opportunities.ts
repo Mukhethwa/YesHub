@@ -21,7 +21,9 @@ export const TENDER_DOC_MAX_MB = 10;
 async function deleteApplication(ctx: MutationCtx, applicationId: Id<"applications">) {
   const application = await ctx.db.get("applications", applicationId);
   if (application) await deleteReviewData(ctx, application);
-  for await (const entry of ctx.db.query("applicationActivity").withIndex("by_application", (q) => q.eq("applicationId", applicationId))) {
+  for await (const entry of ctx.db
+    .query("applicationActivity")
+    .withIndex("by_application", (q) => q.eq("applicationId", applicationId))) {
     await ctx.db.delete("applicationActivity", entry._id);
   }
   await ctx.db.delete("applications", applicationId);
@@ -29,7 +31,9 @@ async function deleteApplication(ctx: MutationCtx, applicationId: Id<"applicatio
 
 /** Removes an SME's applications and their activity. Call wherever an SME profile is deleted. */
 export async function deleteApplicationsForSme(ctx: MutationCtx, smeId: Id<"smes">) {
-  for await (const application of ctx.db.query("applications").withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", smeId))) {
+  for await (const application of ctx.db
+    .query("applications")
+    .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", smeId))) {
     await deleteApplication(ctx, application._id);
   }
 }
@@ -39,12 +43,18 @@ export async function deleteApplicationsForSme(ctx: MutationCtx, smeId: Id<"smes
  * Call when an organisation is deleted.
  */
 export async function deleteOpportunitiesForOrganization(ctx: MutationCtx, organizationId: string, demoOnly = false) {
-  for await (const opportunity of ctx.db.query("opportunities").withIndex("by_organization", (q) => q.eq("organizationId", organizationId))) {
+  for await (const opportunity of ctx.db
+    .query("opportunities")
+    .withIndex("by_organization", (q) => q.eq("organizationId", organizationId))) {
     if (demoOnly && !opportunity.isDemo) continue;
-    for await (const application of ctx.db.query("applications").withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))) {
+    for await (const application of ctx.db
+      .query("applications")
+      .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))) {
       await deleteApplication(ctx, application._id);
     }
-    for await (const doc of ctx.db.query("opportunityDocuments").withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))) {
+    for await (const doc of ctx.db
+      .query("opportunityDocuments")
+      .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))) {
       await ctx.storage.delete(doc.storageId);
       await ctx.db.delete("opportunityDocuments", doc._id);
     }
@@ -265,7 +275,11 @@ export async function sampleTeamIdFor(ctx: QueryCtx, organizationId: string, tit
 }
 
 /** A sample opportunity's listing, or null when the title isn't one of the samples. */
-export function sampleListingFor(title: string, organizationName: string, publishedAt: number): OpportunityListing | null {
+export function sampleListingFor(
+  title: string,
+  organizationName: string,
+  publishedAt: number,
+): OpportunityListing | null {
   const code = sampleCodeFor(title);
   if (!code) return null;
   const { scope, contractPeriod, briefing, submission, evaluationCriteria } = SAMPLE_LISTINGS[code];
@@ -323,7 +337,11 @@ export function referencePrefix(name: string) {
  */
 export async function insertSampleOpportunities(
   ctx: MutationCtx,
-  { organizationId, organizationName, createdBy }: { organizationId: string; organizationName: string; createdBy: string },
+  {
+    organizationId,
+    organizationName,
+    createdBy,
+  }: { organizationId: string; organizationName: string; createdBy: string },
 ) {
   const existing = await ctx.db
     .query("opportunities")
@@ -362,7 +380,9 @@ export async function insertSampleOpportunities(
     );
     const evaluated = applicants.map((sme, j) => ({ sme, j, evaluation: evaluateApplication(opportunity, sme) }));
     // On a closed opportunity the buyer has already shortlisted the best qualifying applicant
-    const best = evaluated.filter((a) => a.evaluation.qualifies).sort((a, b) => b.evaluation.score - a.evaluation.score)[0];
+    const best = evaluated
+      .filter((a) => a.evaluation.qualifies)
+      .sort((a, b) => b.evaluation.score - a.evaluation.score)[0];
 
     for (const { sme, j, evaluation } of evaluated) {
       await ctx.db.insert("applications", {
@@ -373,7 +393,9 @@ export async function insertSampleOpportunities(
         submittedAt: Date.now() - (1 + ((i * 3 + j * 2) % 9)) * DAY,
         evaluation,
         // Quotes spread between 82% and 118% of the estimate, so price points differ
-        quote: sample.value ? Math.round((sample.value * (0.82 + ((i * 7 + j * 11) % 37) / 100)) / 100) * 100 : undefined,
+        quote: sample.value
+          ? Math.round((sample.value * (0.82 + ((i * 7 + j * 11) % 37) / 100)) / 100) * 100
+          : undefined,
         proposal: sampleProposal(sme, sample.title),
       });
     }

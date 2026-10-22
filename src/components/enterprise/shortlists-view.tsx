@@ -71,7 +71,8 @@ export function ShortlistsView() {
           <CardHeader>
             <CardTitle>No one shortlisted yet</CardTitle>
             <CardDescription>
-              Open an opportunity, review its applicants and choose Shortlist on the businesses you want to take further.
+              Open an opportunity, review its applicants and choose Shortlist on the businesses you want to take
+              further.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -134,7 +135,9 @@ function ShortlistTable({ rows }: { rows: Row[] }) {
             </TableCell>
             <TableCell>
               <span className="font-medium tabular-nums">{row.score}</span>
-              <span className="block text-xs text-muted-foreground">{row.qualifies ? "Qualifies" : "Doesn’t qualify"}</span>
+              <span className="block text-xs text-muted-foreground">
+                {row.qualifies ? "Qualifies" : "Doesn’t qualify"}
+              </span>
             </TableCell>
             <TableCell className="max-w-64 text-sm">
               <span className="block truncate">

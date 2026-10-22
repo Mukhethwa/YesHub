@@ -297,7 +297,13 @@ export function FileDrop({
         <Button id={id} type="button" variant="ghost" size="sm" onClick={() => inputRef.current?.click()}>
           Replace
         </Button>
-        <Button type="button" variant="ghost" size="sm" aria-label={`Remove ${file.name}`} onClick={() => onChange(null)}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label={`Remove ${file.name}`}
+          onClick={() => onChange(null)}
+        >
           Remove
         </Button>
       </div>

@@ -162,7 +162,9 @@ function SupplierDirectory() {
                         {docs.onFile} of {docs.total}
                       </span>{" "}
                       <span className="text-muted-foreground">on file</span>
-                      {docs.expired > 0 && <span className="block text-xs text-destructive">{docs.expired} expired</span>}
+                      {docs.expired > 0 && (
+                        <span className="block text-xs text-destructive">{docs.expired} expired</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{s.applications || ""}</TableCell>
                     <TableCell className="pr-6 text-right">
@@ -210,7 +212,9 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
     return (
       <div className="py-24 text-center">
         <p className="font-medium">This business isn’t available</p>
-        <p className="mt-1 text-sm text-muted-foreground">It may have hidden its profile from corporates, or been removed.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          It may have hidden its profile from corporates, or been removed.
+        </p>
         <Button variant="outline" className="mt-4" asChild>
           <Link href={back.href}>{back.label}</Link>
         </Button>
@@ -266,7 +270,9 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
                 <Detail label="B-BBEE">
                   {profile.bbbeeLevel}
                   {profile.bbbeeExpiry && (
-                    <span className={`block text-xs ${isExpired(profile.bbbeeExpiry) ? "text-destructive" : "text-muted-foreground"}`}>
+                    <span
+                      className={`block text-xs ${isExpired(profile.bbbeeExpiry) ? "text-destructive" : "text-muted-foreground"}`}
+                    >
                       {isExpired(profile.bbbeeExpiry) ? "Expired" : "Valid until"} {formatDate(profile.bbbeeExpiry)}
                     </span>
                   )}
@@ -280,12 +286,19 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
                 </Detail>
                 <Detail label="Website">
                   {profile.website && (
-                    <a href={websiteHref(profile.website)} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                    <a
+                      href={websiteHref(profile.website)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline underline-offset-2"
+                    >
                       {profile.website}
                     </a>
                   )}
                 </Detail>
-                <Detail label="Address">{[profile.address, profile.city, profile.hqProvince].filter(Boolean).join(", ")}</Detail>
+                <Detail label="Address">
+                  {[profile.address, profile.city, profile.hqProvince].filter(Boolean).join(", ")}
+                </Detail>
               </dl>
             </CardContent>
           </Card>
@@ -393,7 +406,10 @@ function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpp
             const expiry = expiryFor(type.key);
             const expired = !!doc && isExpired(expiry);
             return (
-              <li key={type.key} className="flex flex-col gap-2 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <li
+                key={type.key}
+                className="flex flex-col gap-2 px-6 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
                     {type.label}
@@ -419,7 +435,9 @@ function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpp
                       </a>
                     </Button>
                   ) : (
-                    profile.canViewDocuments && <span className="shrink-0 text-xs text-muted-foreground">File not uploaded yet</span>
+                    profile.canViewDocuments && (
+                      <span className="shrink-0 text-xs text-muted-foreground">File not uploaded yet</span>
+                    )
                   ))}
               </li>
             );
@@ -457,7 +475,10 @@ function HistoryCard({ profile }: { profile: Profile }) {
               {profile.history.map((h) => (
                 <TableRow key={h.applicationId}>
                   <TableCell className="max-w-72 pl-6">
-                    <Link href={`/dashboard/opportunities?id=${h.opportunityId}`} className="block truncate font-medium hover:underline">
+                    <Link
+                      href={`/dashboard/opportunities?id=${h.opportunityId}`}
+                      className="block truncate font-medium hover:underline"
+                    >
                       {h.title}
                     </Link>
                     <span className="block truncate text-xs text-muted-foreground">

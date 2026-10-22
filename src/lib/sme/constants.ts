@@ -31,12 +31,36 @@ export const INDUSTRIES = [
 ];
 
 export const SERVICE_SUGGESTIONS: Record<string, string[]> = {
-  "Construction & Built Environment": ["General building", "Civil works", "Electrical installation", "Plumbing", "Painting & renovations"],
-  "ICT & Digital Services": ["Software development", "IT support", "Network installation", "Web design", "Data capturing"],
-  "Cleaning & Facilities Management": ["Office cleaning", "Hygiene services", "Garden services", "Pest control", "Waste removal"],
+  "Construction & Built Environment": [
+    "General building",
+    "Civil works",
+    "Electrical installation",
+    "Plumbing",
+    "Painting & renovations",
+  ],
+  "ICT & Digital Services": [
+    "Software development",
+    "IT support",
+    "Network installation",
+    "Web design",
+    "Data capturing",
+  ],
+  "Cleaning & Facilities Management": [
+    "Office cleaning",
+    "Hygiene services",
+    "Garden services",
+    "Pest control",
+    "Waste removal",
+  ],
   "Transport & Logistics": ["Courier services", "Freight", "Staff transport", "Warehousing", "Fleet management"],
   "Hospitality, Catering & Events": ["Corporate catering", "Event management", "Conference venues", "Décor & hiring"],
-  "Professional & Business Services": ["Bookkeeping", "Payroll", "HR consulting", "Legal services", "Project management"],
+  "Professional & Business Services": [
+    "Bookkeeping",
+    "Payroll",
+    "HR consulting",
+    "Legal services",
+    "Project management",
+  ],
   "Security Services": ["Guarding", "Armed response", "CCTV installation", "Access control"],
   "Education & Training": ["Accredited training", "Learnerships", "Skills development", "Tutoring"],
   Manufacturing: ["Steel fabrication", "Furniture", "Textiles & uniforms", "Packaging", "Printing"],

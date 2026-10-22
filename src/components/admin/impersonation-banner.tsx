@@ -27,11 +27,20 @@ export function ImpersonationBanner() {
   };
 
   return (
-    <div role="status" className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-warning px-4 py-2 text-sm text-black">
+    <div
+      role="status"
+      className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-warning px-4 py-2 text-sm text-black"
+    >
       <span>
         You’re viewing YES Hub as <strong>{data.user.name}</strong> ({data.user.email}).
       </span>
-      <Button size="sm" variant="outline" className="h-7 border-black/30 bg-transparent text-black hover:bg-black/10" disabled={busy} onClick={stop}>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 border-black/30 bg-transparent text-black hover:bg-black/10"
+        disabled={busy}
+        onClick={stop}
+      >
         {busy && <Spinner />}
         Back to my account
       </Button>

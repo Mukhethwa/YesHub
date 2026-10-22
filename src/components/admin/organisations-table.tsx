@@ -30,7 +30,8 @@ export function OrganisationsTable() {
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return (organizations ?? []).filter(
-      (o) => matches(o, filter) && (!term || o.name.toLowerCase().includes(term) || o.slug.toLowerCase().includes(term)),
+      (o) =>
+        matches(o, filter) && (!term || o.name.toLowerCase().includes(term) || o.slug.toLowerCase().includes(term)),
     );
   }, [organizations, search, filter]);
 
@@ -113,7 +114,9 @@ export function OrganisationsTable() {
                 </TableCell>
                 <TableCell className="hidden tabular-nums sm:table-cell">{org.memberCount}</TableCell>
                 <TableCell className="hidden tabular-nums sm:table-cell">{org.teamCount}</TableCell>
-                <TableCell className="hidden text-muted-foreground md:table-cell">{formatDate(org.createdAt)}</TableCell>
+                <TableCell className="hidden text-muted-foreground md:table-cell">
+                  {formatDate(org.createdAt)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

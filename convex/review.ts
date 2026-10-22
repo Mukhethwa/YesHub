@@ -64,7 +64,12 @@ type TrailEntry = {
 
 /** An action error without Convex's "Uncaught Error" prefix or the stack trace. */
 function readableError(error: string) {
-  return error.replace(/^(Error: )?(Uncaught Error: )?/, "").split("\n")[0].trim() || "Unknown error";
+  return (
+    error
+      .replace(/^(Error: )?(Uncaught Error: )?/, "")
+      .split("\n")[0]
+      .trim() || "Unknown error"
+  );
 }
 
 export async function addTrail(ctx: MutationCtx, entry: TrailEntry) {
@@ -101,13 +106,19 @@ export const reviewApplication = workflow
     const documents = await step.runQuery(internal.review.documentsToRead, args);
     // Each document is its own step, so a failure on one is retried without re-reading the others
     await Promise.all(
-      documents.map((key) => step.runAction(internal.reviewActions.extractDocument, { ...args, key }, { name: `read ${key}` })),
+      documents.map((key) =>
+        step.runAction(internal.reviewActions.extractDocument, { ...args, key }, { name: `read ${key}` }),
+      ),
     );
     await step.runAction(internal.reviewActions.assessApplication, args, { name: "score against criteria" });
   });
 
 export const reviewFinished = internalMutation({
-  args: { workflowId: vWorkflowId, result: vResultValidator, context: v.object({ applicationId: v.id("applications") }) },
+  args: {
+    workflowId: vWorkflowId,
+    result: vResultValidator,
+    context: v.object({ applicationId: v.id("applications") }),
+  },
   handler: async (ctx, args) => {
     const application = await ctx.db.get("applications", args.context.applicationId);
     // A newer review replaced this one, or the application was withdrawn
@@ -124,7 +135,8 @@ export const reviewFinished = internalMutation({
       applicationId: application._id,
       kind: "error",
       actor: JEV,
-      summary: "Jev couldn’t finish reviewing this application. It keeps YES Hub’s eligibility check until it’s retried.",
+      summary:
+        "Jev couldn’t finish reviewing this application. It keeps YES Hub’s eligibility check until it’s retried.",
       details: [error.slice(0, 1000)],
     });
   },
@@ -133,9 +145,11 @@ export const reviewFinished = internalMutation({
 /** The documents behind an application: the profile documents the opportunity asks for, then attachments. */
 function documentsOf(sme: Doc<"smes">, opportunity: Doc<"opportunities">, application: Doc<"applications">) {
   // With no requirement listed, Jev still reads the core compliance documents
-  const wanted = (opportunity.requiredDocuments.length
-    ? opportunity.requiredDocuments
-    : ["bbbeeCertificate", "taxCertificate", "cipcCertificate"]) as DocKey[];
+  const wanted = (
+    opportunity.requiredDocuments.length
+      ? opportunity.requiredDocuments
+      : ["bbbeeCertificate", "taxCertificate", "cipcCertificate"]
+  ) as DocKey[];
   const profile = wanted.flatMap((key) => {
     const doc = sme.documents[key];
     if (!doc?.storageId) return [];
@@ -246,10 +260,7 @@ export const saveExtraction = internalMutation({
         args.status === "unreadable"
           ? `Couldn’t read ${doc.label} (${doc.name}): ${args.summary}`
           : `Read ${doc.label} (${doc.name})${args.issues.length ? `, with ${args.issues.length} issue${args.issues.length === 1 ? "" : "s"}` : ""}. ${args.summary}`,
-      details: [
-        ...args.fields.map((f) => `${f.name}: ${f.value}`),
-        ...args.issues.map((issue) => `Issue: ${issue}`),
-      ],
+      details: [...args.fields.map((f) => `${f.name}: ${f.value}`), ...args.issues.map((issue) => `Issue: ${issue}`)],
       ...call,
     });
     return null;
@@ -344,7 +355,12 @@ export const saveAssessment = internalMutation({
 
     await ctx.db.patch("applications", application._id, {
       evaluation: { engine: "jev", ...result, evaluatedAt: Date.now(), model: call.model },
-      review: { ...(application.review ?? { startedAt: Date.now() }), status: "reviewed", finishedAt: Date.now(), error: undefined },
+      review: {
+        ...(application.review ?? { startedAt: Date.now() }),
+        status: "reviewed",
+        finishedAt: Date.now(),
+        error: undefined,
+      },
     });
     await addTrail(ctx, {
       opportunityId: application.opportunityId,
@@ -356,10 +372,18 @@ export const saveAssessment = internalMutation({
       details: [
         ...result.criteria.map((c) => {
           const outcome =
-            c.met !== undefined ? (c.met ? "met" : "not met") : c.score !== undefined ? `${c.score}/100` : "calculated at decision";
+            c.met !== undefined
+              ? c.met
+                ? "met"
+                : "not met"
+              : c.score !== undefined
+                ? `${c.score}/100`
+                : "calculated at decision";
           return `${c.criterion}: ${outcome}. ${c.reasoning}${c.evidence.length ? ` Evidence: ${c.evidence.join("; ")}` : ""}`;
         }),
-        ...result.checks.filter((c) => c.required && !c.passed).map((c) => `Requirement not met: ${c.label}. ${c.detail}`),
+        ...result.checks
+          .filter((c) => c.required && !c.passed)
+          .map((c) => `Requirement not met: ${c.label}. ${c.detail}`),
         ...result.concerns.map((c) => `Concern: ${c}`),
       ],
       ...call,
@@ -408,7 +432,11 @@ export const decisionFinished = internalMutation({
     const run = await ctx.db.get("decisionRuns", args.context.runId);
     if (!run || run.status !== "running" || args.result.kind === "success") return;
     const error = args.result.kind === "failed" ? readableError(args.result.error) : "The decision was cancelled.";
-    await ctx.db.patch("decisionRuns", run._id, { status: "failed", finishedAt: Date.now(), error: error.slice(0, 500) });
+    await ctx.db.patch("decisionRuns", run._id, {
+      status: "failed",
+      finishedAt: Date.now(),
+      error: error.slice(0, 500),
+    });
     await addTrail(ctx, {
       opportunityId: run.opportunityId,
       organizationId: run.organizationId,
@@ -586,7 +614,9 @@ export const calculatePoints = internalMutation({
       .filter((c) => c.eligible)
       .sort(
         (a, b) =>
-          (b.totalPoints ?? 0) - (a.totalPoints ?? 0) || b.score - a.score || order.get(a.applicationId)! - order.get(b.applicationId)!,
+          (b.totalPoints ?? 0) - (a.totalPoints ?? 0) ||
+          b.score - a.score ||
+          order.get(a.applicationId)! - order.get(b.applicationId)!,
       );
     ranked.forEach((c, i) => (c.rank = i + 1));
 
@@ -633,9 +663,7 @@ export const applyDecision = internalMutation({
     runId: v.id("decisionRuns"),
     candidates: v.array(vCandidate),
     summary: v.string(),
-    decisions: v.array(
-      v.object({ applicationId: v.id("applications"), approved: v.boolean(), rationale: v.string() }),
-    ),
+    decisions: v.array(v.object({ applicationId: v.id("applications"), approved: v.boolean(), rationale: v.string() })),
     call: v.object(vJevCall),
   },
   handler: async (ctx, args) => {
@@ -659,7 +687,12 @@ export const applyDecision = internalMutation({
       let ok = jev?.approved ?? false;
       let rationale = jev?.rationale || "Jev didn’t give a decision for this applicant, so it isn’t approved.";
       if (!jev) {
-        await trail({ applicationId: c.applicationId, kind: "guardrail", actor: "YES Hub", summary: `No decision from Jev for ${c.companyName}; not approved.` });
+        await trail({
+          applicationId: c.applicationId,
+          kind: "guardrail",
+          actor: "YES Hub",
+          summary: `No decision from Jev for ${c.companyName}; not approved.`,
+        });
       }
       if (ok && !c.eligible) {
         ok = false;
@@ -764,7 +797,8 @@ export const requestDecision = mutation({
     if (!enterprise || !opportunity || opportunity.organizationId !== enterprise.organization.id) {
       throw new ConvexError("That opportunity isn’t available.");
     }
-    if (!canManage(enterprise.organization.role)) throw new ConvexError("Only owners and admins can ask Jev to decide.");
+    if (!canManage(enterprise.organization.role))
+      throw new ConvexError("Only owners and admins can ask Jev to decide.");
     if (enterprise.organization.verificationStatus !== "verified") {
       throw new ConvexError("YES Hub needs to verify your organisation first.");
     }
@@ -823,7 +857,8 @@ export const overrideDecision = mutation({
     if (!enterprise || !application || application.organizationId !== enterprise.organization.id) {
       throw new ConvexError("That application isn’t available.");
     }
-    if (!canManage(enterprise.organization.role)) throw new ConvexError("Only owners and admins can change a decision.");
+    if (!canManage(enterprise.organization.role))
+      throw new ConvexError("Only owners and admins can change a decision.");
     if (!application.decision) throw new ConvexError("Jev hasn’t decided on this application yet.");
     const reason = args.reason.trim();
     if (reason.length < 10) throw new ConvexError("Give a reason of at least a sentence. It’s kept on the record.");
@@ -834,7 +869,12 @@ export const overrideDecision = mutation({
       status: args.outcome === "approved" ? "awarded" : "declined",
       statusChangedAt: Date.now(),
       statusChangedBy: enterprise.user.name,
-      decision: { ...application.decision, outcome: args.outcome, overriddenBy: enterprise.user.name, overrideReason: reason },
+      decision: {
+        ...application.decision,
+        outcome: args.outcome,
+        overriddenBy: enterprise.user.name,
+        overrideReason: reason,
+      },
     });
     await addTrail(ctx, {
       opportunityId: application.opportunityId,
@@ -900,7 +940,12 @@ export const applicationReview = query({
     ]);
     const attachments = [];
     for (const file of application.attachments ?? []) {
-      attachments.push({ label: file.label, name: file.name, size: file.size, url: await ctx.storage.getUrl(file.storageId) });
+      attachments.push({
+        label: file.label,
+        name: file.name,
+        size: file.size,
+        url: await ctx.storage.getUrl(file.storageId),
+      });
     }
 
     return {
@@ -1025,7 +1070,9 @@ export async function deleteReviewData(ctx: MutationCtx, application: Doc<"appli
     .withIndex("by_application_and_key", (q) => q.eq("applicationId", application._id))) {
     await ctx.db.delete("documentExtractions", row._id);
   }
-  for await (const row of ctx.db.query("reviewTrail").withIndex("by_application", (q) => q.eq("applicationId", application._id))) {
+  for await (const row of ctx.db
+    .query("reviewTrail")
+    .withIndex("by_application", (q) => q.eq("applicationId", application._id))) {
     await ctx.db.delete("reviewTrail", row._id);
   }
   for (const file of application.attachments ?? []) await ctx.storage.delete(file.storageId);
@@ -1033,10 +1080,14 @@ export async function deleteReviewData(ctx: MutationCtx, application: Doc<"appli
 
 /** Removes an opportunity's decision runs and their trail. Call wherever an opportunity is deleted. */
 export async function deleteDecisionData(ctx: MutationCtx, opportunityId: Id<"opportunities">) {
-  for await (const row of ctx.db.query("reviewTrail").withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunityId))) {
+  for await (const row of ctx.db
+    .query("reviewTrail")
+    .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunityId))) {
     await ctx.db.delete("reviewTrail", row._id);
   }
-  for await (const run of ctx.db.query("decisionRuns").withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunityId))) {
+  for await (const run of ctx.db
+    .query("decisionRuns")
+    .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunityId))) {
     await ctx.db.delete("decisionRuns", run._id);
   }
 }

@@ -6,16 +6,7 @@ import { extractText, getDocumentProxy } from "unpdf";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
-import {
-  asBoolean,
-  asObject,
-  asScore,
-  asString,
-  asStrings,
-  askJev,
-  clip,
-  JevError,
-} from "./lib/jev";
+import { asBoolean, asObject, asScore, asString, asStrings, askJev, clip, JevError } from "./lib/jev";
 import type { Candidate } from "./review";
 import type { CriterionAssessment, Evaluation } from "./schema";
 
@@ -191,7 +182,11 @@ export const assessApplication = internalAction({
       JSON.stringify(input.documents, null, 2),
       "",
       "YES Hub's eligibility rules (location, B-BBEE minimum, required documents, good standing):",
-      JSON.stringify(rules.checks.filter((c) => c.required), null, 2),
+      JSON.stringify(
+        rules.checks.filter((c) => c.required),
+        null,
+        2,
+      ),
       "",
       "Scoring guide for functionality and assessed criteria: 0-39 no evidence, 40-59 weak, 60-79 adequate,",
       "80-100 strong, with evidence in the documents or proposal. Claims only on the profile count for less",
@@ -224,7 +219,10 @@ export const assessApplication = internalAction({
             points: c.points,
             met: judged ? (asBoolean(a.met) ?? (c.kind === "bbbee" ? undefined : false)) : undefined,
             score: scored ? (asScore(a.score) ?? 0) : undefined,
-            reasoning: clip(asString(a.reasoning, c.kind === "price" ? "Calculated from the quote." : "No reasoning given."), 800),
+            reasoning: clip(
+              asString(a.reasoning, c.kind === "price" ? "Calculated from the quote." : "No reasoning given."),
+              800,
+            ),
             evidence: asStrings(a.evidence, 8).map((e) => clip(e, 300)),
           };
         });
@@ -245,7 +243,13 @@ export const assessApplication = internalAction({
     const checks: Evaluation["checks"] = [...rules.checks];
     answer.criteria.forEach((c, i) => {
       if (c.kind === "gate") {
-        checks.push({ id: `criterion-${i + 1}`, label: c.criterion, required: true, passed: c.met === true, detail: c.reasoning });
+        checks.push({
+          id: `criterion-${i + 1}`,
+          label: c.criterion,
+          required: true,
+          passed: c.met === true,
+          detail: c.reasoning,
+        });
       } else if (c.kind === "functionality") {
         const minimum = c.points ?? 0;
         checks.push({
@@ -277,9 +281,7 @@ export const assessApplication = internalAction({
       // Same convention as the rules: an applicant who doesn't qualify never outranks one who does
       score: qualifies ? answer.score : Math.min(answer.score, 59),
       summary:
-        qualifies || !failed.length
-          ? answer.summary
-          : `Doesn’t qualify: ${failed.join(", ")}. ${answer.summary}`,
+        qualifies || !failed.length ? answer.summary : `Doesn’t qualify: ${failed.join(", ")}. ${answer.summary}`,
       checks,
       criteria: answer.criteria,
       concerns: answer.concerns,

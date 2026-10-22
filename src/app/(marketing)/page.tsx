@@ -174,7 +174,9 @@ function HowItWorks() {
         <ol className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
           {STEPS.map((step, i) => (
             <li key={step.title}>
-              <span className="text-sm font-medium text-muted-foreground tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+              <span className="text-sm font-medium text-muted-foreground tabular-nums">
+                {String(i + 1).padStart(2, "0")}
+              </span>
               <h3 className="mt-2 text-lg font-semibold">{step.title}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{step.body}</p>
             </li>
@@ -220,7 +222,9 @@ function TenderPack() {
           {DOCUMENTS.map((doc) => (
             <li key={doc.key} className="flex items-center justify-between gap-4 px-5 py-3.5 text-sm">
               <span className="font-medium">{doc.label}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">{doc.required ? "Required" : "Recommended"}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {doc.required ? "Required" : "Recommended"}
+              </span>
             </li>
           ))}
         </ul>

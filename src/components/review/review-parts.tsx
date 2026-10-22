@@ -7,7 +7,14 @@ import { useState } from "react";
 import { Pill } from "@/components/admin/page-header";
 import { formatDateTime } from "@/components/admin/shared";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import type { api } from "../../../convex/_generated/api";
@@ -35,7 +42,11 @@ export function ReviewStatus({ review, engine }: { review: Review; engine: "rule
   return <Pill>Rules check only</Pill>;
 }
 
-export function DecisionPill({ decision }: { decision: Pick<ApplicationDecision, "outcome" | "overriddenBy"> | null | undefined }) {
+export function DecisionPill({
+  decision,
+}: {
+  decision: Pick<ApplicationDecision, "outcome" | "overriddenBy"> | null | undefined;
+}) {
   if (!decision) return null;
   return decision.outcome === "approved" ? (
     <Pill tone="success">{decision.overriddenBy ? "Approved (changed)" : "Approved by Jev"}</Pill>
@@ -58,7 +69,8 @@ function criterionResult(c: CriterionAssessment) {
     if (c.met === false) return { text: "Level not supported", tone: "text-destructive" };
     return { text: "Calculated from level", tone: "text-muted-foreground" };
   }
-  if (c.kind === "gate") return c.met ? { text: "Met", tone: "text-success" } : { text: "Not met", tone: "text-destructive" };
+  if (c.kind === "gate")
+    return c.met ? { text: "Met", tone: "text-success" } : { text: "Not met", tone: "text-destructive" };
   const minimum = c.kind === "functionality" ? (c.points ?? 0) : 0;
   const passed = (c.score ?? 0) >= minimum;
   return {
@@ -69,7 +81,8 @@ function criterionResult(c: CriterionAssessment) {
 
 /** Each of the buyer's criteria with Jev's result, reasoning and evidence. */
 export function CriteriaList({ criteria }: { criteria: CriterionAssessment[] }) {
-  if (criteria.length === 0) return <p className="text-sm text-muted-foreground">The buyer didn’t list evaluation criteria.</p>;
+  if (criteria.length === 0)
+    return <p className="text-sm text-muted-foreground">The buyer didn’t list evaluation criteria.</p>;
   return (
     <ul className="space-y-3">
       {criteria.map((c) => {
@@ -134,7 +147,9 @@ export function DocumentReadings({ documents }: { documents: Reading[] }) {
                 ) : (
                   <Pill tone="success">No issues</Pill>
                 )}
-                <ChevronDownIcon className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
+                <ChevronDownIcon
+                  className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-180")}
+                />
               </span>
             </button>
             {expanded && (
@@ -163,7 +178,9 @@ export function DocumentReadings({ documents }: { documents: Reading[] }) {
                 {d.excerpt && d.excerpt !== "(image)" && (
                   <details className="text-xs">
                     <summary className="cursor-pointer text-muted-foreground">Text Jev read</summary>
-                    <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-muted p-3 font-sans whitespace-pre-wrap">{d.excerpt}</pre>
+                    <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-muted p-3 font-sans whitespace-pre-wrap">
+                      {d.excerpt}
+                    </pre>
                   </details>
                 )}
               </div>
@@ -210,7 +227,12 @@ export function TrailList({ entries }: { entries: TrailRow[] }) {
             {e.model && ` · ${e.model}`}
             {e.costUsd !== null && ` · $${e.costUsd.toFixed(4)}`}
           </p>
-          <p className={cn(e.kind === "guardrail" || e.kind === "error" ? "text-destructive" : "", e.kind === "override" && "font-medium")}>
+          <p
+            className={cn(
+              e.kind === "guardrail" || e.kind === "error" ? "text-destructive" : "",
+              e.kind === "override" && "font-medium",
+            )}
+          >
             {e.summary}
           </p>
           {e.details.length > 0 && (

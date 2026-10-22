@@ -130,7 +130,11 @@ export function ApplicationStatusPill({ status }: { status: ApplicationStatus })
 }
 
 export function FitPill({ evaluation }: { evaluation: Evaluation }) {
-  return evaluation.qualifies ? <Pill tone="success">You qualify</Pill> : <Pill tone="danger">You don’t qualify yet</Pill>;
+  return evaluation.qualifies ? (
+    <Pill tone="success">You qualify</Pill>
+  ) : (
+    <Pill tone="danger">You don’t qualify yet</Pill>
+  );
 }
 
 /** Requirements and strengths, met or not. */
@@ -151,7 +155,13 @@ export function ChecksList({ evaluation }: { evaluation: Evaluation }) {
                   <span className="font-medium">{c.label}</span>
                   <span className="block text-xs text-muted-foreground">{c.detail}</span>
                 </span>
-                <span className={c.passed ? "shrink-0 text-xs font-medium text-success" : "shrink-0 text-xs font-medium text-destructive"}>
+                <span
+                  className={
+                    c.passed
+                      ? "shrink-0 text-xs font-medium text-success"
+                      : "shrink-0 text-xs font-medium text-destructive"
+                  }
+                >
                   {c.passed ? "Met" : "Not met"}
                 </span>
               </li>

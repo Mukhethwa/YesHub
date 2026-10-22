@@ -111,7 +111,9 @@ function Dashboard({ rows, more }: { rows: Row[]; more: boolean }) {
       <Card>
         <CardHeader>
           <CardTitle>Your opportunities</CardTitle>
-          <CardDescription>Applicants are checked against each opportunity’s requirements as they apply.</CardDescription>
+          <CardDescription>
+            Applicants are checked against each opportunity’s requirements as they apply.
+          </CardDescription>
           <CardAction>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/dashboard/opportunities">View all</Link>

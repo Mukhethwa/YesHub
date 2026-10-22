@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 
-export function AdminPageHeader({ title, description, children }: { title: string; description: string; children?: ReactNode }) {
+export function AdminPageHeader({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children?: ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
@@ -13,7 +21,13 @@ export function AdminPageHeader({ title, description, children }: { title: strin
 }
 
 /** Small status pill used across the admin tables. */
-export function Pill({ tone = "neutral", children }: { tone?: "neutral" | "success" | "warning" | "danger" | "info"; children: ReactNode }) {
+export function Pill({
+  tone = "neutral",
+  children,
+}: {
+  tone?: "neutral" | "success" | "warning" | "danger" | "info";
+  children: ReactNode;
+}) {
   const tones = {
     neutral: "bg-secondary text-secondary-foreground",
     success: "bg-success/10 text-success",
@@ -21,5 +35,9 @@ export function Pill({ tone = "neutral", children }: { tone?: "neutral" | "succe
     danger: "bg-destructive/10 text-destructive",
     info: "bg-primary/10 text-primary",
   };
-  return <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>{children}</span>;
+  return (
+    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>
+      {children}
+    </span>
+  );
 }

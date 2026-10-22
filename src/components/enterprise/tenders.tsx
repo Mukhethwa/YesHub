@@ -68,7 +68,11 @@ export function QualifiedShare({ qualified, applications }: { qualified: number;
         <span className="font-medium">{qualified}</span>
         <span className="text-muted-foreground"> of {applications}</span>
       </p>
-      <Progress value={percent(qualified, applications)} className="mt-1.5" aria-label={`${qualified} of ${applications} qualify`} />
+      <Progress
+        value={percent(qualified, applications)}
+        className="mt-1.5"
+        aria-label={`${qualified} of ${applications} qualify`}
+      />
     </div>
   );
 }

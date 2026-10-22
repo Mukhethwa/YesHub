@@ -5,7 +5,14 @@ import type { FunctionReturnType } from "convex/server";
 
 import { TrailList } from "@/components/review/review-parts";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -113,7 +120,9 @@ function RunTrail({ runId, title }: { runId: Id<"decisionRuns">; title: string }
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>The decision in order: who asked, every applicant’s points, Jev’s decisions, guardrails and changes.</DialogDescription>
+          <DialogDescription>
+            The decision in order: who asked, every applicant’s points, Jev’s decisions, guardrails and changes.
+          </DialogDescription>
         </DialogHeader>
         <div className="max-h-[65vh] overflow-y-auto pr-1">
           <TrailBody runId={runId} />

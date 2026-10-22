@@ -91,10 +91,26 @@ export function TeamView() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Members" value={members.length} note={`${team.invitations.length} invitation${team.invitations.length === 1 ? "" : "s"} pending`} />
-        <Stat label="Departments" value={departments.length} note={`${unassigned.length} opportunit${unassigned.length === 1 ? "y" : "ies"} unassigned`} />
-        <Stat label="Your departments’ open work" value={myWork.filter(isOpen).length} note={`${myWork.length} opportunities in total`} />
-        <Stat label="Awaiting review" value={awaiting} note="Applications in your departments nobody has shortlisted yet" />
+        <Stat
+          label="Members"
+          value={members.length}
+          note={`${team.invitations.length} invitation${team.invitations.length === 1 ? "" : "s"} pending`}
+        />
+        <Stat
+          label="Departments"
+          value={departments.length}
+          note={`${unassigned.length} opportunit${unassigned.length === 1 ? "y" : "ies"} unassigned`}
+        />
+        <Stat
+          label="Your departments’ open work"
+          value={myWork.filter(isOpen).length}
+          note={`${myWork.length} opportunities in total`}
+        />
+        <Stat
+          label="Awaiting review"
+          value={awaiting}
+          note="Applications in your departments nobody has shortlisted yet"
+        />
       </div>
 
       <Card>
@@ -141,9 +157,7 @@ export function TeamView() {
         )}
       </section>
 
-      {unassigned.length > 0 && (
-        <UnassignedCard opportunities={unassigned} departments={departments} me={me} />
-      )}
+      {unassigned.length > 0 && <UnassignedCard opportunities={unassigned} departments={departments} me={me} />}
 
       <MembersCard team={team} />
 
@@ -181,7 +195,8 @@ function DepartmentCard({
           {mine && <Pill tone="info">Your department</Pill>}
         </CardTitle>
         <CardDescription>
-          {members.length} member{members.length === 1 ? "" : "s"} · {open.length} open · {opportunities.length - open.length} closed
+          {members.length} member{members.length === 1 ? "" : "s"} · {open.length} open ·{" "}
+          {opportunities.length - open.length} closed
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
@@ -225,7 +240,9 @@ function CreateDepartment() {
     event.preventDefault();
     if (!name.trim()) return;
     setPending(true);
-    const ok = await runAuthAction(`${name.trim()} created`, () => authClient.organization.createTeam({ name: name.trim() }));
+    const ok = await runAuthAction(`${name.trim()} created`, () =>
+      authClient.organization.createTeam({ name: name.trim() }),
+    );
     if (ok) setName("");
     setPending(false);
   };
@@ -260,14 +277,17 @@ function DeleteDepartment({ department, owns }: { department: Department; owns: 
           <AlertDialogTitle>Delete {department.name}?</AlertDialogTitle>
           <AlertDialogDescription>
             Its members stay in the organisation.
-            {owns > 0 && ` Its ${owns} opportunit${owns === 1 ? "y becomes" : "ies become"} unassigned until you move ${owns === 1 ? "it" : "them"} to another department.`}
+            {owns > 0 &&
+              ` Its ${owns} opportunit${owns === 1 ? "y becomes" : "ies become"} unassigned until you move ${owns === 1 ? "it" : "them"} to another department.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={() =>
-              runAuthAction(`${department.name} deleted`, () => authClient.organization.removeTeam({ teamId: department.id }))
+              runAuthAction(`${department.name} deleted`, () =>
+                authClient.organization.removeTeam({ teamId: department.id }),
+              )
             }
           >
             Delete department
@@ -370,7 +390,8 @@ function MembersCard({ team }: { team: Team }) {
       <CardHeader>
         <CardTitle>Members</CardTitle>
         <CardDescription>
-          Owners and admins manage the team and settings; members review applicants and move work within their departments.
+          Owners and admins manage the team and settings; members review applicants and move work within their
+          departments.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0">
@@ -405,7 +426,10 @@ function MembersCard({ team }: { team: Team }) {
                         value={m.role}
                         onValueChange={(role) =>
                           runAuthAction(`${m.name} is now ${roleLabel(role).toLowerCase()}`, () =>
-                            authClient.organization.updateMemberRole({ memberId: m.id, role: role as "admin" | "member" }),
+                            authClient.organization.updateMemberRole({
+                              memberId: m.id,
+                              role: role as "admin" | "member",
+                            }),
                           )
                         }
                       >
@@ -425,13 +449,18 @@ function MembersCard({ team }: { team: Team }) {
                     {m.teamIds.length === 0 ? (
                       <span className="text-muted-foreground">None</span>
                     ) : (
-                      m.teamIds.map((id) => departmentName.get(id)).filter(Boolean).join(", ")
+                      m.teamIds
+                        .map((id) => departmentName.get(id))
+                        .filter(Boolean)
+                        .join(", ")
                     )}
                   </TableCell>
                   <TableCell className="text-sm">{formatDate(m.createdAt)}</TableCell>
                   <TableCell className="pr-6">
                     <div className="flex justify-end gap-1.5">
-                      {me.canManage && departments.length > 0 && <EditDepartments member={m} departments={departments} />}
+                      {me.canManage && departments.length > 0 && (
+                        <EditDepartments member={m} departments={departments} />
+                      )}
                       {editable && <RemoveMember member={m} />}
                     </div>
                   </TableCell>
@@ -531,7 +560,9 @@ function RemoveMember({ member }: { member: Member }) {
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={() =>
-              runAuthAction(`${member.name} removed`, () => authClient.organization.removeMember({ memberIdOrEmail: member.id }))
+              runAuthAction(`${member.name} removed`, () =>
+                authClient.organization.removeMember({ memberIdOrEmail: member.id }),
+              )
             }
           >
             Remove from organisation
@@ -613,7 +644,9 @@ function InvitationsCard({ team }: { team: Team }) {
 
         {team.invitations.length > 0 && (
           <div>
-            <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Pending invitations</p>
+            <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Pending invitations
+            </p>
             <ul className="divide-y rounded-lg border">
               {team.invitations.map((i) => (
                 <li key={i.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">

@@ -2,7 +2,12 @@
 // admin UI, so the same rules apply everywhere. Relative imports only: Convex bundles this file too.
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements } from "better-auth/plugins/admin/access";
-import { adminAc as orgAdminAc, defaultStatements as orgStatements, memberAc, ownerAc } from "better-auth/plugins/organization/access";
+import {
+  adminAc as orgAdminAc,
+  defaultStatements as orgStatements,
+  memberAc,
+  ownerAc,
+} from "better-auth/plugins/organization/access";
 
 export const statements = {
   // Better Auth's own admin resources: user (create, list, set-role, ban, impersonate, …) and session
@@ -21,7 +26,19 @@ export const ac = createAccessControl(statements);
 
 /** Everything, including managing other staff. */
 const superadmin = ac.newRole({
-  user: ["create", "list", "set-role", "ban", "impersonate", "impersonate-admins", "delete", "set-password", "set-email", "get", "update"],
+  user: [
+    "create",
+    "list",
+    "set-role",
+    "ban",
+    "impersonate",
+    "impersonate-admins",
+    "delete",
+    "set-password",
+    "set-email",
+    "get",
+    "update",
+  ],
   session: ["list", "revoke", "delete"],
   staff: ["invite", "manage"],
   sme: ["read", "verify", "suspend", "delete"],
@@ -69,7 +86,10 @@ export const STAFF_ROLES: StaffRole[] = ["superadmin", "admin", "moderator", "vi
 export const ROLE_LABELS: Record<PlatformRole, { label: string; description: string }> = {
   superadmin: { label: "Super admin", description: "Everything, including inviting staff and changing access levels" },
   admin: { label: "Admin", description: "Manage users, SMEs and organisations; can’t change access levels" },
-  moderator: { label: "Moderator", description: "Ban and unban users, verify SMEs and enterprises; read-only otherwise" },
+  moderator: {
+    label: "Moderator",
+    description: "Ban and unban users, verify SMEs and enterprises; read-only otherwise",
+  },
   viewer: { label: "Viewer", description: "Read-only access to the admin area" },
   user: { label: "User", description: "Not YES Hub staff" },
 };

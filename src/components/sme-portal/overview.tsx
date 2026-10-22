@@ -101,7 +101,9 @@ export function Overview({ sme }: { sme: SmeProfile }) {
                     return (
                       <li key={d.key} className="flex justify-between gap-3">
                         <span>{d.label}</span>
-                        <span className={cn("shrink-0 text-xs", expired ? "text-destructive" : "text-muted-foreground")}>
+                        <span
+                          className={cn("shrink-0 text-xs", expired ? "text-destructive" : "text-muted-foreground")}
+                        >
                           {expired ? "Expired" : "Needed"}
                         </span>
                       </li>
@@ -172,8 +174,7 @@ function WelcomeBanner({ sme }: { sme: SmeProfile }) {
       <CardHeader>
         <CardTitle className="text-lg">Welcome, {sme.contactName.split(/\s+/)[0]}</CardTitle>
         <CardDescription>
-          {sme.companyName} is registered. We’ll start matching you as soon as opportunities in your area are
-          published.
+          {sme.companyName} is registered. We’ll start matching you as soon as opportunities in your area are published.
         </CardDescription>
         <CardAction>
           <Button variant="ghost" size="sm" onClick={() => router.replace(pathname)}>

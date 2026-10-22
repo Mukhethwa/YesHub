@@ -120,7 +120,9 @@ function ApplicationsList({ sme }: { sme: SmeProfile }) {
             <Card>
               <CardHeader>
                 <CardTitle>What’s holding you back</CardTitle>
-                <CardDescription>Requirements you didn’t meet across your applications. Fixing these opens up more work.</CardDescription>
+                <CardDescription>
+                  Requirements you didn’t meet across your applications. Fixing these opens up more work.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm">
@@ -202,8 +204,12 @@ function ApplicationCard({ row }: { row: Row }) {
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-muted-foreground">{a.evaluation.engine === "jev" ? "Jev’s review" : "When you applied"}</dt>
-          <dd>{a.evaluation.qualifies ? "Qualified" : "Didn’t qualify"} · score {a.evaluation.score}</dd>
+          <dt className="text-xs text-muted-foreground">
+            {a.evaluation.engine === "jev" ? "Jev’s review" : "When you applied"}
+          </dt>
+          <dd>
+            {a.evaluation.qualifies ? "Qualified" : "Didn’t qualify"} · score {a.evaluation.score}
+          </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">Buyer activity</dt>
@@ -236,7 +242,10 @@ const docLabel = (key: string) => DOCUMENTS.find((d) => d.key === key)?.label ??
 function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme: SmeProfile }) {
   const o = useQuery(api.smeOpportunities.opportunity, { opportunityId });
   // A live check for SMEs that haven't applied, so they see their fit before applying
-  const preview = useMemo(() => (o && !o.application ? evaluateApplication(o as EvaluableOpportunity, sme) : null), [o, sme]);
+  const preview = useMemo(
+    () => (o && !o.application ? evaluateApplication(o as EvaluableOpportunity, sme) : null),
+    [o, sme],
+  );
 
   if (o === undefined) return <Spinner className="mx-auto mt-24" />;
   if (o === null) {
@@ -277,7 +286,8 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
 
       <dl className="grid gap-x-6 gap-y-4 rounded-xl border bg-card p-5 sm:grid-cols-2 lg:grid-cols-4">
         <Fact label="Closes">
-          {formatDate(o.closesAt)} <span className="text-muted-foreground">({closingLabel(o.closesAt).toLowerCase()})</span>
+          {formatDate(o.closesAt)}{" "}
+          <span className="text-muted-foreground">({closingLabel(o.closesAt).toLowerCase()})</span>
         </Fact>
         <Fact label="Value">{formatRand(o.value)}</Fact>
         <Fact label="Contract period">{o.contractPeriod || "Not stated"}</Fact>
@@ -320,18 +330,23 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
           {a ? (
             <ol className="space-y-2 border-t pt-4 text-sm">
               <li>
-                <span className="text-muted-foreground tabular-nums">{formatDateTime(a.submittedAt)}</span> · You applied
+                <span className="text-muted-foreground tabular-nums">{formatDateTime(a.submittedAt)}</span> · You
+                applied
               </li>
               {a.views > 0 && (
                 <li>
-                  <span className="text-muted-foreground tabular-nums">{formatDateTime(a.lastViewedAt ?? undefined)}</span> ·{" "}
-                  {o.organizationName} last opened your application ({a.views} time{a.views === 1 ? "" : "s"} so far)
+                  <span className="text-muted-foreground tabular-nums">
+                    {formatDateTime(a.lastViewedAt ?? undefined)}
+                  </span>{" "}
+                  · {o.organizationName} last opened your application ({a.views} time{a.views === 1 ? "" : "s"} so far)
                 </li>
               )}
               {a.status === "shortlisted" && (
                 <li>
-                  <span className="text-muted-foreground tabular-nums">{formatDateTime(a.statusChangedAt ?? undefined)}</span> ·
-                  You were shortlisted. {o.organizationName} can now see your contact details.
+                  <span className="text-muted-foreground tabular-nums">
+                    {formatDateTime(a.statusChangedAt ?? undefined)}
+                  </span>{" "}
+                  · You were shortlisted. {o.organizationName} can now see your contact details.
                 </li>
               )}
               {a.status === "declined" && <li>{o.organizationName} didn’t take your application further this time.</li>}
@@ -361,7 +376,9 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
         <Card>
           <CardHeader>
             <CardTitle>About this opportunity</CardTitle>
-            <CardDescription>Published by {o.organizationName} on {formatDate(o.listing.publishedAt)}.</CardDescription>
+            <CardDescription>
+              Published by {o.organizationName} on {formatDate(o.listing.publishedAt)}.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="space-y-4 text-sm">
@@ -430,7 +447,9 @@ function ListingItem({ label, children }: { label: string; children: React.React
   );
 }
 
-type MyApplication = NonNullable<NonNullable<FunctionReturnType<typeof api.smeOpportunities.opportunity>>["application"]>;
+type MyApplication = NonNullable<
+  NonNullable<FunctionReturnType<typeof api.smeOpportunities.opportunity>>["application"]
+>;
 
 /** Jev's review of the SME's own application: how each criterion scored, and the decision with its reasons. */
 function JevReview({ application: a }: { application: MyApplication }) {

@@ -40,7 +40,9 @@ function matches(user: AdminUser, filter: Filter) {
 export function AccountPills({ user }: { user: AdminUser }) {
   return (
     <div className="flex flex-wrap gap-1">
-      {user.accountType === "staff" && isStaffRole(user.role) && <Pill tone="info">{ROLE_LABELS[user.role].label}</Pill>}
+      {user.accountType === "staff" && isStaffRole(user.role) && (
+        <Pill tone="info">{ROLE_LABELS[user.role].label}</Pill>
+      )}
       {user.accountType === "sme" && <Pill>SME</Pill>}
       {user.accountType === "enterprise" && <Pill>Enterprise</Pill>}
       {!user.accountType && <Pill tone="warning">Not set up</Pill>}
@@ -59,7 +61,8 @@ export function UsersTable() {
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     const rows = (users ?? []).filter(
-      (u) => matches(u, filter) && (!term || u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term)),
+      (u) =>
+        matches(u, filter) && (!term || u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term)),
     );
     return rows.sort((a, b) => {
       const cmp = sort.key === "createdAt" ? a.createdAt - b.createdAt : a[sort.key].localeCompare(b[sort.key]);
@@ -168,8 +171,12 @@ export function UsersTable() {
                 <TableCell>
                   <AccountPills user={user} />
                 </TableCell>
-                <TableCell>{user.banned ? <Pill tone="danger">Banned</Pill> : <Pill tone="success">Active</Pill>}</TableCell>
-                <TableCell className="hidden text-muted-foreground md:table-cell">{formatDate(user.createdAt)}</TableCell>
+                <TableCell>
+                  {user.banned ? <Pill tone="danger">Banned</Pill> : <Pill tone="success">Active</Pill>}
+                </TableCell>
+                <TableCell className="hidden text-muted-foreground md:table-cell">
+                  {formatDate(user.createdAt)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

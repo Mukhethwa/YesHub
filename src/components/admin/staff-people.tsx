@@ -62,8 +62,8 @@ export function StaffPeople() {
           <CardHeader>
             <CardTitle>Invite links</CardTitle>
             <CardDescription>
-              Invitations are emailed, but you can also send the link yourself. They sign in or create an account with the
-              invited email, then accept.
+              Invitations are emailed, but you can also send the link yourself. They sign in or create an account with
+              the invited email, then accept.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -73,7 +73,8 @@ export function StaffPeople() {
                   <div className="min-w-0">
                     <p className="truncate font-medium">{invitation.email}</p>
                     <p className="text-xs text-muted-foreground">
-                      {STAFF_ROLE_OPTIONS[invitation.role ?? ""] ?? "Viewer"} · expires {formatDate(invitation.expiresAt)}
+                      {STAFF_ROLE_OPTIONS[invitation.role ?? ""] ?? "Viewer"} · expires{" "}
+                      {formatDate(invitation.expiresAt)}
                     </p>
                   </div>
                   <Button
@@ -141,8 +142,12 @@ function ReadOnlyStaff({ staff }: { staff: ReturnType<typeof useQuery<typeof api
                   <p className="font-medium">{member.name}</p>
                   <p className="text-xs text-muted-foreground">{member.email}</p>
                 </TableCell>
-                <TableCell>{STAFF_ROLE_OPTIONS[member.role] ?? ORG_ROLE_LABELS[member.role as OrgRole] ?? member.role}</TableCell>
-                <TableCell className="hidden text-muted-foreground sm:table-cell">{formatDate(member.createdAt)}</TableCell>
+                <TableCell>
+                  {STAFF_ROLE_OPTIONS[member.role] ?? ORG_ROLE_LABELS[member.role as OrgRole] ?? member.role}
+                </TableCell>
+                <TableCell className="hidden text-muted-foreground sm:table-cell">
+                  {formatDate(member.createdAt)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

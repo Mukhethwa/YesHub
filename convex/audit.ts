@@ -25,7 +25,13 @@ export const record = internalMutation({
 export async function audit(
   ctx: MutationCtx,
   actor: { _id: string; name: string },
-  e: { action: string; targetType: "user" | "organization" | "sme" | "staff"; targetId?: string; targetLabel?: string; details?: string },
+  e: {
+    action: string;
+    targetType: "user" | "organization" | "sme" | "staff";
+    targetId?: string;
+    targetLabel?: string;
+    details?: string;
+  },
 ) {
   await ctx.db.insert("auditLog", { actorId: actor._id, actorName: actor.name, ...e });
 }

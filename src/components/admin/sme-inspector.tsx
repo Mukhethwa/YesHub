@@ -89,7 +89,12 @@ function Inspector({ smeId, onClose }: { smeId: Id<"smes">; onClose: () => void 
               label="Website"
               value={
                 sme.website && (
-                  <a href={websiteHref(sme.website)} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                  <a
+                    href={websiteHref(sme.website)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
+                  >
                     {sme.website}
                   </a>
                 )
@@ -255,13 +260,26 @@ function Moderation({ sme, onDeleted }: { sme: SmeDetail; onDeleted: () => void 
               Reinstate
             </Button>
           ) : (
-            <Button variant="outline" size="sm" disabled={!can({ sme: ["suspend"] })} onClick={() => setSuspendOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!can({ sme: ["suspend"] })}
+              onClick={() => setSuspendOpen(true)}
+            >
               Suspend…
             </Button>
           )}
         </Row>
-        <Row title="Delete profile" description="Delete the SME profile and its documents. The account stays and can register again.">
-          <Button variant="destructive" size="sm" disabled={!can({ sme: ["delete"] })} onClick={() => setDeleteOpen(true)}>
+        <Row
+          title="Delete profile"
+          description="Delete the SME profile and its documents. The account stays and can register again."
+        >
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={!can({ sme: ["delete"] })}
+            onClick={() => setDeleteOpen(true)}
+          >
             Delete…
           </Button>
         </Row>
@@ -298,7 +316,9 @@ function Moderation({ sme, onDeleted }: { sme: SmeDetail; onDeleted: () => void 
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {sme.companyName}?</AlertDialogTitle>
-            <AlertDialogDescription>The profile and every uploaded document are deleted. This can’t be undone.</AlertDialogDescription>
+            <AlertDialogDescription>
+              The profile and every uploaded document are deleted. This can’t be undone.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

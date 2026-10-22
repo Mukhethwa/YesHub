@@ -117,9 +117,12 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
     const body = (hookCtx.body ?? {}) as Record<string, string | undefined>;
     const returned = hookCtx.context.returned as Record<string, unknown> | null;
     // The endpoints return the invitation or member they changed; use it to find the organisation
-    const record = (returned?.member ?? returned?.invitation ?? returned) as
-      | { organizationId?: string; email?: string; userId?: string; role?: string }
-      | null;
+    const record = (returned?.member ?? returned?.invitation ?? returned) as {
+      organizationId?: string;
+      email?: string;
+      userId?: string;
+      role?: string;
+    } | null;
     const organizationId = body.organizationId ?? record?.organizationId ?? session.session.activeOrganizationId;
     if (!organizationId) return;
     const org = await hookCtx.context.adapter.findOne<{ kind?: string }>({
@@ -274,7 +277,12 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
           targetType: "user",
           targetId,
           targetLabel: target?.email ?? (typeof body.email === "string" ? body.email : undefined),
-          details: typeof body.banReason === "string" ? body.banReason : typeof body.role === "string" ? `role: ${body.role}` : undefined,
+          details:
+            typeof body.banReason === "string"
+              ? body.banReason
+              : typeof body.role === "string"
+                ? `role: ${body.role}`
+                : undefined,
         });
       }),
     },
