@@ -8,6 +8,7 @@ import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
 import { components } from "./_generated/api";
 import { evaluateApplication } from "./lib/evaluation";
+import { addTrail } from "./review";
 import {
   canManage,
   getMemberPreferences,
@@ -153,6 +154,7 @@ export const opportunity = query({
         submittedAt: application.submittedAt,
         statusChangedAt: application.statusChangedAt ?? null,
         statusChangedBy: application.statusChangedBy ?? null,
+        statusReason: application.statusReason ?? null,
         lastViewed: await lastViewOf(ctx, application._id),
         evaluation: application.evaluation,
         review: application.review ?? null,
@@ -219,6 +221,8 @@ export const opportunity = query({
       /** Departments the signed-in user may move it into. */
       assignableDepartmentIds: manager ? detail.teams.map((t) => t.id) : myTeamIds,
       canShortlist: manager || !settings.shortlistAdminsOnly,
+      /** Awarding is for owners and admins. */
+      canAward: manager,
       defaultApplicantFilter: settings.defaultApplicantFilter,
     };
   },
@@ -252,10 +256,24 @@ export const setOpportunityDepartment = mutation({
 /* ------------------------------------------------------------------------------------------------------ */
 
 /** Shortlists, declines or resets an applicant to one of the organisation's opportunities. */
+/** Words for each action on the record, e.g. "Naledi Dlamini shortlisted Ubuntu Facilities". */
+const STATUS_VERBS = {
+  submitted: "removed from the shortlist",
+  shortlisted: "shortlisted",
+  declined: "declined",
+  awarded: "awarded the opportunity to",
+} as const;
+
+/**
+ * Shortlists, removes from the shortlist, declines or awards an applicant. Every action needs a written reason
+ * (PAJA s5), which goes on the application's record and is shown to the SME with the outcome. Awarding is
+ * for owners and admins, and only from the shortlist.
+ */
 export const setApplicationStatus = mutation({
   args: {
     applicationId: v.id("applications"),
-    status: v.union(v.literal("submitted"), v.literal("shortlisted"), v.literal("declined")),
+    status: v.union(v.literal("submitted"), v.literal("shortlisted"), v.literal("declined"), v.literal("awarded")),
+    reason: v.string(),
   },
   handler: async (ctx, args) => {
     const enterprise = await getEnterprise(ctx);
@@ -265,19 +283,54 @@ export const setApplicationStatus = mutation({
       throw new ConvexError("That application isn’t available.");
     }
     if (application.status === "awarded") throw new ConvexError("This application has already been awarded.");
+    const manager = canManage(enterprise.organization.role);
     const settings = await getOrganizationSettings(ctx, enterprise.organization.id);
-    if (settings.shortlistAdminsOnly && !canManage(enterprise.organization.role)) {
-      throw new ConvexError("In your organisation, only owners and admins shortlist applicants.");
+    if (settings.shortlistAdminsOnly && !manager) {
+      throw new ConvexError("Only owners and admins in your organisation can change an applicant’s status.");
     }
+    if (args.status === "awarded") {
+      if (!manager) throw new ConvexError("Only owners and admins can award.");
+      if (application.status !== "shortlisted") throw new ConvexError("Only shortlisted applicants can be awarded.");
+    }
+    const reason = args.reason.trim();
+    if (reason.length < 10) throw new ConvexError("Enter a reason of at least 10 characters.");
+    if (reason.length > 1000) throw new ConvexError("Keep the reason under 1 000 characters.");
+    if (args.status === application.status) return null;
+
+    // Going against the shortlisting outcome is recorded as a change to it
+    const decision = application.decision;
+    const againstShortlisting =
+      decision &&
+      ((decision.outcome === "shortlisted" && args.status !== "shortlisted" && args.status !== "awarded") ||
+        (decision.outcome === "not_shortlisted" && args.status === "shortlisted"));
 
     await ctx.db.patch("applications", application._id, {
       status: args.status,
       statusChangedAt: Date.now(),
       statusChangedBy: enterprise.user.name,
+      statusReason: reason,
+      ...(againstShortlisting && decision
+        ? { decision: { ...decision, overriddenBy: enterprise.user.name, overrideReason: reason } }
+        : {}),
     });
-    const action =
-      args.status === "shortlisted" ? "shortlisted" : args.status === "declined" ? "declined" : "unshortlisted";
-    await recordActivity(ctx, application, enterprise.user, action);
+
+    const action = (
+      { shortlisted: "shortlisted", declined: "declined", awarded: "awarded", submitted: "unshortlisted" } as const
+    )[args.status];
+    await recordActivity(ctx, application, enterprise.user, action, reason);
+    const sme = await ctx.db.get("smes", application.smeId);
+    await addTrail(ctx, {
+      opportunityId: application.opportunityId,
+      organizationId: application.organizationId,
+      applicationId: application._id,
+      runId: decision?.runId,
+      kind: againstShortlisting ? "override" : "action",
+      actor: enterprise.user.name,
+      summary: `${enterprise.user.name} ${STATUS_VERBS[args.status]} ${sme?.companyName ?? "this applicant"}${
+        againstShortlisting ? ", against the shortlisting outcome" : ""
+      }.`,
+      details: [reason],
+    });
     return null;
   },
 });

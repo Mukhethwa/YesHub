@@ -1,5 +1,6 @@
 "use client";
 
+import { BadgeCheckIcon, CircleSlashIcon, InboxIcon, ListChecksIcon } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
@@ -9,6 +10,7 @@ import { toast } from "sonner";
 
 import { AdminPageHeader, Pill } from "@/components/admin/page-header";
 import { Score } from "@/components/app/score";
+import { StatStrip } from "@/components/app/stat-strip";
 import { useBreadcrumb } from "@/components/portal/breadcrumbs";
 import { FilterTabs, formatDateTime, runMutation, TablePagination, usePagination } from "@/components/admin/shared";
 import { Button } from "@/components/ui/button";
@@ -34,7 +36,7 @@ import { formatBytes, formatDate } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
 import { CreateOrganisation } from "./create-organisation";
 import { OpportunityTable } from "./enterprise-overview";
-import { ApplicantReview, ApplicantReviewStatus, EvaluationCard } from "./evaluation";
+import { ApplicantActions, ApplicantReview, ApplicantReviewStatus, EvaluationCard } from "./evaluation";
 import { DepartmentSelect } from "./team-view";
 import { closingLabel, formatRand, KIND_LABELS, percent, PhasePill, phaseOf } from "./tenders";
 
@@ -98,10 +100,7 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
 
   return (
     <div className="space-y-5">
-      <AdminPageHeader
-        title="Opportunities"
-        description="Every tender, RFQ and grant you’ve listed, with how many SMEs applied and how many qualify."
-      />
+      <AdminPageHeader title="Opportunities" />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterTabs
@@ -173,16 +172,6 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
     <div>
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 text-sm">{children}</dd>
-    </div>
-  );
-}
-
-function Stat({ label, value, note }: { label: string; value: number; note?: string }) {
-  return (
-    <div className="rounded-xl border bg-card p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
-      {note && <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>}
     </div>
   );
 }
@@ -263,16 +252,19 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
         </div>
       </dl>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Applications" value={detail.applications} />
-        <Stat
-          label="Qualify"
-          value={detail.qualified}
-          note={`${percent(detail.qualified, detail.applications)}% of applicants`}
-        />
-        <Stat label="Don’t qualify" value={detail.applications - detail.qualified} />
-        <Stat label="Shortlisted" value={detail.shortlisted} />
-      </div>
+      <StatStrip
+        items={[
+          { label: "Applications", icon: InboxIcon, value: detail.applications },
+          {
+            label: "Meet the requirements",
+            icon: BadgeCheckIcon,
+            value: detail.qualified,
+            context: `${percent(detail.qualified, detail.applications)}% of applicants`,
+          },
+          { label: "Don’t meet them", icon: CircleSlashIcon, value: detail.applications - detail.qualified },
+          { label: "Shortlisted", icon: ListChecksIcon, value: detail.shortlisted },
+        ]}
+      />
 
       <Tabs defaultValue="applicants">
         <TabsList>
@@ -289,8 +281,8 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
               <CardDescription>
                 Ranked best fit first: SMEs that meet every requirement, then by score.{" "}
                 {reviewed
-                  ? "Scored from each SME’s documents and proposal, against your evaluation criteria."
-                  : "Checked by YES Hub’s eligibility rules while the documents are reviewed."}
+                  ? "Scored against your evaluation criteria."
+                  : "Eligibility checked. Document review in progress."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 px-0">
@@ -314,6 +306,7 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
                 <ApplicantTable
                   opportunityId={detail.id}
                   canShortlist={detail.canShortlist}
+                  canAward={detail.canAward}
                   applicants={visible}
                   ranks={new Map(detail.applicants.map((a, i) => [a.id, i + 1]))}
                 />
@@ -562,43 +555,23 @@ function OpportunityActivityCard({ opportunityId }: { opportunityId: Detail["id"
   );
 }
 
-function ShortlistButton({ applicant, allowed }: { applicant: Applicant; allowed: boolean }) {
-  const setStatus = useMutation(api.enterprise.setApplicationStatus);
-  const [pending, setPending] = useState(false);
-  const shortlisted = applicant.status === "shortlisted";
-  if (applicant.status === "awarded") return null;
-
-  return (
-    <Button
-      variant={shortlisted ? "outline" : "default"}
-      size="sm"
-      disabled={pending || !allowed}
-      title={allowed ? undefined : "In your organisation, only owners and admins shortlist applicants"}
-      onClick={async () => {
-        setPending(true);
-        await runMutation(
-          shortlisted
-            ? `${applicant.sme.companyName} removed from the shortlist`
-            : `${applicant.sme.companyName} shortlisted`,
-          () => setStatus({ applicationId: applicant.id, status: shortlisted ? "submitted" : "shortlisted" }),
-        );
-        setPending(false);
-      }}
-    >
-      {pending && <Spinner />}
-      {shortlisted ? "Remove from shortlist" : "Shortlist"}
-    </Button>
-  );
-}
+const STATUS_LABELS: Record<Applicant["status"], string> = {
+  submitted: "Awaiting your decision",
+  shortlisted: "Shortlisted",
+  declined: "Not taken further",
+  awarded: "Awarded",
+};
 
 function ApplicantTable({
   opportunityId,
   canShortlist,
+  canAward,
   applicants,
   ranks,
 }: {
   opportunityId: string;
   canShortlist: boolean;
+  canAward: boolean;
   applicants: Applicant[];
   ranks: Map<string, number>;
 }) {
@@ -666,7 +639,7 @@ function ApplicantTable({
                         setOpen(expanded ? null : a.id);
                       }}
                     >
-                      {expanded ? "Hide" : "Why"}
+                      {expanded ? "Hide" : "Details"}
                     </Button>
                     <Button variant="outline" size="sm" asChild>
                       <Link
@@ -676,14 +649,13 @@ function ApplicantTable({
                         View business
                       </Link>
                     </Button>
-                    <ShortlistButton applicant={a} allowed={canShortlist} />
                   </div>
                 </TableCell>
               </TableRow>
               {expanded && (
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableCell colSpan={6} className="px-6 py-4 whitespace-normal">
-                    <ApplicantChecks applicant={a} />
+                    <ApplicantChecks applicant={a} canAct={canShortlist} canAward={canAward} />
                   </TableCell>
                 </TableRow>
               )}
@@ -695,7 +667,15 @@ function ApplicantTable({
   );
 }
 
-function ApplicantChecks({ applicant }: { applicant: Applicant }) {
+function ApplicantChecks({
+  applicant,
+  canAct,
+  canAward,
+}: {
+  applicant: Applicant;
+  canAct: boolean;
+  canAward: boolean;
+}) {
   const { evaluation } = applicant;
   const required = evaluation.checks.filter((c) => c.required);
   const strengths = evaluation.checks.filter((c) => !c.required);
@@ -722,6 +702,27 @@ function ApplicantChecks({ applicant }: { applicant: Applicant }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 text-sm">
+          <p className="font-medium">{STATUS_LABELS[applicant.status]}</p>
+          {applicant.statusReason ? (
+            <p className="text-muted-foreground">
+              {applicant.statusChangedBy}: {applicant.statusReason}
+            </p>
+          ) : (
+            <p className="text-muted-foreground">No action taken yet.</p>
+          )}
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <ApplicantActions
+            applicationId={applicant.id}
+            companyName={applicant.sme.companyName}
+            status={applicant.status}
+            canAct={canAct}
+            canAward={canAward}
+          />
+        </div>
+      </div>
       <p className="text-sm">{evaluation.summary}</p>
       <div className="grid gap-6 md:grid-cols-2">
         <div>

@@ -83,7 +83,7 @@ export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHre
           variant="ghost"
           align={collapsed ? "start" : "center"}
           className={cn(
-            "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&_.text-muted-foreground]:text-sidebar-foreground/60",
+            "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&_.text-foreground]:text-white [&_.text-muted-foreground]:text-sidebar-foreground/70",
             collapsed ? "mx-auto" : "w-full justify-start",
           )}
         />

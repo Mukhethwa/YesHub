@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { ShieldAlertIcon } from "lucide-react";
+import { BadgeCheckIcon, BriefcaseBusinessIcon, CalendarClockIcon, InboxIcon, ShieldAlertIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -92,12 +92,14 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
         items={[
           {
             label: "Open opportunities",
+            icon: BriefcaseBusinessIcon,
             value: open.length,
             context: `of ${rows.length}${more ? "+" : ""} listed`,
             href: "/dashboard/opportunities",
           },
           {
             label: "Applications",
+            icon: InboxIcon,
             value: applications,
             context: awaitingReview ? undefined : "All reviewed",
             action: awaitingReview
@@ -106,11 +108,13 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
           },
           {
             label: "Meet the requirements",
+            icon: BadgeCheckIcon,
             value: `${percent(qualified, applications)}%`,
             context: `${qualified} applicants, ${shortlisted} shortlisted`,
           },
           {
             label: "Closing this week",
+            icon: CalendarClockIcon,
             value: closingThisWeek.length,
             context: closingThisWeek.length ? undefined : "Nothing closes in the next 7 days",
             action: closingThisWeek[0]

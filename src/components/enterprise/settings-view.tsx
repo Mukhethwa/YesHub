@@ -24,7 +24,6 @@ import { api } from "../../../convex/_generated/api";
 import type { MemberPreferences, OrganizationSettings } from "../../../convex/schema";
 import { formatDateTime } from "../admin/shared";
 import { CreateOrganisation } from "./create-organisation";
-import { roleWithArticle } from "./team-view";
 
 type Data = NonNullable<FunctionReturnType<typeof api.enterprise.settings>>;
 
@@ -44,9 +43,7 @@ export function EnterpriseSettingsView() {
       <AdminPageHeader
         title="Settings"
         description={
-          data.canManage
-            ? "Your organisation’s profile, defaults for new listings and how your team reviews applicants."
-            : `Organisation settings are managed by owners and admins. You’re ${roleWithArticle(data.role)}, so you can change your own notifications.`
+          data.canManage ? undefined : "Managed by owners and admins. You can change your own notifications."
         }
       />
       {/* Keyed on the saved version so the forms reset to fresh values after a save */}

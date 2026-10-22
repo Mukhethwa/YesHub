@@ -30,7 +30,7 @@ const STEPS: { id: StepId; title: string; heading: string; blurb: string; tip: s
     title: "Services & capabilities",
     heading: "What does your business do?",
     blurb: "List your services and describe what you can deliver.",
-    tip: "Our AI reads your capability statement to match you to tenders written in very different words. Be specific.",
+    tip: "Your capability statement is matched against tender requirements. Be specific.",
   },
   {
     id: "coverage",

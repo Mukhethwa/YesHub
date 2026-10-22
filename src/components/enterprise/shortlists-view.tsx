@@ -1,12 +1,11 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { AdminPageHeader, Pill } from "@/components/admin/page-header";
-import { runMutation } from "@/components/admin/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatDate } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
 import { CreateOrganisation } from "./create-organisation";
+import { ApplicantActions } from "./evaluation";
 import { closingLabel, KIND_LABELS, PhasePill, phaseOf } from "./tenders";
 
 type Row = NonNullable<FunctionReturnType<typeof api.enterprise.shortlist>>[number];
@@ -45,8 +45,8 @@ export function ShortlistsView() {
         title="Shortlists"
         description={
           rows.length === 0
-            ? "Businesses you shortlist from your opportunities’ applicants appear here."
-            : `${businesses} business${businesses === 1 ? "" : "es"} shortlisted across ${opportunities.length} opportunit${opportunities.length === 1 ? "y" : "ies"}. Contact details are shared once you shortlist.`
+            ? undefined
+            : `${businesses} business${businesses === 1 ? "" : "es"} across ${opportunities.length} opportunit${opportunities.length === 1 ? "y" : "ies"}`
         }
       >
         {opportunities.length > 1 && (
@@ -160,34 +160,18 @@ function ShortlistTable({ rows }: { rows: Row[] }) {
                 <Button variant="outline" size="sm" asChild>
                   <Link href={`/dashboard/suppliers?id=${row.sme.id}&from=${row.opportunity.id}`}>View business</Link>
                 </Button>
-                <RemoveButton row={row} />
+                <ApplicantActions
+                  applicationId={row.applicationId}
+                  companyName={row.sme.companyName}
+                  status="shortlisted"
+                  canAct
+                  canAward={false}
+                />
               </div>
             </TableCell>
           </TableRow>
         ))}
       </TableBody>
     </Table>
-  );
-}
-
-function RemoveButton({ row }: { row: Row }) {
-  const setStatus = useMutation(api.enterprise.setApplicationStatus);
-  const [pending, setPending] = useState(false);
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={pending}
-      onClick={async () => {
-        setPending(true);
-        await runMutation(`${row.sme.companyName} removed from the shortlist`, () =>
-          setStatus({ applicationId: row.applicationId, status: "submitted" }),
-        );
-        setPending(false);
-      }}
-    >
-      {pending && <Spinner />}
-      Remove
-    </Button>
   );
 }

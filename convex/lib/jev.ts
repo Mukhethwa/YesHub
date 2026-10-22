@@ -27,11 +27,11 @@ export function parseJsonObject(text: string): unknown {
   const body = fenced ? fenced[1] : text;
   const start = body.indexOf("{");
   const end = body.lastIndexOf("}");
-  if (start === -1 || end <= start) throw new JevError("Jev’s answer wasn’t JSON.");
+  if (start === -1 || end <= start) throw new JevError("The review’s answer wasn’t JSON.");
   try {
     return JSON.parse(body.slice(start, end + 1));
   } catch {
-    throw new JevError("Jev’s answer wasn’t valid JSON.");
+    throw new JevError("The review’s answer wasn’t valid JSON.");
   }
 }
 
@@ -89,7 +89,7 @@ export async function askJev<T>({
   }
   const content = body.choices?.[0]?.message?.content;
   if (!content) {
-    throw new JevError(`Jev returned no answer (${body.choices?.[0]?.finish_reason ?? "no choices"}).`);
+    throw new JevError(`The review returned no answer (${body.choices?.[0]?.finish_reason ?? "no choices"}).`);
   }
 
   return {

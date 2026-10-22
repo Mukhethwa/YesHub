@@ -1,7 +1,15 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { CheckIcon, CircleAlertIcon, FileTextIcon } from "lucide-react";
+import {
+  CheckIcon,
+  CircleAlertIcon,
+  FileTextIcon,
+  FolderOpenIcon,
+  GaugeIcon,
+  SendIcon,
+  TargetIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -152,24 +160,28 @@ function SmeSummary({
       items={[
         {
           label: "Profile readiness",
+          icon: GaugeIcon,
           value: `${score}%`,
           href: "/sme/profile",
           context: score === 100 ? "Fully match-ready" : "Complete the checks below",
         },
         {
           label: "Open matches",
+          icon: TargetIcon,
           value: matches === undefined ? "–" : newMatches,
           context: newMatches ? undefined : "We’ll alert you when one fits",
           action: newMatches ? { label: "See matches", href: "/sme/matches" } : undefined,
         },
         {
           label: "Applications in progress",
+          icon: SendIcon,
           value: applications === undefined ? "–" : active.length,
           href: "/sme/opportunities",
           context: `${applications?.length ?? 0} in total`,
         },
         {
           label: "Documents",
+          icon: FolderOpenIcon,
           value: `${documents.done} of ${documents.total}`,
           context: missing ? undefined : "All required documents in place",
           action: missing ? { label: `Upload ${missing} required`, href: "/sme/documents" } : undefined,

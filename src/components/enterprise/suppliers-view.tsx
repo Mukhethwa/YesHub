@@ -80,10 +80,7 @@ function SupplierDirectory() {
 
   return (
     <div className="space-y-5">
-      <AdminPageHeader
-        title="Find suppliers"
-        description="SMEs on YES Hub that share their profile with corporates, and every SME that applied to your opportunities."
-      />
+      <AdminPageHeader title="Find suppliers" />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterTabs
@@ -398,7 +395,7 @@ function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpp
         <CardDescription>
           {profile.canViewDocuments
             ? "Open each document to check it against the details on this profile."
-            : "You can open documents once this business applies to one of your opportunities. Until then you can see what’s on file."}
+            : "Documents can be opened once this business applies to one of your opportunities."}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0">

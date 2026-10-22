@@ -15,7 +15,7 @@ const AUDIENCES = [
   },
   {
     title: "Corporates & funders",
-    description: "Post opportunities, review AI-ranked shortlists and source verified local suppliers.",
+    description: "Post opportunities, review ranked shortlists and source verified local suppliers.",
     points: ["Post tenders, RFQs & grants", "Review AI shortlists", "Rate supplier delivery"],
     available: false,
   },

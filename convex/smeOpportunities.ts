@@ -95,6 +95,7 @@ async function applicationSummary(ctx: QueryCtx, application: Doc<"applications"
     status: application.status,
     submittedAt: application.submittedAt,
     statusChangedAt: application.statusChangedAt ?? null,
+    statusReason: application.statusReason ?? null,
     evaluation: application.evaluation,
     review: application.review ? { status: application.review.status } : null,
     // The SME sees its own outcome and why, never other applicants' details

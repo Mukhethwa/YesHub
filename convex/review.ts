@@ -444,7 +444,7 @@ export const decisionFinished = internalMutation({
       runId: run._id,
       kind: "error",
       actor: JEV,
-      summary: "The evaluation couldn’t finish. Nobody’s status was changed.",
+      summary: "Shortlisting did not complete. No application statuses were changed.",
       details: [error.slice(0, 1000)],
     });
   },
@@ -664,60 +664,60 @@ export const applyDecision = internalMutation({
     runId: v.id("decisionRuns"),
     candidates: v.array(vCandidate),
     summary: v.string(),
-    decisions: v.array(v.object({ applicationId: v.id("applications"), approved: v.boolean(), rationale: v.string() })),
+    decisions: v.array(
+      v.object({ applicationId: v.id("applications"), shortlisted: v.boolean(), rationale: v.string() }),
+    ),
     call: v.object(vJevCall),
   },
   handler: async (ctx, args) => {
     const run = await ctx.db.get("decisionRuns", args.runId);
     if (!run || run.status !== "running") return null;
-    const opportunity = await ctx.db.get("opportunities", run.opportunityId);
-    if (!opportunity) return null;
 
     const trail = (entry: Omit<TrailEntry, "opportunityId" | "organizationId" | "runId">) =>
       addTrail(ctx, { opportunityId: run.opportunityId, organizationId: run.organizationId, runId: run._id, ...entry });
 
-    // Guardrails: Jev only approves eligible applicants, never more than the buyer asked for, and anyone it
-    // didn't decide on isn't approved
+    // Guardrails: only eligible applicants are shortlisted, never more than the buyer asked for, and anyone
+    // without a recommendation isn't shortlisted
     const byId = new Map(args.decisions.map((d) => [d.applicationId, d]));
-    const approved: Candidate[] = [];
-    const outcomes = new Map<Id<"applications">, { approved: boolean; rationale: string }>();
+    const shortlist: Candidate[] = [];
+    const outcomes = new Map<Id<"applications">, { shortlisted: boolean; rationale: string }>();
     const ranked = [...args.candidates].sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity));
 
     for (const c of ranked) {
-      const jev = byId.get(c.applicationId);
-      let ok = jev?.approved ?? false;
-      let rationale = jev?.rationale || "No decision was made for this applicant, so it isn’t approved.";
-      if (!jev) {
+      const recommendation = byId.get(c.applicationId);
+      let selected = recommendation?.shortlisted ?? false;
+      let rationale = recommendation?.rationale || "No recommendation was recorded for this application.";
+      if (!recommendation) {
         await trail({
           applicationId: c.applicationId,
           kind: "guardrail",
           actor: "YES Hub",
-          summary: `No decision was made for ${c.companyName}, so they weren’t approved.`,
+          summary: `No recommendation for ${c.companyName}. Not shortlisted.`,
         });
       }
-      if (ok && !c.eligible) {
-        ok = false;
+      if (selected && !c.eligible) {
+        selected = false;
         rationale = `Not eligible: ${c.ineligibleReasons.join("; ")}`;
         await trail({
           applicationId: c.applicationId,
           kind: "guardrail",
           actor: "YES Hub",
-          summary: `${c.companyName} was put forward but isn’t eligible, so they weren’t approved.`,
+          summary: `${c.companyName} was recommended but is not eligible. Not shortlisted.`,
           details: c.ineligibleReasons,
         });
       }
-      if (ok && approved.length >= run.slots) {
-        ok = false;
-        rationale = `${rationale} Not approved: the ${run.slots} place${run.slots === 1 ? " was" : "s were"} already filled by higher-ranked applicants.`;
+      if (selected && shortlist.length >= run.slots) {
+        selected = false;
+        rationale = `${rationale} The shortlist of ${run.slots} was filled by higher-ranked applicants.`;
         await trail({
           applicationId: c.applicationId,
           kind: "guardrail",
           actor: "YES Hub",
-          summary: `More applicants were put forward than the ${run.slots} asked for, so ${c.companyName} (ranked ${c.rank}) wasn’t approved.`,
+          summary: `Shortlist limit of ${run.slots} reached. ${c.companyName} (ranked ${c.rank}) not shortlisted.`,
         });
       }
-      if (ok) approved.push(c);
-      outcomes.set(c.applicationId, { approved: ok, rationale });
+      if (selected) shortlist.push(c);
+      outcomes.set(c.applicationId, { shortlisted: selected, rationale });
     }
 
     const now = Date.now();
@@ -725,13 +725,14 @@ export const applyDecision = internalMutation({
       const outcome = outcomes.get(c.applicationId)!;
       const application = await ctx.db.get("applications", c.applicationId);
       if (!application) continue;
+      // Shortlisting never awards: the buyer decides among the shortlist (setApplicationStatus)
       await ctx.db.patch("applications", application._id, {
-        status: outcome.approved ? "awarded" : "declined",
+        status: outcome.shortlisted ? "shortlisted" : "declined",
         statusChangedAt: now,
         statusChangedBy: JEV,
         decision: {
           runId: run._id,
-          outcome: outcome.approved ? "approved" : "not_approved",
+          outcome: outcome.shortlisted ? "shortlisted" : "not_shortlisted",
           rank: c.rank,
           eligible: c.eligible,
           pricePoints: c.pricePoints,
@@ -745,7 +746,7 @@ export const applyDecision = internalMutation({
         applicationId: c.applicationId,
         kind: "decision",
         actor: JEV,
-        summary: `${outcome.approved ? "Approved" : "Not approved"}: ${c.companyName}${c.rank ? ` (ranked ${c.rank})` : ""}.`,
+        summary: `${outcome.shortlisted ? "Shortlisted" : "Not shortlisted"}: ${c.companyName}${c.rank ? ` (ranked ${c.rank})` : ""}.`,
         details: [outcome.rationale],
         model: args.call.model,
       });
@@ -755,15 +756,14 @@ export const applyDecision = internalMutation({
       status: "decided",
       finishedAt: now,
       summary: args.summary,
-      approved: approved.length,
+      approved: shortlist.length,
       model: args.call.model,
     });
-    if (approved.length > 0) await ctx.db.patch("opportunities", opportunity._id, { status: "awarded" });
     await trail({
       kind: "decision",
       actor: JEV,
-      summary: `Decided: ${approved.length} of ${args.candidates.length} applicant${args.candidates.length === 1 ? "" : "s"} approved (${run.slots} place${run.slots === 1 ? "" : "s"}). ${args.summary}`,
-      details: approved.map((c) => `Approved: ${c.companyName}, ranked ${c.rank}, ${c.totalPoints} points`),
+      summary: `Shortlisted ${shortlist.length} of ${args.candidates.length} applicant${args.candidates.length === 1 ? "" : "s"} (limit ${run.slots}). ${args.summary}`,
+      details: shortlist.map((c) => `Shortlisted: ${c.companyName}, ranked ${c.rank}, ${c.totalPoints} points`),
       ...args.call,
     });
     return null;
@@ -798,25 +798,24 @@ export const requestDecision = mutation({
     if (!enterprise || !opportunity || opportunity.organizationId !== enterprise.organization.id) {
       throw new ConvexError("That opportunity isn’t available.");
     }
-    if (!canManage(enterprise.organization.role))
-      throw new ConvexError("Only owners and admins can evaluate applicants.");
+    if (!canManage(enterprise.organization.role)) throw new ConvexError("Only owners and admins can run shortlisting.");
     if (enterprise.organization.verificationStatus !== "verified") {
       throw new ConvexError("YES Hub needs to verify your organisation first.");
     }
     const slots = Math.floor(args.slots);
-    if (slots < 1 || slots > 50) throw new ConvexError("Choose between 1 and 50 applicants to approve.");
+    if (slots < 1 || slots > 50) throw new ConvexError("The shortlist must be between 1 and 50 applicants.");
 
     const runs = await ctx.db
       .query("decisionRuns")
       .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
       .order("desc")
       .take(1);
-    if (runs[0]?.status === "running") throw new ConvexError("This opportunity is already being evaluated.");
+    if (runs[0]?.status === "running") throw new ConvexError("Shortlisting is already running for this opportunity.");
     const applications = await ctx.db
       .query("applications")
       .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
       .take(1);
-    if (applications.length === 0) throw new ConvexError("Nobody has applied yet.");
+    if (applications.length === 0) throw new ConvexError("There are no applications to shortlist.");
 
     const runId = await ctx.db.insert("decisionRuns", {
       opportunityId: opportunity._id,
@@ -839,55 +838,9 @@ export const requestDecision = mutation({
       runId,
       kind: "decision_started",
       actor: enterprise.user.name,
-      summary: `${enterprise.user.name} started an evaluation, approving up to ${slots} applicant${slots === 1 ? "" : "s"}.`,
+      summary: `${enterprise.user.name} started shortlisting, limit ${slots} applicant${slots === 1 ? "" : "s"}.`,
     });
     return runId;
-  },
-});
-
-/** Changes Jev's decision on one applicant. The reason is required and goes on the trail. */
-export const overrideDecision = mutation({
-  args: {
-    applicationId: v.id("applications"),
-    outcome: v.union(v.literal("approved"), v.literal("not_approved")),
-    reason: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const enterprise = await getEnterprise(ctx);
-    const application = await ctx.db.get("applications", args.applicationId);
-    if (!enterprise || !application || application.organizationId !== enterprise.organization.id) {
-      throw new ConvexError("That application isn’t available.");
-    }
-    if (!canManage(enterprise.organization.role))
-      throw new ConvexError("Only owners and admins can change a decision.");
-    if (!application.decision) throw new ConvexError("This application hasn’t been evaluated yet.");
-    const reason = args.reason.trim();
-    if (reason.length < 10) throw new ConvexError("Give a reason of at least a sentence. It’s kept on the record.");
-    if (args.outcome === application.decision.outcome) return null;
-
-    const sme = await ctx.db.get("smes", application.smeId);
-    await ctx.db.patch("applications", application._id, {
-      status: args.outcome === "approved" ? "awarded" : "declined",
-      statusChangedAt: Date.now(),
-      statusChangedBy: enterprise.user.name,
-      decision: {
-        ...application.decision,
-        outcome: args.outcome,
-        overriddenBy: enterprise.user.name,
-        overrideReason: reason,
-      },
-    });
-    await addTrail(ctx, {
-      opportunityId: application.opportunityId,
-      organizationId: application.organizationId,
-      applicationId: application._id,
-      runId: application.decision.runId,
-      kind: "override",
-      actor: enterprise.user.name,
-      summary: `${enterprise.user.name} changed the decision on ${sme?.companyName ?? "this applicant"} to ${args.outcome === "approved" ? "approved" : "not approved"}.`,
-      details: [reason],
-    });
-    return null;
   },
 });
 
@@ -1006,7 +959,7 @@ export const opportunityDecisions = query({
         requestedBy: r.requestedBy,
         finishedAt: r.finishedAt ?? null,
         summary: r.summary ?? null,
-        approved: r.approved ?? null,
+        shortlisted: r.approved ?? null,
         model: r.model ?? null,
         error: r.error ?? null,
       })),
@@ -1027,18 +980,28 @@ export const recentDecisions = query({
     for (const run of runs) {
       const opportunity = await ctx.db.get("opportunities", run.opportunityId);
       if (!opportunity) continue;
+      const applicants = await ctx.db
+        .query("applications")
+        .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
+        .take(1000);
       rows.push({
+        applicants: applicants.length,
         id: run._id,
         at: run._creationTime,
         status: run.status,
         slots: run.slots,
-        approved: run.approved ?? null,
+        shortlisted: run.approved ?? null,
         summary: run.summary ?? null,
         error: run.error ?? null,
         model: run.model ?? null,
         requestedBy: run.requestedBy,
         organizationName: names.get(run.organizationId) ?? "Deleted organisation",
-        opportunity: { id: opportunity._id, title: opportunity.title, reference: opportunity.reference },
+        opportunity: {
+          id: opportunity._id,
+          title: opportunity.title,
+          reference: opportunity.reference,
+          kind: opportunity.kind,
+        },
       });
     }
     return rows;

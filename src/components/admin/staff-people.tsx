@@ -35,10 +35,7 @@ export function StaffPeople() {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="Staff"
-        description="The YES Hub team. Each person’s access level decides what they can do in the admin area."
-      />
+      <AdminPageHeader title="Staff" />
 
       <AccessLevels />
 
