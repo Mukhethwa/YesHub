@@ -1,4 +1,4 @@
-import { ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -12,6 +12,8 @@ export type StatItem = {
   /** Something to do about this figure, e.g. { label: "Verify 4", href }. Shown instead of the context. */
   action?: { label: string; href: string };
   href?: string;
+  /** Drawn large and faint in the corner, saying what the figure is about. */
+  icon?: LucideIcon;
 };
 
 /**
@@ -66,8 +68,21 @@ export function StatStrip({
         return (
           <div
             key={item.label}
-            className={cn("flex flex-col", brand ? "bg-primary text-primary-foreground" : "bg-card")}
+            className={cn(
+              "relative isolate flex flex-col overflow-hidden",
+              brand ? "bg-primary text-primary-foreground" : "bg-card",
+            )}
           >
+            {item.icon && (
+              <item.icon
+                aria-hidden
+                strokeWidth={1.5}
+                className={cn(
+                  "pointer-events-none absolute -right-5 -bottom-7 -z-10 size-28 -rotate-12 sm:size-32",
+                  brand ? "text-white/12" : "text-primary/8",
+                )}
+              />
+            )}
             {item.href ? (
               <Link href={item.href} className={cell}>
                 {body}

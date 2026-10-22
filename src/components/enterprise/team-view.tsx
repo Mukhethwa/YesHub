@@ -85,9 +85,9 @@ export function TeamView() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Team"
-        description={`${team.organization.name}, You’re ${roleWithArticle(me.role)}${
-          myDepartments.length ? ` in ${myDepartments.map((d) => d.name).join(" and ")}` : ", not in a department yet"
-        }.`}
+        description={`You’re ${roleWithArticle(me.role)}${
+          myDepartments.length ? ` in ${myDepartments.map((d) => d.name).join(" and ")}` : ""
+        }`}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

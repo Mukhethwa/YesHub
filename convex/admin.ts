@@ -50,6 +50,18 @@ export const overview = query({
       enterprises: capped(enterprises),
       pendingEnterpriseCount: pending.length,
       pendingEnterprises: pending.slice(0, 5),
+      // For the charts: the browser buckets these by day, since queries shouldn't read the clock
+      userCreatedAt: users.map((u) => u.createdAt),
+      smeCreatedAt: smes.map((s) => s._creationTime),
+      smesByProvince: Object.entries(
+        smes.reduce<Record<string, number>>((acc, s) => ({ ...acc, [s.hqProvince]: (acc[s.hqProvince] ?? 0) + 1 }), {}),
+      )
+        .map(([province, count]) => ({ province, count }))
+        .sort((a, b) => b.count - a.count),
+      organizationsByStatus: (["verified", "unverified", "rejected"] as const).map((status) => ({
+        status,
+        count: enterprises.filter((o) => o.verificationStatus === status).length,
+      })),
       recentUsers: users.slice(0, 5),
       recentSmes: smes.slice(0, 5).map((s) => ({
         id: s._id,

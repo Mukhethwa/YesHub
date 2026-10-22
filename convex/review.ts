@@ -980,7 +980,12 @@ export const recentDecisions = query({
     for (const run of runs) {
       const opportunity = await ctx.db.get("opportunities", run.opportunityId);
       if (!opportunity) continue;
+      const applicants = await ctx.db
+        .query("applications")
+        .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
+        .take(1000);
       rows.push({
+        applicants: applicants.length,
         id: run._id,
         at: run._creationTime,
         status: run.status,
@@ -991,7 +996,12 @@ export const recentDecisions = query({
         model: run.model ?? null,
         requestedBy: run.requestedBy,
         organizationName: names.get(run.organizationId) ?? "Deleted organisation",
-        opportunity: { id: opportunity._id, title: opportunity.title, reference: opportunity.reference },
+        opportunity: {
+          id: opportunity._id,
+          title: opportunity.title,
+          reference: opportunity.reference,
+          kind: opportunity.kind,
+        },
       });
     }
     return rows;

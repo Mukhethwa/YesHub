@@ -1,5 +1,6 @@
 "use client";
 
+import { BadgeCheckIcon, CircleSlashIcon, InboxIcon, ListChecksIcon } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
@@ -99,10 +100,7 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
 
   return (
     <div className="space-y-5">
-      <AdminPageHeader
-        title="Opportunities"
-        description="Every tender, RFQ and grant you’ve listed, with how many SMEs applied and how many qualify."
-      />
+      <AdminPageHeader title="Opportunities" />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterTabs
@@ -256,14 +254,15 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
 
       <StatStrip
         items={[
-          { label: "Applications", value: detail.applications },
+          { label: "Applications", icon: InboxIcon, value: detail.applications },
           {
             label: "Meet the requirements",
+            icon: BadgeCheckIcon,
             value: detail.qualified,
             context: `${percent(detail.qualified, detail.applications)}% of applicants`,
           },
-          { label: "Don’t meet them", value: detail.applications - detail.qualified },
-          { label: "Shortlisted", value: detail.shortlisted },
+          { label: "Don’t meet them", icon: CircleSlashIcon, value: detail.applications - detail.qualified },
+          { label: "Shortlisted", icon: ListChecksIcon, value: detail.shortlisted },
         ]}
       />
 

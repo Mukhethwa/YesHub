@@ -1,6 +1,7 @@
 import {
   Building2Icon,
   BriefcaseBusinessIcon,
+  ChartColumnIcon,
   LayoutDashboardIcon,
   ScrollTextIcon,
   ShieldCheckIcon,
@@ -12,6 +13,7 @@ import type { PortalNavItem } from "@/components/portal/types";
 
 export const ADMIN_NAV = {
   overview: { href: "/admin", label: "Overview", icon: LayoutDashboardIcon },
+  analytics: { href: "/admin/analytics", label: "Analytics", icon: ChartColumnIcon },
   users: { href: "/admin/users", label: "Users", icon: UserCogIcon },
   smes: { href: "/admin/smes", label: "SMEs", icon: StoreIcon },
   organisations: { href: "/admin/organisations", label: "Organisations", icon: Building2Icon },

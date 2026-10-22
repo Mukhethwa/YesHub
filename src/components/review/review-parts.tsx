@@ -1,7 +1,20 @@
 "use client";
 
 import type { FunctionReturnType } from "convex/server";
-import { ChevronDownIcon } from "lucide-react";
+import {
+  CalculatorIcon,
+  ChevronDownIcon,
+  CircleXIcon,
+  ClipboardCheckIcon,
+  FileSearchIcon,
+  GavelIcon,
+  ListChecksIcon,
+  type LucideIcon,
+  PlayIcon,
+  SendIcon,
+  ShieldAlertIcon,
+  UserPenIcon,
+} from "lucide-react";
 import { useState } from "react";
 
 import { Pill } from "@/components/admin/page-header";
@@ -204,55 +217,110 @@ export type TrailRow = {
   generationId: string | null;
 };
 
-const TRAIL_LABELS: Record<TrailKind, string> = {
-  submitted: "Application",
-  extraction: "Document read",
-  assessment: "Scored",
-  decision_started: "Shortlisting started",
-  points: "Points",
-  decision: "Shortlisting",
-  guardrail: "Rule applied",
-  override: "Changed by buyer",
-  action: "Buyer action",
-  error: "Error",
+const TRAIL: Record<TrailKind, { label: string; icon: LucideIcon; tone: string }> = {
+  submitted: { label: "Application", icon: SendIcon, tone: "bg-brand-blue/15 text-brand-blue" },
+  extraction: { label: "Document read", icon: FileSearchIcon, tone: "bg-muted text-muted-foreground" },
+  assessment: { label: "Scored", icon: ClipboardCheckIcon, tone: "bg-brand-blue/15 text-brand-blue" },
+  decision_started: { label: "Shortlisting started", icon: PlayIcon, tone: "bg-brand-navy text-white" },
+  points: { label: "Points", icon: CalculatorIcon, tone: "bg-muted text-foreground" },
+  decision: { label: "Shortlisting", icon: ListChecksIcon, tone: "bg-brand-green/20 text-success" },
+  guardrail: { label: "Rule applied", icon: ShieldAlertIcon, tone: "bg-brand-yellow/25 text-warning" },
+  override: { label: "Changed by buyer", icon: UserPenIcon, tone: "bg-brand-yellow/25 text-warning" },
+  action: { label: "Buyer action", icon: GavelIcon, tone: "bg-primary/15 text-primary" },
+  error: { label: "Error", icon: CircleXIcon, tone: "bg-destructive/15 text-destructive" },
 };
 
-/** Trail entries written before the review was renamed say "Jev"; show them the way new ones read. */
+/** Trail entries written before the review was renamed say "Jev" and "approving"; show them the way new ones read. */
 const actorName = (actor: string) => (actor === "Jev" ? "Automated review" : actor);
+export const plainSummary = (text: string) =>
+  text
+    .replace(/^Jev\b/, "The review")
+    .replace(/\bJev\b/g, "the automated review")
+    .replace(/\bapproving up to\b/g, "shortlisting up to");
+
+/** "X isn’t eligible: because…" reads as a headline and its explanation. */
+function splitSummary(text: string) {
+  const i = text.indexOf(": ");
+  if (i < 8 || i > 90) return { headline: text, body: "" };
+  return { headline: text.slice(0, i), body: text.slice(i + 2) };
+}
+
+/** Error details carry the server's stack frames; keep the sentence and drop the frames. */
+export const cleanError = (detail: string) =>
+  detail
+    .replace(/^(Error: )?(Uncaught )?(Error: )?/, "")
+    .replace(/\s+at (async )?\S+ \([^)]*\)/g, "")
+    .trim();
 
 /**
- * The paper trail as a timeline. `technical` adds which model answered and what it cost, for YES Hub staff;
- * buyers and SMEs don't need the implementation details.
+ * The paper trail as a timeline. `technical` adds which model answered, what it cost and the raw error, for
+ * YES Hub staff; buyers and SMEs don't need the implementation details.
  */
 export function TrailList({ entries, technical = false }: { entries: TrailRow[]; technical?: boolean }) {
   return (
-    <ol className="space-y-3">
-      {entries.map((e) => (
-        <li key={e.id} className="border-l-2 pl-3 text-sm">
-          <p className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-            <span className="tabular-nums">{formatDateTime(e.at)}</span>
-            <span className="font-medium text-foreground/80">{TRAIL_LABELS[e.kind]}</span>
-            <span>{actorName(e.actor)}</span>
-            {technical && e.model && <code>{e.model}</code>}
-            {technical && e.costUsd !== null && <span className="tabular-nums">${e.costUsd.toFixed(4)}</span>}
-          </p>
-          <p
-            className={cn(
-              e.kind === "guardrail" || e.kind === "error" ? "text-destructive" : "",
-              e.kind === "override" && "font-medium",
-            )}
-          >
-            {technical ? e.summary : e.summary.replace(/\bJev\b/g, "The review")}
-          </p>
-          {e.details.length > 0 && (technical || e.kind !== "error") && (
-            <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-              {e.details.map((d, i) => (
-                <li key={i}>{d}</li>
-              ))}
-            </ul>
-          )}
-        </li>
-      ))}
+    <ol className="relative space-y-5 before:absolute before:top-2 before:bottom-2 before:left-[15px] before:w-px before:bg-border">
+      {entries.map((e) => {
+        const meta = TRAIL[e.kind];
+        const { headline, body } = splitSummary(plainSummary(e.summary));
+        const isError = e.kind === "error";
+        return (
+          <li key={e.id} className="relative grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
+            <span
+              className={cn(
+                "relative z-10 grid size-8 place-items-center rounded-full ring-4 ring-background",
+                meta.tone,
+              )}
+            >
+              <meta.icon className="size-4" aria-hidden />
+            </span>
+            <div className="min-w-0 pt-0.5">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                <p className="text-xs">
+                  <span className="font-semibold">{meta.label}</span>
+                  <span className="text-muted-foreground"> by {actorName(e.actor)}</span>
+                </p>
+                <time className="text-xs text-muted-foreground tabular-nums">{formatDateTime(e.at)}</time>
+              </div>
+              <p
+                className={cn(
+                  "mt-1 text-sm font-medium",
+                  isError && "text-destructive",
+                  e.kind === "guardrail" && "text-warning",
+                )}
+              >
+                {headline}
+              </p>
+              {body && <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{body}</p>}
+              {e.details.length > 0 && !isError && (
+                <ul className="mt-2 space-y-1 rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                  {e.details.map((d, i) => (
+                    <li key={i}>{plainSummary(d)}</li>
+                  ))}
+                </ul>
+              )}
+              {isError && technical && e.details.length > 0 && (
+                <div className="mt-2 rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs">
+                  {e.details.map((d, i) => (
+                    <p key={i}>{cleanError(d)}</p>
+                  ))}
+                  <details className="mt-1.5">
+                    <summary className="cursor-pointer text-muted-foreground">Raw error</summary>
+                    <pre className="mt-1.5 overflow-x-auto font-mono text-[11px] whitespace-pre-wrap text-muted-foreground">
+                      {e.details.join("\n")}
+                    </pre>
+                  </details>
+                </div>
+              )}
+              {technical && (e.model || e.costUsd !== null) && (
+                <p className="mt-1.5 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                  {e.model && <code className="rounded bg-muted px-1.5 py-0.5">{e.model}</code>}
+                  {e.costUsd !== null && <span className="tabular-nums">${e.costUsd.toFixed(4)}</span>}
+                </p>
+              )}
+            </div>
+          </li>
+        );
+      })}
     </ol>
   );
 }

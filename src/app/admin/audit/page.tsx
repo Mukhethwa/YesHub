@@ -6,10 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function Page() {
   return (
     <div className="space-y-5">
-      <AdminPageHeader
-        title="Audit log"
-        description="What staff did in the admin area, and every change any action made to YES Hub’s data, field by field."
-      />
+      <AdminPageHeader title="Audit log" />
       <Tabs defaultValue="actions">
         <TabsList>
           <TabsTrigger value="actions">Staff actions</TabsTrigger>

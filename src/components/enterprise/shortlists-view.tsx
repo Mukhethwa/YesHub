@@ -45,8 +45,8 @@ export function ShortlistsView() {
         title="Shortlists"
         description={
           rows.length === 0
-            ? "Businesses you shortlist from your opportunities’ applicants appear here."
-            : `${businesses} business${businesses === 1 ? "" : "es"} shortlisted across ${opportunities.length} opportunit${opportunities.length === 1 ? "y" : "ies"}. Contact details are shared once you shortlist.`
+            ? undefined
+            : `${businesses} business${businesses === 1 ? "" : "es"} across ${opportunities.length} opportunit${opportunities.length === 1 ? "y" : "ies"}`
         }
       >
         {opportunities.length > 1 && (

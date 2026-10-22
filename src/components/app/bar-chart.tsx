@@ -18,10 +18,13 @@ export function BarChart({
   rows,
   legend,
   empty = "Nothing to show yet.",
+  compact = false,
 }: {
   rows: BarRow[];
   legend: { label: string; className: string }[];
   empty?: string;
+  /** A narrower label column, for charts in a side column. */
+  compact?: boolean;
 }) {
   const max = Math.max(1, ...rows.map((r) => r.segments.reduce((sum, s) => sum + s.value, 0)));
 
@@ -40,7 +43,13 @@ export function BarChart({
             <span className="truncate">{row.label}</span>
           );
           return (
-            <li key={row.key} className="grid gap-1.5 sm:grid-cols-[minmax(0,14rem)_1fr] sm:items-center sm:gap-4">
+            <li
+              key={row.key}
+              className={cn(
+                "grid gap-1.5 sm:items-center sm:gap-4",
+                compact ? "grid-cols-[7.5rem_1fr] items-center gap-3" : "sm:grid-cols-[minmax(0,14rem)_1fr]",
+              )}
+            >
               <span className="flex min-w-0 text-sm">{label}</span>
               <span className="flex items-center gap-3">
                 <span
@@ -64,14 +73,16 @@ export function BarChart({
           );
         })}
       </ul>
-      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
-        {legend.map((l) => (
-          <span key={l.label} className="inline-flex items-center gap-1.5">
-            <span aria-hidden className={cn("size-2.5 rounded-[2px]", l.className)} />
-            {l.label}
-          </span>
-        ))}
-      </div>
+      {legend.length > 0 && (
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+          {legend.map((l) => (
+            <span key={l.label} className="inline-flex items-center gap-1.5">
+              <span aria-hidden className={cn("size-2.5 rounded-[2px]", l.className)} />
+              {l.label}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -80,10 +80,7 @@ function SupplierDirectory() {
 
   return (
     <div className="space-y-5">
-      <AdminPageHeader
-        title="Find suppliers"
-        description="SMEs on YES Hub that share their profile with corporates, and every SME that applied to your opportunities."
-      />
+      <AdminPageHeader title="Find suppliers" />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterTabs
