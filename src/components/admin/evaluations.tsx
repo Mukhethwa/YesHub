@@ -5,7 +5,14 @@ import type { FunctionReturnType } from "convex/server";
 
 import { TrailList } from "@/components/review/review-parts";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,15 +24,15 @@ import { formatDateTime, TablePagination, usePagination } from "./shared";
 type Run = NonNullable<FunctionReturnType<typeof api.review.recentDecisions>>[number];
 
 /** Every decision Jev made on YES Hub, with the full paper trail behind each. */
-export function JevDecisions() {
+export function Evaluations() {
   const runs = useQuery(api.review.recentDecisions);
   const pagination = usePagination(runs ?? []);
 
   return (
     <div className="space-y-5">
       <AdminPageHeader
-        title="Jev decisions"
-        description="Every time an enterprise asked Jev to decide an opportunity: who was approved, and the full record of why."
+        title="Evaluations"
+        description="Every time an enterprise evaluated an opportunity’s applicants: who was approved, and the full record of why."
       />
 
       <div className="overflow-hidden rounded-xl border bg-card">
@@ -52,7 +59,7 @@ export function JevDecisions() {
             {runs?.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
-                  No enterprise has asked Jev to decide yet.
+                  No enterprise has evaluated an opportunity yet.
                 </TableCell>
               </TableRow>
             )}
@@ -61,7 +68,7 @@ export function JevDecisions() {
                 <TableCell className="max-w-80 whitespace-normal">
                   <p className="font-medium">{run.opportunity.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {run.organizationName} · {run.opportunity.reference}
+                    {run.organizationName}, {run.opportunity.reference}
                   </p>
                 </TableCell>
                 <TableCell className="max-w-96 whitespace-normal">
@@ -113,7 +120,9 @@ function RunTrail({ runId, title }: { runId: Id<"decisionRuns">; title: string }
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>The decision in order: who asked, every applicant’s points, Jev’s decisions, guardrails and changes.</DialogDescription>
+          <DialogDescription>
+            The decision in order: who asked, every applicant’s points, the decisions, guardrails and changes.
+          </DialogDescription>
         </DialogHeader>
         <div className="max-h-[65vh] overflow-y-auto pr-1">
           <TrailBody runId={runId} />
@@ -127,5 +136,5 @@ function TrailBody({ runId }: { runId: Id<"decisionRuns"> }) {
   const entries = useQuery(api.review.decisionTrail, { runId });
   if (entries === undefined) return <Spinner className="mx-auto" />;
   if (!entries?.length) return <p className="text-sm text-muted-foreground">Nothing recorded yet.</p>;
-  return <TrailList entries={entries} />;
+  return <TrailList entries={entries} technical />;
 }

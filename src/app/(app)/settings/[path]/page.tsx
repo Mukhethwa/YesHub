@@ -7,7 +7,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { SettingsView } from "./settings-view";
 
 // Account and security, plus the organisation plugin's organisations tab
-const settingsPaths = [...Object.values(viewPaths.settings), ...Object.values(organizationPlugin().viewPaths.settings ?? {})];
+const settingsPaths = [
+  ...Object.values(viewPaths.settings),
+  ...Object.values(organizationPlugin().viewPaths.settings ?? {}),
+];
 
 export function generateStaticParams() {
   return settingsPaths.map((path) => ({ path }));

@@ -72,8 +72,20 @@ export function SettingsSection({ sme }: { sme: SmeProfile }) {
         </CardHeader>
         <CardContent>
           <div className="divide-y">
-            <SwitchRow plain checked={draft.notifyEmail} onChange={(notifyEmail) => set({ notifyEmail })} label="Email" description={sme.email} />
-            <SwitchRow plain checked={draft.notifySms} onChange={(notifySms) => set({ notifySms })} label="SMS" description={sme.phone} />
+            <SwitchRow
+              plain
+              checked={draft.notifyEmail}
+              onChange={(notifyEmail) => set({ notifyEmail })}
+              label="Email"
+              description={sme.email}
+            />
+            <SwitchRow
+              plain
+              checked={draft.notifySms}
+              onChange={(notifySms) => set({ notifySms })}
+              label="SMS"
+              description={sme.phone}
+            />
             <SwitchRow
               plain
               checked={draft.notifyWhatsapp}
@@ -164,7 +176,11 @@ export function SettingsSection({ sme }: { sme: SmeProfile }) {
           <CardDescription>Narrow down which opportunities we match you to.</CardDescription>
         </CardHeader>
         <CardContent>
-          <FormField label="Opportunity types" htmlFor="opportunityTypes" hint="Leave them all selected to see everything.">
+          <FormField
+            label="Opportunity types"
+            htmlFor="opportunityTypes"
+            hint="Leave them all selected to see everything."
+          >
             <ChipGroup
               id="opportunityTypes"
               options={OPPORTUNITY_TYPES}
@@ -173,7 +189,9 @@ export function SettingsSection({ sme }: { sme: SmeProfile }) {
             />
           </FormField>
           {draft.opportunityTypes.length === 0 && (
-            <p className="mt-2 text-sm text-destructive">Select at least one type, or you won’t be matched to anything.</p>
+            <p className="mt-2 text-sm text-destructive">
+              Select at least one type, or you won’t be matched to anything.
+            </p>
           )}
           <FormField label="Minimum contract value" htmlFor="minContractValue" className="mt-5 md:max-w-xs">
             <SelectInput
@@ -252,7 +270,9 @@ export function SettingsSection({ sme }: { sme: SmeProfile }) {
       <Card>
         <CardHeader>
           <CardTitle>Sign-in and security</CardTitle>
-          <CardDescription>Your password, sign-in email and active sessions are managed with your account.</CardDescription>
+          <CardDescription>
+            Your password, sign-in email and active sessions are managed with your account.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Button variant="outline" asChild>
@@ -301,7 +321,11 @@ function DeleteProfileCard({ sme }: { sme: SmeProfile }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <label className="flex cursor-pointer items-start gap-3 text-sm">
-          <Checkbox checked={understood} onCheckedChange={(checked) => setUnderstood(checked === true)} className="mt-0.5" />
+          <Checkbox
+            checked={understood}
+            onCheckedChange={(checked) => setUnderstood(checked === true)}
+            className="mt-0.5"
+          />
           <span>I understand that {sme.companyName} and all its documents will be deleted and can’t be recovered.</span>
         </label>
         {understood && (
@@ -313,7 +337,12 @@ function DeleteProfileCard({ sme }: { sme: SmeProfile }) {
             }}
           >
             <FormField label={`Type “${sme.companyName}” to confirm`} htmlFor="confirmDelete" className="sm:w-80">
-              <Input id="confirmDelete" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} autoComplete="off" />
+              <Input
+                id="confirmDelete"
+                value={confirmName}
+                onChange={(e) => setConfirmName(e.target.value)}
+                autoComplete="off"
+              />
             </FormField>
             <Button type="submit" variant="destructive" disabled={busy || !matches}>
               {busy && <Spinner />}

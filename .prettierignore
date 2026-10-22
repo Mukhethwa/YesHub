@@ -1,0 +1,17 @@
+# Generated
+convex/_generated/
+convex/**/_generated/
+convex/betterAuth/generatedSchema.ts
+.next/
+next-env.d.ts
+pnpm-lock.yaml
+
+# Installed from the shadcn and Better Auth UI registries; keep them as the registries ship them
+src/components/ui/
+src/components/auth/
+src/lib/auth/
+
+# Docs and agent skills keep their own formatting
+*.md
+.claude/
+.agents/

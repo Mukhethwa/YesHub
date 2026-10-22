@@ -81,7 +81,7 @@ export async function askJev<T>({
 
   if (res.status === 402) {
     throw new JevError(
-      "The OpenRouter account Jev uses is out of credits. Add credits at openrouter.ai/settings/credits, then review again.",
+      "The review service is out of credits (OpenRouter). YES Hub needs to add credits, then review again.",
     );
   }
   if (!res.ok || !body) {
@@ -103,7 +103,8 @@ export async function askJev<T>({
 /* Small validators for Jev's answers. They coerce where it's safe and throw where it isn't. */
 
 export function asObject(value: unknown, what: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new JevError(`Expected ${what} to be an object.`);
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new JevError(`Expected ${what} to be an object.`);
   return value as Record<string, unknown>;
 }
 
@@ -115,7 +116,10 @@ export function asString(value: unknown, fallback = ""): string {
 
 export function asStrings(value: unknown, limit = 20): string[] {
   if (!Array.isArray(value)) return [];
-  return value.map((v) => asString(v)).filter(Boolean).slice(0, limit);
+  return value
+    .map((v) => asString(v))
+    .filter(Boolean)
+    .slice(0, limit);
 }
 
 export function asScore(value: unknown): number | undefined {

@@ -44,7 +44,13 @@ const roleLabel = (role: string) =>
     .join(", ");
 
 /** Side panel for one enterprise: verification, members, teams and invitations. */
-export function OrganisationInspector({ organizationId, onClose }: { organizationId: string | null; onClose: () => void }) {
+export function OrganisationInspector({
+  organizationId,
+  onClose,
+}: {
+  organizationId: string | null;
+  onClose: () => void;
+}) {
   return (
     <Sheet open={!!organizationId} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
@@ -82,7 +88,7 @@ function Inspector({ organizationId, onClose }: { organizationId: string; onClos
       <SheetHeader className="border-b p-6">
         <SheetTitle className="text-lg">{org.name}</SheetTitle>
         <SheetDescription>
-          @{org.slug} · created {formatDate(org.createdAt)}
+          @{org.slug}, created {formatDate(org.createdAt)}
         </SheetDescription>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <VerificationPill status={org.verificationStatus} />
@@ -102,7 +108,9 @@ function Inspector({ organizationId, onClose }: { organizationId: string; onClos
           <TabsList>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="teams">Teams</TabsTrigger>
-            <TabsTrigger value="invitations">Invitations{invitations.length > 0 && ` (${invitations.length})`}</TabsTrigger>
+            <TabsTrigger value="invitations">
+              Invitations{invitations.length > 0 && ` (${invitations.length})`}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="members" className="mt-3">
@@ -111,7 +119,9 @@ function Inspector({ organizationId, onClose }: { organizationId: string; onClos
 
           <TabsContent value="teams" className="mt-3">
             {teams.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No teams yet. Tenders are posted from the whole organisation.</p>
+              <p className="text-sm text-muted-foreground">
+                No teams yet. Tenders are posted from the whole organisation.
+              </p>
             ) : (
               <div className="overflow-hidden rounded-lg border">
                 <Table>
@@ -145,7 +155,8 @@ function Inspector({ organizationId, onClose }: { organizationId: string; onClos
                   <li key={invitation.id} className="flex items-center justify-between gap-3 p-3">
                     <span className="truncate">{invitation.email}</span>
                     <span className="shrink-0 text-muted-foreground">
-                      {invitation.role ? roleLabel(invitation.role) : "Member"} · expires {formatDate(invitation.expiresAt)}
+                      {invitation.role ? roleLabel(invitation.role) : "Member"}, expires{" "}
+                      {formatDate(invitation.expiresAt)}
                     </span>
                   </li>
                 ))}
@@ -215,13 +226,23 @@ function Verification({ detail }: { detail: OrgDetail }) {
           </Button>
         )}
         {org.verificationStatus !== "rejected" && (
-          <Button size="sm" variant="outline" disabled={disabled} onClick={() => decide("rejected", "Organisation rejected")}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={disabled}
+            onClick={() => decide("rejected", "Organisation rejected")}
+          >
             {busy === "rejected" && <Spinner />}
             Reject
           </Button>
         )}
         {org.verificationStatus !== "unverified" && (
-          <Button size="sm" variant="ghost" disabled={disabled} onClick={() => decide("unverified", "Moved back to review")}>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={disabled}
+            onClick={() => decide("unverified", "Moved back to review")}
+          >
             {busy === "unverified" && <Spinner />}
             Back to review
           </Button>
@@ -261,7 +282,10 @@ function Members({ detail, teamName }: { detail: OrgDetail; teamName: Map<string
                 </TableCell>
                 <TableCell>{roleLabel(member.role)}</TableCell>
                 <TableCell className="hidden text-muted-foreground sm:table-cell">
-                  {member.teamIds.map((id) => teamName.get(id)).filter(Boolean).join(", ") || "—"}
+                  {member.teamIds
+                    .map((id) => teamName.get(id))
+                    .filter(Boolean)
+                    .join(", ") || "—"}
                 </TableCell>
                 <TableCell className="text-end">
                   <Button
@@ -284,7 +308,8 @@ function Members({ detail, teamName }: { detail: OrgDetail; teamName: Map<string
           <AlertDialogHeader>
             <AlertDialogTitle>Remove {removing?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              They lose access to {detail.organization.name}. Their account stays and they can join another organisation.
+              They lose access to {detail.organization.name}. Their account stays and they can join another
+              organisation.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -293,7 +318,9 @@ function Members({ detail, teamName }: { detail: OrgDetail; teamName: Map<string
               variant="destructive"
               onClick={() =>
                 removing &&
-                runMutation("Member removed", () => removeMember({ memberId: removing.id, memberEmail: removing.email }))
+                runMutation("Member removed", () =>
+                  removeMember({ memberId: removing.id, memberEmail: removing.email }),
+                )
               }
             >
               Remove member
@@ -314,9 +341,16 @@ function DangerZone({ org, onDeleted }: { org: OrgDetail["organization"]; onDele
     <section className="flex items-center justify-between gap-4 rounded-lg border border-destructive/30 p-4">
       <div>
         <p className="text-sm font-medium">Delete organisation</p>
-        <p className="text-sm text-muted-foreground">Removes the organisation, its teams and invitations. Member accounts stay.</p>
+        <p className="text-sm text-muted-foreground">
+          Removes the organisation, its teams and invitations. Member accounts stay.
+        </p>
       </div>
-      <Button variant="destructive" size="sm" disabled={!can({ organization: ["delete"] })} onClick={() => setOpen(true)}>
+      <Button
+        variant="destructive"
+        size="sm"
+        disabled={!can({ organization: ["delete"] })}
+        onClick={() => setOpen(true)}
+      >
         Delete…
       </Button>
       <AlertDialog open={open} onOpenChange={setOpen}>
@@ -330,7 +364,8 @@ function DangerZone({ org, onDeleted }: { org: OrgDetail["organization"]; onDele
             <AlertDialogAction
               variant="destructive"
               onClick={async () => {
-                if (await runMutation("Organisation deleted", () => deleteOrganization({ organizationId: org.id }))) onDeleted();
+                if (await runMutation("Organisation deleted", () => deleteOrganization({ organizationId: org.id })))
+                  onDeleted();
               }}
             >
               Delete organisation

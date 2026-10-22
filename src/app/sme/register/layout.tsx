@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
-  title: "Register your business · YES Hub",
+  title: "Register your business | YES Hub",
 };
 
 export default function SmeRegisterLayout({ children }: LayoutProps<"/sme/register">) {

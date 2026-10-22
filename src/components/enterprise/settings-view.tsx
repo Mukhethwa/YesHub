@@ -72,7 +72,17 @@ function Section({ title, description, children }: { title: string; description:
   );
 }
 
-function Field({ label, htmlFor, hint, children }: { label: string; htmlFor?: string; hint?: string; children: ReactNode }) {
+function Field({
+  label,
+  htmlFor,
+  hint,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  hint?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
@@ -153,7 +163,11 @@ function OrganisationSettings({ data }: { data: Data }) {
             <Input id="org-name" value={name} onChange={(e) => setName(e.target.value)} disabled={readOnly} />
           </Field>
           <Field label="Industry" htmlFor="org-industry">
-            <Select value={draft.industry || "none"} onValueChange={(v) => set({ industry: v === "none" ? "" : v })} disabled={readOnly}>
+            <Select
+              value={draft.industry || "none"}
+              onValueChange={(v) => set({ industry: v === "none" ? "" : v })}
+              disabled={readOnly}
+            >
               <SelectTrigger id="org-industry" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -176,7 +190,11 @@ function OrganisationSettings({ data }: { data: Data }) {
               disabled={readOnly}
             />
           </Field>
-          <Field label="Procurement email" htmlFor="org-email" hint="Shown to SMEs as the enquiries address on new listings.">
+          <Field
+            label="Procurement email"
+            htmlFor="org-email"
+            hint="Shown to SMEs as the enquiries address on new listings."
+          >
             <Input
               id="org-email"
               type="email"
@@ -377,7 +395,10 @@ function NotificationPreferences({ preferences }: { preferences: MemberPreferenc
           onChange={(notifyClosingSoon) => set({ notifyClosingSoon })}
         />
         {draft.notifyClosingSoon && (
-          <Select value={String(draft.closingReminderDays)} onValueChange={(v) => set({ closingReminderDays: Number(v) })}>
+          <Select
+            value={String(draft.closingReminderDays)}
+            onValueChange={(v) => set({ closingReminderDays: Number(v) })}
+          >
             <SelectTrigger className="w-full md:w-56" aria-label="Remind me">
               <SelectValue />
             </SelectTrigger>

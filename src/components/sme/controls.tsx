@@ -292,12 +292,18 @@ export function FileDrop({
         <FileUpIcon className="size-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{file.name}</p>
-          <p className="text-xs text-muted-foreground">{formatBytes(file.size)} · Ready to upload</p>
+          <p className="text-xs text-muted-foreground">{formatBytes(file.size)}, Ready to upload</p>
         </div>
         <Button id={id} type="button" variant="ghost" size="sm" onClick={() => inputRef.current?.click()}>
           Replace
         </Button>
-        <Button type="button" variant="ghost" size="sm" aria-label={`Remove ${file.name}`} onClick={() => onChange(null)}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label={`Remove ${file.name}`}
+          onClick={() => onChange(null)}
+        >
           Remove
         </Button>
       </div>
@@ -336,7 +342,7 @@ export function FileDrop({
           <span className="block text-sm font-medium">
             Drop file here or <span className="text-primary underline underline-offset-2">browse</span>
           </span>
-          <span className="block text-xs text-muted-foreground">PDF, JPG or PNG · up to {DOC_MAX_MB} MB</span>
+          <span className="block text-xs text-muted-foreground">PDF, JPG or PNG, up to {DOC_MAX_MB} MB</span>
         </span>
       </button>
       {problem && <p className="mt-1.5 text-sm text-destructive">{problem}</p>}
@@ -345,11 +351,7 @@ export function FileDrop({
 }
 
 export function SectionLabel({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <p className={cn("-mb-1 pt-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase", className)}>
-      {children}
-    </p>
-  );
+  return <p className={cn("-mb-1 pt-3 text-xs font-semibold text-muted-foreground", className)}>{children}</p>;
 }
 
 /** Label / value row for read-only profile views. */

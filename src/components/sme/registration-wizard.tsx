@@ -153,7 +153,7 @@ export function RegistrationWizard({ name, email }: { name: string; email: strin
       {/* Step navigation */}
       <aside className="hidden w-64 shrink-0 lg:block">
         <div className="sticky top-20">
-          <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">SME registration</p>
+          <p className="text-xs font-semibold text-muted-foreground">SME registration</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Step {index + 1} of {STEPS.length}
           </p>
@@ -213,9 +213,9 @@ export function RegistrationWizard({ name, email }: { name: string; email: strin
           />
 
           <div className="border-b px-5 pt-7 pb-6 md:px-10 md:pt-9">
-            <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            <p className="text-xs font-semibold text-muted-foreground">
               Step {index + 1} of {STEPS.length}
-              <span className="lg:hidden"> · {step.title}</span>
+              <span className="lg:hidden">, {step.title}</span>
             </p>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight md:text-[28px]">{step.heading}</h1>
             <p className="mt-1.5 text-muted-foreground">{step.blurb}</p>

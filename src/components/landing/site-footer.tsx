@@ -29,9 +29,7 @@ export function SiteFooter() {
         </nav>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 pb-10 text-xs text-muted-foreground md:px-6">
-        YES AI Hub · Challenge 4
-      </div>
+      <div className="mx-auto max-w-6xl px-4 pb-10 text-xs text-muted-foreground md:px-6">YES AI Hub, Challenge 4</div>
     </footer>
   );
 }

@@ -28,13 +28,11 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<"/auth/[path]">): Promise<Metadata> {
   const { path } = await params;
-  const view = (Object.keys(viewPaths.auth) as AuthView[]).find(
-    (key) => viewPaths.auth[key] === path,
-  );
+  const view = (Object.keys(viewPaths.auth) as AuthView[]).find((key) => viewPaths.auth[key] === path);
 
   const title = view && titles[view];
 
-  return { title: title ? `${title} · YES Hub` : "YES Hub" };
+  return { title: title ? `${title} | YES Hub` : "YES Hub" };
 }
 
 export default function AuthPage({ params }: PageProps<"/auth/[path]">) {

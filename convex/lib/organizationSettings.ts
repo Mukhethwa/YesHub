@@ -30,9 +30,7 @@ export const DEFAULT_MEMBER_PREFERENCES: MemberPreferences = {
 /** The saved values for every field in `defaults`, falling back to the default; anything else is dropped. */
 function withDefaults<T extends object>(defaults: T, saved: object): T {
   const values = saved as Record<string, unknown>;
-  return Object.fromEntries(
-    Object.entries(defaults).map(([key, fallback]) => [key, values[key] ?? fallback]),
-  ) as T;
+  return Object.fromEntries(Object.entries(defaults).map(([key, fallback]) => [key, values[key] ?? fallback])) as T;
 }
 
 /** Owners and admins manage the organisation; members work on its opportunities. */
@@ -51,7 +49,11 @@ async function settingsRow(ctx: QueryCtx, organizationId: string) {
 export async function getOrganizationSettings(ctx: QueryCtx, organizationId: string) {
   const row = await settingsRow(ctx, organizationId);
   if (!row) return { ...DEFAULT_ORGANIZATION_SETTINGS, updatedBy: null, updatedAt: null };
-  return { ...withDefaults(DEFAULT_ORGANIZATION_SETTINGS, row), updatedBy: row.updatedBy, updatedAt: row._creationTime };
+  return {
+    ...withDefaults(DEFAULT_ORGANIZATION_SETTINGS, row),
+    updatedBy: row.updatedBy,
+    updatedAt: row._creationTime,
+  };
 }
 
 export async function saveOrganizationSettings(

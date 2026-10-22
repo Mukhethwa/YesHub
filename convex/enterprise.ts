@@ -2,7 +2,8 @@ import { ConvexError, v } from "convex/values";
 
 import { getSettings } from "../src/lib/sme/settings";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, mutation, type MutationCtx, type QueryCtx, query } from "./_generated/server";
+import { type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internalMutation, mutation, query } from "./functions";
 import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
 import { components } from "./_generated/api";
@@ -406,7 +407,9 @@ export const recordDocumentOpened = mutation({
       await ctx.db
         .query("applications")
         .withIndex("by_sme_and_opportunity", (q) =>
-          args.opportunityId ? q.eq("smeId", args.smeId).eq("opportunityId", args.opportunityId) : q.eq("smeId", args.smeId),
+          args.opportunityId
+            ? q.eq("smeId", args.smeId).eq("opportunityId", args.opportunityId)
+            : q.eq("smeId", args.smeId),
         )
         .take(APPLICATION_LIMIT)
     ).filter((a) => a.organizationId === enterprise.organization.id);
@@ -774,8 +777,10 @@ export const updateOrganizationSettings = mutation({
     }
 
     const s = args.settings;
-    if (s.retentionMonths < 3 || s.retentionMonths > 60) throw new ConvexError("Keep data for between 3 and 60 months.");
-    if (s.defaultMinBbbeeLevel < 0 || s.defaultMinBbbeeLevel > 8) throw new ConvexError("Choose a B-BBEE level from 1 to 8.");
+    if (s.retentionMonths < 3 || s.retentionMonths > 60)
+      throw new ConvexError("Keep data for between 3 and 60 months.");
+    if (s.defaultMinBbbeeLevel < 0 || s.defaultMinBbbeeLevel > 8)
+      throw new ConvexError("Choose a B-BBEE level from 1 to 8.");
     if (s.procurementEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.procurementEmail.trim())) {
       throw new ConvexError("Enter a valid procurement email address.");
     }
@@ -790,7 +795,10 @@ export const updateOrganizationSettings = mutation({
         website: s.website.trim(),
         procurementEmail: s.procurementEmail.trim().toLowerCase(),
         defaultRequiredDocuments: s.defaultRequiredDocuments.filter((key) => VALID_DOC_KEYS.has(key)),
-        defaultEvaluationCriteria: s.defaultEvaluationCriteria.map((c) => c.trim()).filter(Boolean).slice(0, 20),
+        defaultEvaluationCriteria: s.defaultEvaluationCriteria
+          .map((c) => c.trim())
+          .filter(Boolean)
+          .slice(0, 20),
         defaultSubmission: s.defaultSubmission.trim().slice(0, 1000),
       },
       enterprise.user.name,

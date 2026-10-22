@@ -2,7 +2,8 @@ import { ConvexError, v } from "convex/values";
 
 import { components } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, type MutationCtx, type QueryCtx, query } from "./_generated/server";
+import { type MutationCtx, type QueryCtx } from "./_generated/server";
+import { mutation, query } from "./functions";
 import { authComponent } from "./auth";
 import { evaluateApplication } from "./lib/evaluation";
 import { APPLICATION_LIMIT } from "./lib/opportunities";
@@ -287,7 +288,8 @@ export const apply = mutation({
   handler: async (ctx, args) => {
     const sme = await getOwnSme(ctx);
     if (!sme) throw new ConvexError("Register your business before applying.");
-    if (sme.suspendedAt) throw new ConvexError("Your profile is suspended, so you can’t apply right now. Contact YES Hub.");
+    if (sme.suspendedAt)
+      throw new ConvexError("Your profile is suspended, so you can’t apply right now. Contact YES Hub.");
 
     const opportunity = await ctx.db.get("opportunities", args.opportunityId);
     if (!opportunity || opportunity.status !== "open") throw new ConvexError("This opportunity isn’t open any more.");

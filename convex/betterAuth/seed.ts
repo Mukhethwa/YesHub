@@ -80,14 +80,25 @@ export const organizations = mutation({
       .unique();
     if (staffOrg) {
       for (const member of args.staff) {
-        const memberships = await ctx.db.query("member").withIndex("userId", (q) => q.eq("userId", member.userId)).take(5);
+        const memberships = await ctx.db
+          .query("member")
+          .withIndex("userId", (q) => q.eq("userId", member.userId))
+          .take(5);
         if (memberships.length === 0) {
-          await ctx.db.insert("member", { organizationId: staffOrg._id, userId: member.userId, role: member.role, createdAt: Date.now() });
+          await ctx.db.insert("member", {
+            organizationId: staffOrg._id,
+            userId: member.userId,
+            role: member.role,
+            createdAt: Date.now(),
+          });
         }
         const userId = ctx.db.normalizeId("user", member.userId);
         if (userId) await ctx.db.patch("user", userId, { role: member.role === "owner" ? "superadmin" : member.role });
       }
-      const pending = await ctx.db.query("invitation").withIndex("organizationId", (q) => q.eq("organizationId", staffOrg._id)).take(100);
+      const pending = await ctx.db
+        .query("invitation")
+        .withIndex("organizationId", (q) => q.eq("organizationId", staffOrg._id))
+        .take(100);
       for (const invitation of args.staffInvitations) {
         if (pending.some((p) => p.email === invitation.email)) continue;
         await ctx.db.insert("invitation", {

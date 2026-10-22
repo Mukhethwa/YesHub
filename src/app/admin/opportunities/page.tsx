@@ -1,5 +1,5 @@
-import { JevDecisions } from "@/components/admin/jev-decisions";
+import { Evaluations } from "@/components/admin/evaluations";
 
 export default function Page() {
-  return <JevDecisions />;
+  return <Evaluations />;
 }

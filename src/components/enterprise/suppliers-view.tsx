@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { AdminPageHeader, Pill } from "@/components/admin/page-header";
+import { useBreadcrumb } from "@/components/portal/breadcrumbs";
 import { FilterTabs, TablePagination, usePagination } from "@/components/admin/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -150,7 +151,7 @@ function SupplierDirectory() {
                         {s.verified && <Pill tone="info">Verified</Pill>}
                       </span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        {s.city}, {s.hqProvince} · {s.industry}
+                        {s.city}, {s.hqProvince}, {s.industry}
                       </span>
                     </TableCell>
                     <TableCell className="max-w-56 truncate text-sm">
@@ -162,7 +163,9 @@ function SupplierDirectory() {
                         {docs.onFile} of {docs.total}
                       </span>{" "}
                       <span className="text-muted-foreground">on file</span>
-                      {docs.expired > 0 && <span className="block text-xs text-destructive">{docs.expired} expired</span>}
+                      {docs.expired > 0 && (
+                        <span className="block text-xs text-destructive">{docs.expired} expired</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{s.applications || ""}</TableCell>
                     <TableCell className="pr-6 text-right">
@@ -201,6 +204,7 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
 
 function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpportunity: string | null }) {
   const profile = useQuery(api.enterprise.supplier, { smeId });
+  useBreadcrumb(profile?.companyName);
   const back = fromOpportunity
     ? { href: `/dashboard/opportunities?id=${fromOpportunity}`, label: "Back to the opportunity" }
     : { href: "/dashboard/suppliers", label: "All suppliers" };
@@ -210,7 +214,9 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
     return (
       <div className="py-24 text-center">
         <p className="font-medium">This business isn’t available</p>
-        <p className="mt-1 text-sm text-muted-foreground">It may have hidden its profile from corporates, or been removed.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          It may have hidden its profile from corporates, or been removed.
+        </p>
         <Button variant="outline" className="mt-4" asChild>
           <Link href={back.href}>{back.label}</Link>
         </Button>
@@ -231,7 +237,7 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
           {profile.suspended && <Pill tone="danger">Suspended</Pill>}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          {profile.industry} · {profile.city}, {profile.hqProvince}
+          {profile.industry}, {profile.city}, {profile.hqProvince}
         </p>
       </div>
 
@@ -266,7 +272,9 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
                 <Detail label="B-BBEE">
                   {profile.bbbeeLevel}
                   {profile.bbbeeExpiry && (
-                    <span className={`block text-xs ${isExpired(profile.bbbeeExpiry) ? "text-destructive" : "text-muted-foreground"}`}>
+                    <span
+                      className={`block text-xs ${isExpired(profile.bbbeeExpiry) ? "text-destructive" : "text-muted-foreground"}`}
+                    >
                       {isExpired(profile.bbbeeExpiry) ? "Expired" : "Valid until"} {formatDate(profile.bbbeeExpiry)}
                     </span>
                   )}
@@ -280,12 +288,19 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
                 </Detail>
                 <Detail label="Website">
                   {profile.website && (
-                    <a href={websiteHref(profile.website)} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                    <a
+                      href={websiteHref(profile.website)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline underline-offset-2"
+                    >
                       {profile.website}
                     </a>
                   )}
                 </Detail>
-                <Detail label="Address">{[profile.address, profile.city, profile.hqProvince].filter(Boolean).join(", ")}</Detail>
+                <Detail label="Address">
+                  {[profile.address, profile.city, profile.hqProvince].filter(Boolean).join(", ")}
+                </Detail>
               </dl>
             </CardContent>
           </Card>
@@ -351,7 +366,7 @@ function TagList({ label, items }: { label: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <div>
-      <p className="mb-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
       <div className="flex flex-wrap gap-1.5">
         {items.map((item) => (
           <span key={item} className="rounded-md bg-secondary px-2 py-0.5 text-xs">
@@ -393,7 +408,10 @@ function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpp
             const expiry = expiryFor(type.key);
             const expired = !!doc && isExpired(expiry);
             return (
-              <li key={type.key} className="flex flex-col gap-2 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <li
+                key={type.key}
+                className="flex flex-col gap-2 px-6 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
                     {type.label}
@@ -407,7 +425,7 @@ function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpp
                   </p>
                   {doc && (
                     <p className="truncate text-xs text-muted-foreground">
-                      {doc.name} · {formatBytes(doc.size)} · uploaded {formatDate(doc.uploadedAt)}
+                      {doc.name}, {formatBytes(doc.size)}, uploaded {formatDate(doc.uploadedAt)}
                     </p>
                   )}
                 </div>
@@ -419,7 +437,9 @@ function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpp
                       </a>
                     </Button>
                   ) : (
-                    profile.canViewDocuments && <span className="shrink-0 text-xs text-muted-foreground">File not uploaded yet</span>
+                    profile.canViewDocuments && (
+                      <span className="shrink-0 text-xs text-muted-foreground">File not uploaded yet</span>
+                    )
                   ))}
               </li>
             );
@@ -439,7 +459,7 @@ function HistoryCard({ profile }: { profile: Profile }) {
         <CardDescription>
           {profile.history.length === 0
             ? "This business hasn’t applied to your opportunities yet."
-            : `${profile.history.length} application${profile.history.length === 1 ? "" : "s"} · ${shortlisted} shortlisted`}
+            : `${profile.history.length} application${profile.history.length === 1 ? "" : "s"}, ${shortlisted} shortlisted`}
         </CardDescription>
       </CardHeader>
       {profile.history.length > 0 && (
@@ -457,11 +477,14 @@ function HistoryCard({ profile }: { profile: Profile }) {
               {profile.history.map((h) => (
                 <TableRow key={h.applicationId}>
                   <TableCell className="max-w-72 pl-6">
-                    <Link href={`/dashboard/opportunities?id=${h.opportunityId}`} className="block truncate font-medium hover:underline">
+                    <Link
+                      href={`/dashboard/opportunities?id=${h.opportunityId}`}
+                      className="block truncate font-medium hover:underline"
+                    >
                       {h.title}
                     </Link>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {KIND_LABELS[h.kind]} · {h.reference}
+                      {KIND_LABELS[h.kind]}, {h.reference}
                     </span>
                   </TableCell>
                   <TableCell className="text-sm">{formatDate(h.submittedAt)}</TableCell>

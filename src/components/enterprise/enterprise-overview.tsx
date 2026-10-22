@@ -2,48 +2,44 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
+import { ShieldAlertIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AdminPageHeader, Pill } from "@/components/admin/page-header";
+import { BarChart } from "@/components/app/bar-chart";
+import { EmptyState } from "@/components/app/empty-state";
+import { Section } from "@/components/app/section";
+import { StatStrip } from "@/components/app/stat-strip";
+import { Status } from "@/components/app/status";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { errorMessage } from "@/lib/errors";
 import { api } from "../../../convex/_generated/api";
 import { CreateOrganisation } from "./create-organisation";
-import { closingLabel, KIND_LABELS, percent, PhasePill, phaseOf, QualifiedShare } from "./tenders";
+import { closingLabel, KindTile, percent, PhasePill, phaseOf, QualifiedShare } from "./tenders";
 
 const isDev = process.env.NODE_ENV === "development";
 
 type Overview = NonNullable<FunctionReturnType<typeof api.enterprise.overview>>;
-type Row = Overview["opportunities"][number];
-
-function Stat({ label, value, note }: { label: string; value: string | number; note?: string }) {
-  return (
-    <div className="rounded-xl border bg-card p-5">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-3xl font-semibold tabular-nums">{value}</p>
-      {note && <p className="mt-1 text-xs text-muted-foreground">{note}</p>}
-    </div>
-  );
-}
+type OpportunityRow = Overview["opportunities"][number];
 
 const VERIFICATION: Record<string, { label: string; tone: "success" | "warning" | "danger" }> = {
-  verified: { label: "Verified", tone: "success" },
+  verified: { label: "Verified by YES Hub", tone: "success" },
   unverified: { label: "Awaiting verification", tone: "warning" },
   rejected: { label: "Verification declined", tone: "danger" },
 };
 
 /** Open opportunities first, soonest closing first, then closed ones, most recently closed first. */
-function byUrgency(a: Row, b: Row) {
+function byUrgency(a: OpportunityRow, b: OpportunityRow) {
   const aClosed = phaseOf(a) === "closed";
   const bClosed = phaseOf(b) === "closed";
   if (aClosed !== bClosed) return aClosed ? 1 : -1;
   return aClosed ? b.closesAt.localeCompare(a.closesAt) : a.closesAt.localeCompare(b.closesAt);
 }
+
+const opportunityHref = (r: OpportunityRow) => `/dashboard/opportunities?id=${r.id}`;
 
 export function EnterpriseOverview() {
   const data = useQuery(api.enterprise.overview);
@@ -55,17 +51,22 @@ export function EnterpriseOverview() {
   const verification = VERIFICATION[organization.verificationStatus] ?? VERIFICATION.unverified;
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader title={organization.name} description="How your tenders, RFQs and grants are doing.">
-        <Pill tone={verification.tone}>{verification.label}</Pill>
-      </AdminPageHeader>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">{organization.name}</h1>
+        <Status tone={verification.tone}>{verification.label}</Status>
+      </div>
 
       {organization.verificationStatus !== "verified" && (
-        <p className="rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          {organization.verificationStatus === "rejected"
-            ? "YES Hub couldn’t verify this organisation, so it can’t publish opportunities. Contact YES Hub to resolve it."
-            : "YES Hub is verifying your organisation. You’ll be able to publish opportunities once it’s approved."}
-        </p>
+        // An alert, so it may be tinted (DESIGN.md)
+        <div className="flex gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm">
+          <ShieldAlertIcon className="mt-0.5 size-4 shrink-0 text-warning" />
+          <p>
+            {organization.verificationStatus === "rejected"
+              ? "YES Hub couldn’t verify this organisation, so it can’t publish opportunities. Contact YES Hub to resolve it."
+              : "YES Hub is verifying your organisation. You can publish opportunities once it’s approved."}
+          </p>
+        </div>
       )}
 
       {opportunities.length === 0 ? <NoOpportunities /> : <Dashboard rows={opportunities} more={data.more} />}
@@ -73,86 +74,111 @@ export function EnterpriseOverview() {
   );
 }
 
-function Dashboard({ rows, more }: { rows: Row[]; more: boolean }) {
+function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
   const open = rows.filter((r) => phaseOf(r) !== "closed");
-  const closingThisWeek = rows.filter((r) => phaseOf(r) === "closing");
+  const closingThisWeek = [...rows.filter((r) => phaseOf(r) === "closing")].sort(byUrgency);
   const applications = rows.reduce((sum, r) => sum + r.applications, 0);
   const qualified = rows.reduce((sum, r) => sum + r.qualified, 0);
   const shortlisted = rows.reduce((sum, r) => sum + r.shortlisted, 0);
-  // Open opportunities with applicants but none who meet the requirements
+  const awaitingReview = rows.reduce((sum, r) => sum + r.awaitingReview, 0);
+  // Open opportunities where nobody who applied meets the requirements
   const needsAttention = open.filter((r) => r.qualified === 0).sort(byUrgency);
-  const nextClosing = [...closingThisWeek].sort(byUrgency)[0];
+  const busiest = [...open].sort((a, b) => b.applications - a.applications).slice(0, 6);
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
-          label="Opportunities listed"
-          value={`${rows.length}${more ? "+" : ""}`}
-          note={`${open.length} open · ${rows.length - open.length} closed`}
-        />
-        <Stat
-          label="Applications"
-          value={applications}
-          note={rows.length > 0 ? `${(applications / rows.length).toFixed(1)} per opportunity on average` : undefined}
-        />
-        <Stat
-          label="Qualifying applicants"
-          value={qualified}
-          note={`${percent(qualified, applications)}% meet the requirements · ${shortlisted} shortlisted`}
-        />
-        <Stat
-          label="Closing this week"
-          value={closingThisWeek.length}
-          note={nextClosing ? `Next: ${nextClosing.title}` : "Nothing closes in the next 7 days"}
-        />
-      </div>
+      <StatStrip
+        variant="brand"
+        items={[
+          {
+            label: "Open opportunities",
+            value: open.length,
+            context: `of ${rows.length}${more ? "+" : ""} listed`,
+            href: "/dashboard/opportunities",
+          },
+          {
+            label: "Applications",
+            value: applications,
+            context: awaitingReview ? undefined : "All reviewed",
+            action: awaitingReview
+              ? { label: `${awaitingReview} to review`, href: "/dashboard/opportunities" }
+              : undefined,
+          },
+          {
+            label: "Meet the requirements",
+            value: `${percent(qualified, applications)}%`,
+            context: `${qualified} applicants, ${shortlisted} shortlisted`,
+          },
+          {
+            label: "Closing this week",
+            value: closingThisWeek.length,
+            context: closingThisWeek.length ? undefined : "Nothing closes in the next 7 days",
+            action: closingThisWeek[0]
+              ? { label: `Next: ${closingThisWeek[0].title}`, href: opportunityHref(closingThisWeek[0]) }
+              : undefined,
+          },
+        ]}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your opportunities</CardTitle>
-          <CardDescription>Applicants are checked against each opportunity’s requirements as they apply.</CardDescription>
-          <CardAction>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/dashboard/opportunities">View all</Link>
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="px-0">
-          <OpportunityTable rows={[...rows].sort(byUrgency).slice(0, 8)} />
-        </CardContent>
-      </Card>
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <Section title="Applicants per opportunity" description="Open opportunities with the most applicants.">
+          <div className="rounded-lg border bg-card p-5">
+            <BarChart
+              rows={busiest.map((r) => ({
+                key: r.id,
+                label: r.title,
+                href: opportunityHref(r),
+                segments: [
+                  { value: r.qualified, className: "bg-brand-green", label: "meet the requirements" },
+                  { value: r.applications - r.qualified, className: "bg-brand-blue/30", label: "don’t yet" },
+                ],
+              }))}
+              legend={[
+                { label: "Meet the requirements", className: "bg-brand-green" },
+                { label: "Don’t yet", className: "bg-brand-blue/30" },
+              ]}
+              empty="No open opportunities."
+            />
+          </div>
+        </Section>
 
-      {needsAttention.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Needs attention</CardTitle>
-            <CardDescription>Open opportunities with no qualifying applicant yet.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y">
+        <Section title="Needs attention">
+          {needsAttention.length === 0 ? (
+            <div className="rounded-lg border bg-card">
+              <EmptyState
+                illustration="allChecked"
+                title="Every open opportunity has a qualifying applicant"
+                size="sm"
+              />
+            </div>
+          ) : (
+            <ul className="divide-y overflow-hidden rounded-lg border border-l-4 border-l-warning bg-card">
               {needsAttention.map((r) => (
-                <li key={r.id}>
-                  <Link
-                    href={`/dashboard/opportunities?id=${r.id}`}
-                    className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5 text-sm hover:bg-muted"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium">{r.title}</span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {r.applications === 0
-                          ? "No applications yet"
-                          : `${r.applications} applied, none meet the requirements`}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{closingLabel(r.closesAt)}</span>
-                  </Link>
+                <li key={r.id} className="flex items-start gap-3 px-4 py-3">
+                  <KindTile kind={r.kind} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{r.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.applications === 0
+                        ? `No applications yet. ${closingLabel(r.closesAt)}.`
+                        : `${r.applications} applied, none meet the requirements. ${closingLabel(r.closesAt)}.`}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={opportunityHref(r)}>Review</Link>
+                  </Button>
                 </li>
               ))}
             </ul>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </Section>
+      </div>
+
+      <Section title="Your opportunities" href="/dashboard/opportunities">
+        <div className="overflow-hidden rounded-lg border bg-card">
+          <OpportunityTable rows={[...rows].sort(byUrgency).slice(0, 8)} />
+        </div>
+      </Section>
 
       {isDev && <RemoveSamplesButton />}
     </>
@@ -160,43 +186,44 @@ function Dashboard({ rows, more }: { rows: Row[]; more: boolean }) {
 }
 
 /** Opportunities with their applicant counts. Shared by the overview and the Opportunities page. */
-export function OpportunityTable({ rows }: { rows: Row[] }) {
+export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="pl-6">Opportunity</TableHead>
+          <TableHead className="pl-4">Opportunity</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="text-right">Applications</TableHead>
-          <TableHead>Qualify</TableHead>
-          <TableHead className="pr-6 text-right">Shortlisted</TableHead>
+          <TableHead className="hidden lg:table-cell">Qualify</TableHead>
+          <TableHead className="hidden pr-4 text-right xl:table-cell">Shortlisted</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((r) => {
-          const phase = phaseOf(r);
-          return (
-            <TableRow key={r.id}>
-              <TableCell className="max-w-80 pl-6">
-                <Link href={`/dashboard/opportunities?id=${r.id}`} className="block">
+        {rows.map((r) => (
+          <TableRow key={r.id}>
+            <TableCell className="max-w-80 pl-4">
+              <Link href={opportunityHref(r)} className="flex items-center gap-3">
+                <KindTile kind={r.kind} />
+                <span className="min-w-0">
                   <span className="block truncate font-medium hover:underline">{r.title}</span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {KIND_LABELS[r.kind]} · {r.reference} · {r.teamName ?? "No department"}
+                    {r.reference}
+                    {r.teamName ? `, ${r.teamName}` : ""}
                   </span>
-                </Link>
-              </TableCell>
-              <TableCell>
-                <PhasePill phase={phase} />
-                <span className="mt-1 block text-xs text-muted-foreground">{closingLabel(r.closesAt)}</span>
-              </TableCell>
-              <TableCell className="text-right font-medium tabular-nums">{r.applications}</TableCell>
-              <TableCell>
-                <QualifiedShare qualified={r.qualified} applications={r.applications} />
-              </TableCell>
-              <TableCell className="pr-6 text-right tabular-nums">{r.shortlisted}</TableCell>
-            </TableRow>
-          );
-        })}
+                </span>
+              </Link>
+            </TableCell>
+            <TableCell>
+              <PhasePill phase={phaseOf(r)} />
+              <span className="mt-0.5 block text-xs text-muted-foreground">{closingLabel(r.closesAt)}</span>
+            </TableCell>
+            <TableCell className="text-right font-medium tabular-nums">{r.applications}</TableCell>
+            <TableCell className="hidden lg:table-cell">
+              <QualifiedShare qualified={r.qualified} applications={r.applications} />
+            </TableCell>
+            <TableCell className="hidden pr-4 text-right tabular-nums xl:table-cell">{r.shortlisted}</TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   );
@@ -204,20 +231,15 @@ export function OpportunityTable({ rows }: { rows: Row[] }) {
 
 function NoOpportunities() {
   return (
-    <Card className="mx-auto mt-6 max-w-lg text-center">
-      <CardHeader>
-        <CardTitle>No opportunities yet</CardTitle>
-        <CardDescription>
-          Your tenders, RFQs and grants will appear here with how many SMEs applied and how many qualify. Publishing
-          opportunities is coming next.
-        </CardDescription>
-      </CardHeader>
-      {isDev && (
-        <CardContent className="flex justify-center">
-          <AddSamplesButton />
-        </CardContent>
-      )}
-    </Card>
+    <div className="rounded-lg border bg-card">
+      <EmptyState
+        illustration="contract"
+        title="No opportunities yet"
+        action={isDev ? <AddSamplesButton /> : undefined}
+      >
+        Your tenders, RFQs and grants appear here with how many SMEs applied and how many meet your requirements.
+      </EmptyState>
+    </div>
   );
 }
 

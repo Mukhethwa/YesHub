@@ -110,5 +110,11 @@ export function FilterTabs<T extends string>({
 
 export function formatDateTime(value: number | string | Date | null | undefined) {
   if (!value) return "";
-  return new Date(value).toLocaleString("en-ZA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(value).toLocaleString("en-ZA", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }

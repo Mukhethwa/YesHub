@@ -1,7 +1,8 @@
 import { ConvexError, v } from "convex/values";
 
 import { components } from "./_generated/api";
-import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery } from "./functions";
 import { deleteApplicationsForSme } from "./lib/opportunities";
 import { deleteMemberPreferences } from "./lib/organizationSettings";
 

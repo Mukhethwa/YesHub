@@ -50,7 +50,8 @@ function validateCompany(f: SmeDetails): Errors {
   const e: Errors = {};
   if (!f.companyName.trim()) e.companyName = "Enter your registered company name";
   if (!f.registrationNumber.trim()) e.registrationNumber = "Enter your CIPC registration number";
-  else if (!CIPC_REG.test(f.registrationNumber.trim())) e.registrationNumber = "Use the CIPC format, e.g. 2019/123456/07";
+  else if (!CIPC_REG.test(f.registrationNumber.trim()))
+    e.registrationNumber = "Use the CIPC format, e.g. 2019/123456/07";
   if (f.csdNumber.trim() && !CSD.test(f.csdNumber.trim())) e.csdNumber = "CSD numbers look like MAAA0123456";
   if (!f.industry) e.industry = "Choose the industry you mainly operate in";
   if (!f.city.trim()) e.city = "Enter the city or town you are based in";
@@ -76,7 +77,8 @@ export function validateCompliance(
   if (isExpired(f.bbbeeExpiry)) e.bbbeeExpiry = "This certificate has expired. Upload a current one";
   if (!has.taxCertificate) e.taxCertificate = "Upload your SARS tax compliance status (TCS) document";
   if (isExpired(f.taxExpiry)) e.taxExpiry = "This tax clearance has expired. Upload a current one";
-  if (f.website.trim() && !URL_LIKE.test(f.website.trim())) e.website = "Enter a valid web address, e.g. www.yourcompany.co.za";
+  if (f.website.trim() && !URL_LIKE.test(f.website.trim()))
+    e.website = "Enter a valid web address, e.g. www.yourcompany.co.za";
   if (!f.website.trim() && !has.companyProfile) e.website = "Add your website or upload a company profile";
   return e;
 }

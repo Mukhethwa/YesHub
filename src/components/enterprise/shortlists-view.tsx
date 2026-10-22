@@ -71,7 +71,8 @@ export function ShortlistsView() {
           <CardHeader>
             <CardTitle>No one shortlisted yet</CardTitle>
             <CardDescription>
-              Open an opportunity, review its applicants and choose Shortlist on the businesses you want to take further.
+              Open an opportunity, review its applicants and choose Shortlist on the businesses you want to take
+              further.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -92,7 +93,7 @@ export function ShortlistsView() {
               <CardDescription className="flex flex-wrap items-center gap-2">
                 <PhasePill phase={phaseOf(opportunity)} />
                 <span>
-                  {KIND_LABELS[opportunity.kind]} · {opportunity.reference} · {closingLabel(opportunity.closesAt)}
+                  {KIND_LABELS[opportunity.kind]}, {opportunity.reference}, {closingLabel(opportunity.closesAt)}
                 </span>
               </CardDescription>
             </CardHeader>
@@ -129,16 +130,19 @@ function ShortlistTable({ rows }: { rows: Row[] }) {
                 {row.sme.verified && <Pill tone="info">Verified</Pill>}
               </span>
               <span className="block truncate text-xs text-muted-foreground">
-                {row.sme.city}, {row.sme.hqProvince} · {row.sme.bbbeeLevel}
+                {row.sme.city}, {row.sme.hqProvince}, {row.sme.bbbeeLevel}
               </span>
             </TableCell>
             <TableCell>
               <span className="font-medium tabular-nums">{row.score}</span>
-              <span className="block text-xs text-muted-foreground">{row.qualifies ? "Qualifies" : "Doesn’t qualify"}</span>
+              <span className="block text-xs text-muted-foreground">
+                {row.qualifies ? "Qualifies" : "Doesn’t qualify"}
+              </span>
             </TableCell>
             <TableCell className="max-w-64 text-sm">
               <span className="block truncate">
-                {row.sme.contactName} <span className="text-muted-foreground">· {row.sme.contactRole}</span>
+                {row.sme.contactName}
+                <span className="text-muted-foreground">, {row.sme.contactRole}</span>
               </span>
               <a href={`mailto:${row.sme.email}`} className="block truncate text-xs underline underline-offset-2">
                 {row.sme.email}

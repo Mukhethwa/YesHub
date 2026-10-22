@@ -3,7 +3,8 @@ import { ConvexError, v } from "convex/values";
 import { DOCUMENTS } from "../src/lib/sme/documents";
 import type { DocKey, SmeDetails } from "./schema";
 import { components, internal } from "./_generated/api";
-import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { internalAction } from "./_generated/server";
+import { internalMutation, internalQuery } from "./functions";
 import { createAuth } from "./auth";
 import { sampleDocumentLabelsFor, sampleListingFor, sampleProposal, sampleTeamIdFor } from "./lib/opportunities";
 import { samplePdf } from "./lib/samplePdf";
@@ -61,7 +62,13 @@ function isoDate(daysFromToday: number) {
   return d.toISOString().slice(0, 10);
 }
 
-const SMES: { owner: Person; details: Omit<SmeDetails, "contactName" | "email">; docs: string[]; verified?: boolean; suspended?: string }[] = [
+const SMES: {
+  owner: Person;
+  details: Omit<SmeDetails, "contactName" | "email">;
+  docs: string[];
+  verified?: boolean;
+  suspended?: string;
+}[] = [
   {
     owner: "smeUbuntu",
     verified: true,
@@ -615,7 +622,8 @@ export const sampleDocuments = internalAction({
     const missing = await ctx.runQuery(internal.seed.demoDocumentsWithoutFiles, {});
     for (const doc of missing) {
       const label = DOCUMENTS.find((d) => d.key === doc.key)?.label ?? doc.key;
-      const expiry = doc.key === "bbbeeCertificate" ? doc.bbbeeExpiry : doc.key === "taxCertificate" ? doc.taxExpiry : "";
+      const expiry =
+        doc.key === "bbbeeCertificate" ? doc.bbbeeExpiry : doc.key === "taxCertificate" ? doc.taxExpiry : "";
       const lines = [
         `Company: ${doc.companyName}`,
         `Registration number: ${doc.registrationNumber || "Not stated"}`,
@@ -661,7 +669,8 @@ export const sampleProposals = internalMutation({
         const spread = 0.82 + ((sme.companyName.length * 7 + opportunity.title.length) % 37) / 100;
         await ctx.db.patch("applications", application._id, {
           proposal: sampleProposal(sme, opportunity.title),
-          quote: application.quote ?? (opportunity.value ? Math.round((opportunity.value * spread) / 100) * 100 : undefined),
+          quote:
+            application.quote ?? (opportunity.value ? Math.round((opportunity.value * spread) / 100) * 100 : undefined),
         });
         updated++;
       }

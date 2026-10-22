@@ -137,8 +137,8 @@ function DocRow({ doc, sme, url }: { doc: DocumentType; sme: SmeProfile; url?: s
             <span className="break-all">{file.name}</span>
             <span className="text-muted-foreground">
               {" "}
-              · {formatBytes(file.size)} · uploaded {formatDate(file.uploadedAt)}
-              {expiry && ` · ${status === "expired" ? "expired" : "expires"} ${formatDate(expiry)}`}
+              ({formatBytes(file.size)}), uploaded {formatDate(file.uploadedAt)}
+              {expiry && `, ${status === "expired" ? "expired" : "expires"} ${formatDate(expiry)}`}
             </span>
           </p>
         )}

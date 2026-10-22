@@ -86,7 +86,9 @@ function Inspector({ user, onClose }: { user: AdminUser; onClose: () => void }) 
         </div>
         {locked && (
           <p className="mt-3 text-sm text-muted-foreground">
-            {isSelf ? "This is your account. Manage it from your account settings." : "Only a super admin can change another staff account."}
+            {isSelf
+              ? "This is your account. Manage it from your account settings."
+              : "Only a super admin can change another staff account."}
           </p>
         )}
       </SheetHeader>
@@ -175,7 +177,10 @@ function AccountSection({ user }: { user: AdminUser }) {
               context.organization.kind === "staff" ? (
                 "YES Hub staff"
               ) : (
-                <Link href={`/admin/organisations?id=${context.organization.id}`} className="underline underline-offset-2">
+                <Link
+                  href={`/admin/organisations?id=${context.organization.id}`}
+                  className="underline underline-offset-2"
+                >
                   {context.organization.name} ({context.organization.role})
                 </Link>
               )
@@ -189,7 +194,7 @@ function AccountSection({ user }: { user: AdminUser }) {
             <dt className="text-muted-foreground">Ban</dt>
             <dd>
               {user.banReason || "No reason given"}
-              {user.banExpires ? ` · until ${formatDateTime(user.banExpires)}` : " · until unbanned"}
+              {user.banExpires ? `, until ${formatDateTime(user.banExpires)}` : ", until unbanned"}
             </dd>
           </div>
         )}
@@ -219,7 +224,13 @@ function ProfileSection({ user, disabled }: { user: AdminUser; disabled: boolean
         <FieldGroup className="grid gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="admin-user-name">Name</FieldLabel>
-            <Input id="admin-user-name" value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} required />
+            <Input
+              id="admin-user-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={disabled}
+              required
+            />
           </Field>
           <Field>
             <FieldLabel htmlFor="admin-user-email">Email</FieldLabel>
@@ -249,13 +260,18 @@ function PasswordSection({ user, disabled }: { user: AdminUser; disabled: boolea
   const save = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const ok = await runAuthAction("Password set", () => authClient.admin.setUserPassword({ userId: user.id, newPassword: password }));
+    const ok = await runAuthAction("Password set", () =>
+      authClient.admin.setUserPassword({ userId: user.id, newPassword: password }),
+    );
     setBusy(false);
     if (ok) setPassword("");
   };
 
   return (
-    <Section title="Password" description="Set a new password, e.g. when someone is locked out. Their other sessions stay signed in.">
+    <Section
+      title="Password"
+      description="Set a new password, e.g. when someone is locked out. Their other sessions stay signed in."
+    >
       <form onSubmit={save} className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <Field className="flex-1">
           <FieldLabel htmlFor="admin-user-password">New password</FieldLabel>
@@ -302,7 +318,9 @@ function AccessSection({ user, locked, onDeleted }: { user: AdminUser; locked: b
         <AccessRow
           title={user.banned ? "Unban" : "Ban"}
           description={
-            user.banned ? "Let them sign in again." : "Sign them out everywhere and block sign-in. Their data stays as it is."
+            user.banned
+              ? "Let them sign in again."
+              : "Sign them out everywhere and block sign-in. Their data stays as it is."
           }
         >
           {user.banned ? (
@@ -315,16 +333,26 @@ function AccessSection({ user, locked, onDeleted }: { user: AdminUser; locked: b
               Unban
             </Button>
           ) : (
-            <Button variant="outline" size="sm" disabled={locked || !can({ user: ["ban"] })} onClick={() => setBanOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={locked || !can({ user: ["ban"] })}
+              onClick={() => setBanOpen(true)}
+            >
               Ban…
             </Button>
           )}
         </AccessRow>
-        <AccessRow title="View as this user" description="See YES Hub exactly as they do. A banner lets you switch back.">
+        <AccessRow
+          title="View as this user"
+          description="See YES Hub exactly as they do. A banner lets you switch back."
+        >
           <Button
             variant="outline"
             size="sm"
-            disabled={locked || !!user.banned || !can({ user: [isStaff ? "impersonate-admins" : "impersonate"] }) || busy}
+            disabled={
+              locked || !!user.banned || !can({ user: [isStaff ? "impersonate-admins" : "impersonate"] }) || busy
+            }
             onClick={impersonate}
           >
             {busy && <Spinner />}
@@ -336,7 +364,9 @@ function AccessSection({ user, locked, onDeleted }: { user: AdminUser; locked: b
             variant="outline"
             size="sm"
             disabled={locked || !can({ session: ["revoke"] })}
-            onClick={() => runAuthAction("Signed out everywhere", () => authClient.admin.revokeUserSessions({ userId: user.id }))}
+            onClick={() =>
+              runAuthAction("Signed out everywhere", () => authClient.admin.revokeUserSessions({ userId: user.id }))
+            }
           >
             Sign out
           </Button>
@@ -345,7 +375,12 @@ function AccessSection({ user, locked, onDeleted }: { user: AdminUser; locked: b
           title="Delete account"
           description="Permanently delete the account, its SME profile and documents. Organisations they own are kept."
         >
-          <Button variant="destructive" size="sm" disabled={locked || !can({ user: ["delete"] })} onClick={() => setDeleteOpen(true)}>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={locked || !can({ user: ["delete"] })}
+            onClick={() => setDeleteOpen(true)}
+          >
             Delete…
           </Button>
         </AccessRow>
@@ -365,7 +400,8 @@ function AccessSection({ user, locked, onDeleted }: { user: AdminUser; locked: b
             <AlertDialogAction
               variant="destructive"
               onClick={async () => {
-                if (await runAuthAction("Account deleted", () => authClient.admin.removeUser({ userId: user.id }))) onDeleted();
+                if (await runAuthAction("Account deleted", () => authClient.admin.removeUser({ userId: user.id })))
+                  onDeleted();
               }}
             >
               Delete account
@@ -377,7 +413,15 @@ function AccessSection({ user, locked, onDeleted }: { user: AdminUser; locked: b
   );
 }
 
-function AccessRow({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+function AccessRow({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between gap-4 p-4">
       <div>
@@ -389,7 +433,15 @@ function AccessRow({ title, description, children }: { title: string; descriptio
   );
 }
 
-function BanDialog({ user, open, onOpenChange }: { user: AdminUser; open: boolean; onOpenChange: (open: boolean) => void }) {
+function BanDialog({
+  user,
+  open,
+  onOpenChange,
+}: {
+  user: AdminUser;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [reason, setReason] = useState("");
   const [duration, setDuration] = useState<(typeof BAN_DURATIONS)[number]["id"]>("forever");
   const [busy, setBusy] = useState(false);
@@ -412,7 +464,9 @@ function BanDialog({ user, open, onOpenChange }: { user: AdminUser; open: boolea
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Ban {user.name}?</AlertDialogTitle>
-          <AlertDialogDescription>They’re signed out everywhere and can’t sign in until the ban ends.</AlertDialogDescription>
+          <AlertDialogDescription>
+            They’re signed out everywhere and can’t sign in until the ban ends.
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <FieldGroup>
           <Field>
@@ -468,8 +522,26 @@ type AdminSession = {
 /** Rough device label from a user agent, e.g. "Chrome on Windows". */
 function describeAgent(agent?: string | null) {
   if (!agent) return "Unknown device";
-  const browser = /Edg\//.test(agent) ? "Edge" : /Chrome\//.test(agent) ? "Chrome" : /Firefox\//.test(agent) ? "Firefox" : /Safari\//.test(agent) ? "Safari" : "Browser";
-  const os = /Windows/.test(agent) ? "Windows" : /Android/.test(agent) ? "Android" : /iPhone|iPad/.test(agent) ? "iOS" : /Mac OS/.test(agent) ? "macOS" : /Linux/.test(agent) ? "Linux" : "";
+  const browser = /Edg\//.test(agent)
+    ? "Edge"
+    : /Chrome\//.test(agent)
+      ? "Chrome"
+      : /Firefox\//.test(agent)
+        ? "Firefox"
+        : /Safari\//.test(agent)
+          ? "Safari"
+          : "Browser";
+  const os = /Windows/.test(agent)
+    ? "Windows"
+    : /Android/.test(agent)
+      ? "Android"
+      : /iPhone|iPad/.test(agent)
+        ? "iOS"
+        : /Mac OS/.test(agent)
+          ? "macOS"
+          : /Linux/.test(agent)
+            ? "Linux"
+            : "";
   return os ? `${browser} on ${os}` : browser;
 }
 
@@ -508,10 +580,12 @@ function SessionsSection({ user, disabled }: { user: AdminUser; disabled: boolea
               <div className="min-w-0">
                 <p className="font-medium">
                   {describeAgent(s.userAgent)}
-                  {s.impersonatedBy && <span className="ml-2 text-xs font-normal text-muted-foreground">(staff viewing)</span>}
+                  {s.impersonatedBy && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">(staff viewing)</span>
+                  )}
                 </p>
                 <p className="text-muted-foreground">
-                  {s.ipAddress ? `${s.ipAddress} · ` : ""}since {formatDateTime(s.createdAt)}
+                  {s.ipAddress ? `${s.ipAddress}, ` : ""}since {formatDateTime(s.createdAt)}
                 </p>
               </div>
               <Button
@@ -519,7 +593,12 @@ function SessionsSection({ user, disabled }: { user: AdminUser; disabled: boolea
                 size="sm"
                 disabled={disabled}
                 onClick={async () => {
-                  if (await runAuthAction("Session ended", () => authClient.admin.revokeUserSession({ sessionToken: s.token }))) refresh();
+                  if (
+                    await runAuthAction("Session ended", () =>
+                      authClient.admin.revokeUserSession({ sessionToken: s.token }),
+                    )
+                  )
+                    refresh();
                 }}
               >
                 Sign out
@@ -533,7 +612,12 @@ function SessionsSection({ user, disabled }: { user: AdminUser; disabled: boolea
           variant="outline"
           disabled={disabled}
           onClick={async () => {
-            if (await runAuthAction("Signed out everywhere", () => authClient.admin.revokeUserSessions({ userId: user.id }))) refresh();
+            if (
+              await runAuthAction("Signed out everywhere", () =>
+                authClient.admin.revokeUserSessions({ userId: user.id }),
+              )
+            )
+              refresh();
           }}
         >
           Sign out of all sessions

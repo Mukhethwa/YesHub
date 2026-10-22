@@ -27,7 +27,17 @@ type Part = "company" | "offering" | "coverage" | "compliance" | "contact";
 const PARTS: Record<Part, { title: string; fields: (keyof SmeDetails)[] }> = {
   company: {
     title: "Company details",
-    fields: ["companyName", "registrationNumber", "csdNumber", "industry", "yearsTrading", "employees", "address", "city", "hqProvince"],
+    fields: [
+      "companyName",
+      "registrationNumber",
+      "csdNumber",
+      "industry",
+      "yearsTrading",
+      "employees",
+      "address",
+      "city",
+      "hqProvince",
+    ],
   },
   offering: { title: "Services & capabilities", fields: ["services", "capabilities", "accreditations"] },
   coverage: { title: "Provinces & service areas", fields: ["nationwide", "provinces", "serviceAreas"] },
@@ -182,7 +192,12 @@ export function ProfileSection({ sme }: { sme: SmeProfile }) {
               label="Website"
               value={
                 sme.website && (
-                  <a href={websiteHref(sme.website)} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                  <a
+                    href={websiteHref(sme.website)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
+                  >
                     {sme.website}
                   </a>
                 )
@@ -311,7 +326,7 @@ function DocLine({ sme, docKey, url }: { sme: SmeProfile; docKey: DocKey; url?: 
     <span className="flex flex-wrap items-baseline gap-x-3">
       <span className="min-w-0 break-all">{doc.name}</span>
       <span className="text-muted-foreground">
-        {formatBytes(doc.size)} · uploaded {formatDate(doc.uploadedAt)}
+        {formatBytes(doc.size)}, uploaded {formatDate(doc.uploadedAt)}
       </span>
       {url && (
         <a href={url} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">

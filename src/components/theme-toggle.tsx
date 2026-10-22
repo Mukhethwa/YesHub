@@ -1,50 +1,31 @@
 "use client";
 
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
+import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { useIsHydrated } from "@/components/auth/use-is-hydrated";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-const THEMES = [
-  { value: "light", label: "Light", icon: SunIcon },
-  { value: "dark", label: "Dark", icon: MoonIcon },
-  { value: "system", label: "System", icon: MonitorIcon },
-] as const;
-
-/** Light / dark / system switcher. The icon follows the theme actually in effect. */
+/**
+ * Switches between light and dark. Until someone picks one, the theme follows the device (see Providers);
+ * the button always shows where a click takes you.
+ */
 export function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  // The stored theme is only known in the browser, so render a neutral icon until hydrated
+  const { resolvedTheme, setTheme } = useTheme();
+  // The theme in effect is only known in the browser
   const isHydrated = useIsHydrated();
-  const Icon = !isHydrated ? MonitorIcon : resolvedTheme === "dark" ? MoonIcon : SunIcon;
+  const dark = isHydrated && resolvedTheme === "dark";
+  const label = dark ? "Switch to light mode" : "Switch to dark mode";
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Change theme">
-          <Icon />
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label={label} onClick={() => setTheme(dark ? "light" : "dark")}>
+          {dark ? <SunIcon /> : <MoonIcon />}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-36">
-        <DropdownMenuLabel>Theme</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={isHydrated ? theme : undefined} onValueChange={setTheme}>
-          {THEMES.map(({ value, label, icon: ItemIcon }) => (
-            <DropdownMenuRadioItem key={value} value={value}>
-              <ItemIcon />
-              {label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }

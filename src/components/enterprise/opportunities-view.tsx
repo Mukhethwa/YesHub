@@ -8,13 +8,21 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AdminPageHeader, Pill } from "@/components/admin/page-header";
+import { Score } from "@/components/app/score";
+import { useBreadcrumb } from "@/components/portal/breadcrumbs";
 import { FilterTabs, formatDateTime, runMutation, TablePagination, usePagination } from "@/components/admin/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,7 +34,7 @@ import { formatBytes, formatDate } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
 import { CreateOrganisation } from "./create-organisation";
 import { OpportunityTable } from "./enterprise-overview";
-import { ApplicantJevReview, ApplicantJevStatus, JevDecisionCard } from "./jev-review";
+import { ApplicantReview, ApplicantReviewStatus, EvaluationCard } from "./evaluation";
 import { DepartmentSelect } from "./team-view";
 import { closingLabel, formatRand, KIND_LABELS, percent, PhasePill, phaseOf } from "./tenders";
 
@@ -66,7 +74,10 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
 
   const rows = useMemo(() => data?.opportunities ?? [], [data]);
   const myTeamIds = useMemo(() => data?.myTeamIds ?? [], [data]);
-  const inScope = useMemo(() => rows.filter((r) => inDepartment(r, department, myTeamIds)), [rows, department, myTeamIds]);
+  const inScope = useMemo(
+    () => rows.filter((r) => inDepartment(r, department, myTeamIds)),
+    [rows, department, myTeamIds],
+  );
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return inScope.filter(
@@ -178,6 +189,7 @@ function Stat({ label, value, note }: { label: string; value: number; note?: str
 
 function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
   const detail = useQuery(api.enterprise.opportunity, { opportunityId });
+  useBreadcrumb(detail?.title);
   // Null until the user picks a filter, so it starts from the organisation's chosen default
   const [chosenFilter, setFilter] = useState<ApplicantFilter | null>(null);
 
@@ -186,7 +198,9 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
     return (
       <div className="py-24 text-center">
         <p className="font-medium">This opportunity isn’t available</p>
-        <p className="mt-1 text-sm text-muted-foreground">It may have been removed, or it belongs to another organisation.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          It may have been removed, or it belongs to another organisation.
+        </p>
         <Button variant="outline" className="mt-4" asChild>
           <Link href="/dashboard/opportunities">All opportunities</Link>
         </Button>
@@ -200,7 +214,7 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
   const visible = detail.applicants.filter((a) =>
     filter === "all" ? true : filter === "qualify" ? a.evaluation.qualifies : !a.evaluation.qualifies,
   );
-  const usesJev = detail.applicants.some((a) => a.evaluation.engine === "jev");
+  const reviewed = detail.applicants.some((a) => a.evaluation.engine === "jev");
 
   return (
     <div className="space-y-6">
@@ -212,7 +226,7 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <PhasePill phase={phase} />
           <span className="text-sm text-muted-foreground">
-            {KIND_LABELS[detail.kind]} · {detail.reference}
+            {KIND_LABELS[detail.kind]}, {detail.reference}
           </span>
         </div>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">{detail.title}</h1>
@@ -221,7 +235,8 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
 
       <dl className="grid gap-x-6 gap-y-4 rounded-xl border bg-card p-5 sm:grid-cols-2 lg:grid-cols-4">
         <Fact label="Closes">
-          {formatDate(detail.closesAt)} <span className="text-muted-foreground">({closingLabel(detail.closesAt).toLowerCase()})</span>
+          {formatDate(detail.closesAt)}{" "}
+          <span className="text-muted-foreground">({closingLabel(detail.closesAt).toLowerCase()})</span>
         </Fact>
         <Fact label="Value">{formatRand(detail.value)}</Fact>
         <Fact label="Where">{detail.provinces.length ? detail.provinces.join(", ") : "Nationwide"}</Fact>
@@ -267,15 +282,15 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
         </TabsList>
 
         <TabsContent value="applicants" className="space-y-6">
-          <JevDecisionCard opportunityId={detail.id} applicants={detail.applicants.length} />
+          <EvaluationCard opportunityId={detail.id} applicants={detail.applicants.length} />
           <Card>
             <CardHeader>
               <CardTitle>Applicants</CardTitle>
               <CardDescription>
                 Ranked best fit first: SMEs that meet every requirement, then by score.{" "}
-                {usesJev
-                  ? "Scored by Jev from each SME’s documents and proposal, against your evaluation criteria."
-                  : "Checked by YES Hub’s eligibility rules while Jev reviews the documents."}
+                {reviewed
+                  ? "Scored from each SME’s documents and proposal, against your evaluation criteria."
+                  : "Checked by YES Hub’s eligibility rules while the documents are reviewed."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 px-0">
@@ -361,7 +376,7 @@ function ListingCard({ detail }: { detail: Detail }) {
             </ul>
           </ListingItem>
           <ListingItem label="Enquiries">
-            {listing.enquiriesName} ·{" "}
+            {listing.enquiriesName},{" "}
             <a href={`mailto:${listing.enquiriesEmail}`} className="underline underline-offset-2">
               {listing.enquiriesEmail}
             </a>
@@ -375,7 +390,7 @@ function ListingCard({ detail }: { detail: Detail }) {
 function ListingItem({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</dt>
+      <dt className="mb-1 text-xs font-medium text-muted-foreground">{label}</dt>
       <dd>{children}</dd>
     </div>
   );
@@ -397,7 +412,11 @@ function ReleasedDocumentsCard({ detail }: { detail: Detail }) {
     if (!file) return toast.error("Choose a file to upload.");
     setPending(true);
     try {
-      await add({ opportunityId: detail.id, label: label || file.name.replace(/\.[^.]+$/, ""), file: await upload(file) });
+      await add({
+        opportunityId: detail.id,
+        label: label || file.name.replace(/\.[^.]+$/, ""),
+        file: await upload(file),
+      });
       toast.success(`${file.name} added`);
       setLabel("");
       setFile(null);
@@ -413,7 +432,10 @@ function ReleasedDocumentsCard({ detail }: { detail: Detail }) {
     <Card>
       <CardHeader>
         <CardTitle>Documents released with this opportunity</CardTitle>
-        <CardDescription>The documents SMEs download to respond: the RFQ or terms of reference, specifications, pricing schedules and forms.</CardDescription>
+        <CardDescription>
+          The documents SMEs download to respond: the RFQ or terms of reference, specifications, pricing schedules and
+          forms.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5 px-0">
         {detail.documents.length === 0 ? (
@@ -425,7 +447,7 @@ function ReleasedDocumentsCard({ detail }: { detail: Detail }) {
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{doc.label}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {doc.name} · {formatBytes(doc.size)} · added {formatDateTime(doc.uploadedAt)} by {doc.uploadedBy}
+                    {doc.name}, {formatBytes(doc.size)}, added {formatDateTime(doc.uploadedAt)} by {doc.uploadedBy}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
@@ -502,7 +524,9 @@ function OpportunityActivityCard({ opportunityId }: { opportunityId: Detail["id"
     <Card>
       <CardHeader>
         <CardTitle>Activity</CardTitle>
-        <CardDescription>Who in your organisation viewed, shortlisted or opened documents for each applicant.</CardDescription>
+        <CardDescription>
+          Who in your organisation viewed, shortlisted or opened documents for each applicant.
+        </CardDescription>
       </CardHeader>
       <CardContent className="px-0">
         {entries === undefined ? (
@@ -521,10 +545,12 @@ function OpportunityActivityCard({ opportunityId }: { opportunityId: Detail["id"
             <TableBody>
               {entries.map((entry) => (
                 <TableRow key={entry.id}>
-                  <TableCell className="pl-6 text-sm whitespace-nowrap text-muted-foreground">{formatDateTime(entry.at)}</TableCell>
+                  <TableCell className="pl-6 text-sm whitespace-nowrap text-muted-foreground">
+                    {formatDateTime(entry.at)}
+                  </TableCell>
                   <TableCell className="text-sm font-medium">{entry.actorName}</TableCell>
                   <TableCell className="pr-6 text-sm">
-                    {activityText(entry)} <span className="text-muted-foreground">· {entry.companyName}</span>
+                    {activityText(entry)} <span className="text-muted-foreground">({entry.companyName})</span>
                   </TableCell>
                 </TableRow>
               ))}
@@ -551,7 +577,9 @@ function ShortlistButton({ applicant, allowed }: { applicant: Applicant; allowed
       onClick={async () => {
         setPending(true);
         await runMutation(
-          shortlisted ? `${applicant.sme.companyName} removed from the shortlist` : `${applicant.sme.companyName} shortlisted`,
+          shortlisted
+            ? `${applicant.sme.companyName} removed from the shortlist`
+            : `${applicant.sme.companyName} shortlisted`,
           () => setStatus({ applicationId: applicant.id, status: shortlisted ? "submitted" : "shortlisted" }),
         );
         setPending(false);
@@ -607,21 +635,24 @@ function ApplicantTable({
                     {a.status === "shortlisted" && <Pill tone="success">Shortlisted</Pill>}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {a.sme.city}, {a.sme.hqProvince} · {a.sme.industry}
+                    {a.sme.city}, {a.sme.hqProvince}, {a.sme.industry}
                   </span>
                 </TableCell>
                 <TableCell className="text-sm">{a.sme.bbbeeLevel || "Not stated"}</TableCell>
                 <TableCell>
-                  <div className="w-24">
-                    <span className="font-medium tabular-nums">{a.evaluation.score}</span>
-                    <Progress value={a.evaluation.score} className="mt-1.5" aria-label={`Score ${a.evaluation.score} out of 100`} />
-                  </div>
+                  <Score value={a.evaluation.score} />
                 </TableCell>
                 <TableCell>
-                  {a.evaluation.qualifies ? <Pill tone="success">Qualifies</Pill> : <Pill tone="danger">Doesn’t qualify</Pill>}
-                  <ApplicantJevStatus applicant={a} />
+                  {a.evaluation.qualifies ? (
+                    <Pill tone="success">Qualifies</Pill>
+                  ) : (
+                    <Pill tone="danger">Doesn’t qualify</Pill>
+                  )}
+                  <ApplicantReviewStatus applicant={a} />
                   <span className="mt-1 block text-xs text-muted-foreground">
-                    {a.lastViewed ? `Viewed by ${a.lastViewed.by}, ${formatDateTime(a.lastViewed.at)}` : "Not viewed yet"}
+                    {a.lastViewed
+                      ? `Viewed by ${a.lastViewed.by}, ${formatDateTime(a.lastViewed.at)}`
+                      : "Not viewed yet"}
                   </span>
                 </TableCell>
                 <TableCell className="pr-6">
@@ -638,7 +669,10 @@ function ApplicantTable({
                       {expanded ? "Hide" : "Why"}
                     </Button>
                     <Button variant="outline" size="sm" asChild>
-                      <Link href={`/dashboard/suppliers?id=${a.sme.id}&from=${opportunityId}`} onClick={() => viewed(a)}>
+                      <Link
+                        href={`/dashboard/suppliers?id=${a.sme.id}&from=${opportunityId}`}
+                        onClick={() => viewed(a)}
+                      >
                         View business
                       </Link>
                     </Button>
@@ -674,7 +708,11 @@ function ApplicantChecks({ applicant }: { applicant: Applicant }) {
             <span className="font-medium">{c.label}</span>
             <span className="block text-xs text-muted-foreground">{c.detail}</span>
           </span>
-          <span className={c.passed ? "shrink-0 text-xs font-medium text-success" : "shrink-0 text-xs font-medium text-destructive"}>
+          <span
+            className={
+              c.passed ? "shrink-0 text-xs font-medium text-success" : "shrink-0 text-xs font-medium text-destructive"
+            }
+          >
             {c.passed ? "Met" : "Not met"}
           </span>
         </li>
@@ -687,19 +725,19 @@ function ApplicantChecks({ applicant }: { applicant: Applicant }) {
       <p className="text-sm">{evaluation.summary}</p>
       <div className="grid gap-6 md:grid-cols-2">
         <div>
-          <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Requirements</p>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">Requirements</p>
           {list(required)}
         </div>
         <div>
-          <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Strengths</p>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">Strengths</p>
           {list(strengths)}
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Applied {formatDateTime(applicant.submittedAt)} · checked {formatDateTime(evaluation.evaluatedAt)} by{" "}
-        {evaluation.engine === "jev" ? "Jev" : "YES Hub’s eligibility rules"}
+        Applied {formatDateTime(applicant.submittedAt)}, checked {formatDateTime(evaluation.evaluatedAt)} by{" "}
+        {evaluation.engine === "jev" ? "document review" : "YES Hub’s eligibility rules"}
       </p>
-      <ApplicantJevReview
+      <ApplicantReview
         applicationId={applicant.id}
         companyName={applicant.sme.companyName}
         evaluation={applicant.evaluation}
@@ -737,7 +775,7 @@ function ApplicationLog({ applicationId, companyName }: { applicationId: Applica
   return (
     <div className="border-t pt-3">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Activity</p>
+        <p className="text-xs font-medium text-muted-foreground">Activity</p>
         {entries.length > INLINE_ACTIVITY && (
           <Dialog>
             <DialogTrigger asChild>

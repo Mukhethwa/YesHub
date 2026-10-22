@@ -20,7 +20,7 @@ export function ScoreRing({ score }: { score: number }) {
       </svg>
       <div className="text-center">
         <p className="text-2xl font-semibold tabular-nums">{score}%</p>
-        <p className="text-[11px] tracking-wider text-muted-foreground uppercase">Ready</p>
+        <p className="text-[11px] text-muted-foreground">Ready</p>
       </div>
     </div>
   );
