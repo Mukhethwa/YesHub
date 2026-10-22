@@ -113,6 +113,35 @@ const evaluationCheck = v.object({
  * How well an application fits its opportunity. Written when the SME applies (or is re-checked), never
  * computed in a query, because checks such as document expiry depend on today's date.
  */
+/** How a buyer's evaluation criterion is applied (see convex/lib/procurement.ts). */
+export const criterionKind = v.union(
+  /** Pass or fail, e.g. "PSIRA registration required". */
+  v.literal("gate"),
+  /** Scored 0 to 100 with a minimum to proceed, e.g. "Functionality: 60 points minimum to proceed". */
+  v.literal("functionality"),
+  /** Points from the quoted price, calculated with the 80/20 or 90/10 formula once everyone's quotes are in. */
+  v.literal("price"),
+  /** Points from the B-BBEE level, from the preferential procurement tables. */
+  v.literal("bbbee"),
+  /** Anything else, scored 0 to 100 by Jev, e.g. "Growth and job creation potential". */
+  v.literal("assessed"),
+);
+
+/** Jev's assessment of one evaluation criterion, with the evidence it relied on. */
+export const criterionAssessment = v.object({
+  criterion: v.string(),
+  kind: criterionKind,
+  /** Points available (price, B-BBEE) or the minimum to proceed (functionality), when the criterion says. */
+  points: v.optional(v.number()),
+  /** Gates only. */
+  met: v.optional(v.boolean()),
+  /** 0 to 100, for functionality and assessed criteria. Price and B-BBEE points are calculated, not judged. */
+  score: v.optional(v.number()),
+  reasoning: v.string(),
+  /** Where the evidence came from, e.g. "Tax compliance status: valid until 2027-01-29". */
+  evidence: v.array(v.string()),
+});
+
 export const evaluation = v.object({
   /** "rules" is YES Hub's built-in eligibility check (convex/lib/evaluation.ts); "jev" once Jev ranks it. */
   engine: v.union(v.literal("rules"), v.literal("jev")),
@@ -122,6 +151,49 @@ export const evaluation = v.object({
   summary: v.string(),
   checks: v.array(evaluationCheck),
   evaluatedAt: v.number(),
+  /** Jev only: each of the buyer's evaluation criteria. */
+  criteria: v.optional(v.array(criterionAssessment)),
+  /** Jev only: concerns a reviewer should look at, e.g. a certificate in another company's name. */
+  concerns: v.optional(v.array(v.string())),
+  /** Jev only: the model OpenRouter's Jev router chose. */
+  model: v.optional(v.string()),
+});
+
+/** A file an SME attaches to one application: a proposal, pricing schedule or returnable form. */
+export const applicationAttachment = v.object({
+  storageId: v.id("_storage"),
+  /** What it is, e.g. "Pricing schedule". */
+  label: v.string(),
+  name: v.string(),
+  size: v.number(),
+  type: v.string(),
+});
+
+/** Where Jev's review of one application is up to. */
+export const reviewState = v.object({
+  status: v.union(v.literal("reviewing"), v.literal("reviewed"), v.literal("failed")),
+  workflowId: v.optional(v.string()),
+  startedAt: v.number(),
+  finishedAt: v.optional(v.number()),
+  error: v.optional(v.string()),
+});
+
+/** Jev's decision on one application, from a decision run on its opportunity. */
+export const applicationDecision = v.object({
+  runId: v.id("decisionRuns"),
+  outcome: v.union(v.literal("approved"), v.literal("not_approved")),
+  /** Position in the final ranking, 1 is best. Absent for applicants who weren't eligible. */
+  rank: v.optional(v.number()),
+  eligible: v.boolean(),
+  pricePoints: v.optional(v.number()),
+  bbbeePoints: v.optional(v.number()),
+  /** Out of 100: price plus B-BBEE points, or the average of assessed criteria. */
+  totalPoints: v.optional(v.number()),
+  rationale: v.string(),
+  decidedAt: v.number(),
+  /** Set when someone in the organisation changed Jev's decision. */
+  overriddenBy: v.optional(v.string()),
+  overrideReason: v.optional(v.string()),
 });
 
 /** The published details of an opportunity, as a buyer would put in a tender notice. */
@@ -190,6 +262,24 @@ export type OpportunityKind = Infer<typeof opportunityKind>;
 export type OpportunityStatus = Infer<typeof opportunityStatus>;
 export type ApplicationStatus = Infer<typeof applicationStatus>;
 export type Evaluation = Infer<typeof evaluation>;
+export type CriterionKind = Infer<typeof criterionKind>;
+export type CriterionAssessment = Infer<typeof criterionAssessment>;
+export type ApplicationAttachment = Infer<typeof applicationAttachment>;
+export type ApplicationDecision = Infer<typeof applicationDecision>;
+
+/** What one step of a review or decision recorded, for the paper trail. */
+export const trailKind = v.union(
+  v.literal("submitted"),
+  v.literal("extraction"),
+  v.literal("assessment"),
+  v.literal("decision_started"),
+  v.literal("points"),
+  v.literal("decision"),
+  v.literal("guardrail"),
+  v.literal("override"),
+  v.literal("error"),
+);
+export type TrailKind = Infer<typeof trailKind>;
 
 export default defineSchema({
   smes: defineTable({
@@ -297,10 +387,84 @@ export default defineSchema({
     statusChangedAt: v.optional(v.number()),
     statusChangedBy: v.optional(v.string()),
     evaluation,
+    /** The SME's quoted price in rand, for criteria that score price. */
+    quote: v.optional(v.number()),
+    /** The SME's short response to the opportunity: approach, capacity, references. */
+    proposal: v.optional(v.string()),
+    /** Files sent with this application. Compliance documents come from the SME profile instead. */
+    attachments: v.optional(v.array(applicationAttachment)),
+    /** Jev's document review and scoring. Absent on applications made before Jev reviewed them. */
+    review: v.optional(reviewState),
+    /** Jev's decision, once the buyer asks for one. */
+    decision: v.optional(applicationDecision),
   })
     .index("by_opportunity", ["opportunityId"])
     .index("by_sme_and_opportunity", ["smeId", "opportunityId"])
     .index("by_organization_and_status", ["organizationId", "status"]),
+
+  /** What Jev read from each document behind an application. */
+  documentExtractions: defineTable({
+    applicationId: v.id("applications"),
+    opportunityId: v.id("opportunities"),
+    /** A DocKey for profile documents, or "attachment-<n>" for files sent with the application. */
+    key: v.string(),
+    source: v.union(v.literal("profile"), v.literal("application")),
+    label: v.string(),
+    name: v.string(),
+    storageId: v.id("_storage"),
+    status: v.union(v.literal("read"), v.literal("unreadable")),
+    /** What kind of document Jev says it is, and whether that's what it was uploaded as. */
+    documentType: v.string(),
+    matchesLabel: v.boolean(),
+    fields: v.array(v.object({ name: v.string(), value: v.string() })),
+    /** Problems, e.g. a different company name or an expired date. */
+    issues: v.array(v.string()),
+    summary: v.string(),
+    /** The start of the text read from the file, kept so a reviewer can see what Jev saw. */
+    excerpt: v.string(),
+    model: v.optional(v.string()),
+  }).index("by_application_and_key", ["applicationId", "key"]),
+
+  /** A buyer's request for Jev to decide who is approved on one opportunity. */
+  decisionRuns: defineTable({
+    opportunityId: v.id("opportunities"),
+    organizationId: v.string(),
+    requestedBy: v.string(),
+    requestedById: v.string(),
+    /** How many applicants the buyer wants approved. */
+    slots: v.number(),
+    status: v.union(v.literal("running"), v.literal("decided"), v.literal("failed")),
+    workflowId: v.optional(v.string()),
+    finishedAt: v.optional(v.number()),
+    summary: v.optional(v.string()),
+    approved: v.optional(v.number()),
+    model: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }).index("by_opportunity", ["opportunityId"]),
+
+  /**
+   * The paper trail: every step Jev took and every decision anyone made, in order. Entries are never
+   * edited; a correction is a new entry.
+   */
+  reviewTrail: defineTable({
+    opportunityId: v.id("opportunities"),
+    organizationId: v.string(),
+    applicationId: v.optional(v.id("applications")),
+    runId: v.optional(v.id("decisionRuns")),
+    kind: trailKind,
+    /** "Jev", "YES Hub" or the person who acted. */
+    actor: v.string(),
+    summary: v.string(),
+    /** Supporting detail: Jev's reasoning, the numbers behind points, the text of an override reason. */
+    details: v.optional(v.array(v.string())),
+    model: v.optional(v.string()),
+    /** OpenRouter's generation id, to look the call up in OpenRouter's logs. */
+    generationId: v.optional(v.string()),
+    costUsd: v.optional(v.number()),
+  })
+    .index("by_application", ["applicationId"])
+    .index("by_opportunity", ["opportunityId"])
+    .index("by_run", ["runId"]),
 
   /** Every action YES Hub staff take in the admin area, newest first by _creationTime. */
   auditLog: defineTable({

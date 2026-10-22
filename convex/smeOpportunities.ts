@@ -1,11 +1,14 @@
 import { ConvexError, v } from "convex/values";
 
 import { components } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
-import { mutation, type QueryCtx, query } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { mutation, type MutationCtx, type QueryCtx, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { evaluateApplication } from "./lib/evaluation";
 import { APPLICATION_LIMIT } from "./lib/opportunities";
+import { classifyCriteria } from "./lib/procurement";
+import { addTrail, MAX_ATTACHMENTS, startReview } from "./review";
+import type { ApplicationAttachment } from "./schema";
 
 /*
  * The SME side of opportunities: what's open to apply for (Matches), what the SME applied to
@@ -53,6 +56,8 @@ function publicOpportunity(o: Doc<"opportunities">, organizationName: string) {
     status: o.status,
     organizationName,
     contractPeriod: o.listing?.contractPeriod ?? "",
+    /** Whether the buyer scores price, so applying asks for a quote. */
+    scoresPrice: classifyCriteria(o.listing?.evaluationCriteria ?? []).some((c) => c.kind === "price"),
     publishedAt: o.listing?.publishedAt ?? o._creationTime,
   };
 }
@@ -90,6 +95,20 @@ async function applicationSummary(ctx: QueryCtx, application: Doc<"applications"
     submittedAt: application.submittedAt,
     statusChangedAt: application.statusChangedAt ?? null,
     evaluation: application.evaluation,
+    review: application.review ? { status: application.review.status } : null,
+    // The SME sees its own outcome and why, never other applicants' details
+    decision: application.decision
+      ? {
+          outcome: application.decision.outcome,
+          rationale: application.decision.rationale,
+          eligible: application.decision.eligible,
+          totalPoints: application.decision.totalPoints ?? null,
+          decidedAt: application.decision.decidedAt,
+        }
+      : null,
+    quote: application.quote ?? null,
+    proposal: application.proposal ?? null,
+    attachments: (application.attachments ?? []).map((a) => ({ label: a.label, name: a.name })),
     ...(await rankOf(ctx, application)),
     ...(await buyerViews(ctx, application)),
   };
@@ -207,6 +226,49 @@ export const opportunity = query({
   },
 });
 
+/** Longest proposal an SME can send with an application. */
+const PROPOSAL_MAX_CHARS = 4000;
+const ATTACHMENT_MAX_MB = 10;
+/** Jev reads PDFs and images, so those are what applications accept. */
+const ATTACHMENT_TYPES = ["application/pdf", "image/png", "image/jpeg"];
+
+/** Checks files sent with an application and turns them into stored references. Rejects the lot on a problem. */
+async function checkAttachments(
+  ctx: MutationCtx,
+  files: { storageId: Id<"_storage">; label: string; name: string }[],
+): Promise<ApplicationAttachment[]> {
+  const discard = () => Promise.all(files.map((f) => ctx.storage.delete(f.storageId).catch(() => {})));
+  if (files.length > MAX_ATTACHMENTS) {
+    await discard();
+    throw new ConvexError(`Send at most ${MAX_ATTACHMENTS} documents with an application.`);
+  }
+  const result: ApplicationAttachment[] = [];
+  for (const file of files) {
+    const meta = await ctx.db.system.get("_storage", file.storageId);
+    const problem = !meta
+      ? `Couldn’t find the upload for ${file.name}. Please try again.`
+      : meta.size > ATTACHMENT_MAX_MB * 1024 * 1024
+        ? `${file.name} is larger than ${ATTACHMENT_MAX_MB} MB`
+        : !ATTACHMENT_TYPES.includes(meta.contentType ?? "")
+          ? `${file.name} isn’t a PDF, JPG or PNG file`
+          : !file.label.trim()
+            ? `Say what ${file.name} is`
+            : null;
+    if (problem || !meta) {
+      await discard();
+      throw new ConvexError(problem ?? "Upload failed.");
+    }
+    result.push({
+      storageId: file.storageId,
+      label: file.label.trim().slice(0, 100),
+      name: file.name.slice(0, 200),
+      size: meta.size,
+      type: meta.contentType!,
+    });
+  }
+  return result;
+}
+
 /** Today as yyyy-mm-dd in South Africa, to compare with closing dates. */
 function todayInSouthAfrica() {
   return new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -214,7 +276,14 @@ function todayInSouthAfrica() {
 
 /** Applies to an open opportunity. The buyer sees it straight away, checked against their requirements. */
 export const apply = mutation({
-  args: { opportunityId: v.id("opportunities") },
+  args: {
+    opportunityId: v.id("opportunities"),
+    /** Quoted price in rand, for opportunities that score price. */
+    quote: v.optional(v.number()),
+    proposal: v.optional(v.string()),
+    /** Files the browser already uploaded to Convex storage. */
+    attachments: v.optional(v.array(v.object({ storageId: v.id("_storage"), label: v.string(), name: v.string() }))),
+  },
   handler: async (ctx, args) => {
     const sme = await getOwnSme(ctx);
     if (!sme) throw new ConvexError("Register your business before applying.");
@@ -237,13 +306,33 @@ export const apply = mutation({
       .unique();
     if (existing) throw new ConvexError("You’ve already applied to this opportunity.");
 
-    return ctx.db.insert("applications", {
+    const quote = args.quote === undefined ? undefined : Math.round(args.quote * 100) / 100;
+    if (quote !== undefined && !(quote > 0 && quote < 1e12)) throw new ConvexError("Enter your quoted price in rand.");
+    const proposal = args.proposal?.trim().slice(0, PROPOSAL_MAX_CHARS) || undefined;
+    const attachments = await checkAttachments(ctx, args.attachments ?? []);
+
+    const applicationId = await ctx.db.insert("applications", {
       opportunityId: opportunity._id,
       organizationId: opportunity.organizationId,
       smeId: sme._id,
       status: "submitted",
       submittedAt: Date.now(),
+      // YES Hub's rules answer straight away; Jev replaces this once it has read the documents
       evaluation: evaluateApplication(opportunity, sme),
+      quote,
+      proposal,
+      attachments,
     });
+    await addTrail(ctx, {
+      opportunityId: opportunity._id,
+      organizationId: opportunity.organizationId,
+      applicationId,
+      kind: "submitted",
+      actor: sme.companyName,
+      summary: `${sme.companyName} applied${quote !== undefined ? ` with a quote of R${quote.toLocaleString("en-ZA")}` : ""}${attachments.length ? ` and ${attachments.length} document${attachments.length === 1 ? "" : "s"}` : ""}.`,
+      details: attachments.map((a) => `${a.label}: ${a.name}`),
+    });
+    await startReview(ctx, applicationId);
+    return applicationId;
   },
 });

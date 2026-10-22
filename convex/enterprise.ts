@@ -154,6 +154,10 @@ export const opportunity = query({
         statusChangedBy: application.statusChangedBy ?? null,
         lastViewed: await lastViewOf(ctx, application._id),
         evaluation: application.evaluation,
+        review: application.review ?? null,
+        decision: application.decision ?? null,
+        quote: application.quote ?? null,
+        attachments: application.attachments?.length ?? 0,
         sme: {
           id: sme._id,
           companyName: sme.companyName,

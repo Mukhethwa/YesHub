@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 
 import { FilterTabs, formatDateTime } from "@/components/admin/shared";
 import { closingLabel, formatRand, KIND_LABELS, PhasePill, phaseOf } from "@/components/enterprise/tenders";
+import { CriteriaList, DecisionPill, ReviewStatus } from "@/components/review/review-parts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -16,6 +17,7 @@ import { formatBytes, formatDate } from "@/lib/sme/format";
 import type { SmeProfile } from "@/lib/sme/types";
 import { api } from "../../../convex/_generated/api";
 import { evaluateApplication, type EvaluableOpportunity } from "../../../convex/lib/evaluation";
+import { rand } from "../../../convex/lib/procurement";
 import { ApplicationStatusPill, ApplyButton, ChecksList, FitPill, reachLabel, reachOf } from "./opportunities-shared";
 import { SectionHeader } from "./require-sme";
 
@@ -184,6 +186,7 @@ function ApplicationCard({ row }: { row: Row }) {
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ApplicationStatusPill status={a.status} />
+          <ReviewStatus review={a.review} engine={a.evaluation.engine} />
           <PhasePill phase={phaseOf(o)} />
         </div>
       </div>
@@ -199,8 +202,8 @@ function ApplicationCard({ row }: { row: Row }) {
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-muted-foreground">When you applied</dt>
-          <dd>{a.evaluation.qualifies ? "Qualified" : "Didn’t qualify"} · fit {a.evaluation.score}</dd>
+          <dt className="text-xs text-muted-foreground">{a.evaluation.engine === "jev" ? "Jev’s review" : "When you applied"}</dt>
+          <dd>{a.evaluation.qualifies ? "Qualified" : "Didn’t qualify"} · score {a.evaluation.score}</dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">Buyer activity</dt>
@@ -293,7 +296,9 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
           <CardTitle>{a ? "Your application" : "Your fit"}</CardTitle>
           <CardDescription>
             {a
-              ? `Checked when you applied on ${formatDateTime(a.submittedAt)}, the same way the buyer sees it.`
+              ? a.evaluation.engine === "jev"
+                ? `Reviewed by Jev on ${formatDateTime(a.evaluation.evaluatedAt)}, the same way the buyer sees it.`
+                : `Checked when you applied on ${formatDateTime(a.submittedAt)}, the same way the buyer sees it.`
               : "How your current profile measures up to this opportunity, the same way the buyer will see it."}
           </CardDescription>
         </CardHeader>
@@ -310,6 +315,7 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
             )}
           </div>
           <ChecksList evaluation={evaluation} />
+          {a && <JevReview application={a} />}
 
           {a ? (
             <ol className="space-y-2 border-t pt-4 text-sm">
@@ -338,7 +344,13 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
                     ? "You meet every requirement. The buyer sees your profile and documents when you apply."
                     : "You can still apply, but the buyer will see what’s missing. Fixing it first improves your chances."}
                 </p>
-                <ApplyButton opportunityId={o.id} title={o.title} qualifies={evaluation.qualifies} size="default" />
+                <ApplyButton
+                  opportunityId={o.id}
+                  title={o.title}
+                  qualifies={evaluation.qualifies}
+                  scoresPrice={o.scoresPrice}
+                  size="default"
+                />
               </div>
             )
           )}
@@ -414,6 +426,79 @@ function ListingItem({ label, children }: { label: string; children: React.React
     <div>
       <dt className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</dt>
       <dd>{children}</dd>
+    </div>
+  );
+}
+
+type MyApplication = NonNullable<NonNullable<FunctionReturnType<typeof api.smeOpportunities.opportunity>>["application"]>;
+
+/** Jev's review of the SME's own application: how each criterion scored, and the decision with its reasons. */
+function JevReview({ application: a }: { application: MyApplication }) {
+  const { evaluation } = a;
+  return (
+    <div className="space-y-4 border-t pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Jev’s review</p>
+        <ReviewStatus review={a.review} engine={evaluation.engine} />
+      </div>
+
+      {a.decision && (
+        <div className={a.decision.outcome === "approved" ? "rounded-lg bg-success/10 p-4" : "rounded-lg bg-muted p-4"}>
+          <div className="flex flex-wrap items-center gap-2">
+            <DecisionPill decision={a.decision} />
+            {a.decision.totalPoints !== null && (
+              <span className="text-sm text-muted-foreground">{a.decision.totalPoints} points</span>
+            )}
+          </div>
+          <p className="mt-2 text-sm">{a.decision.rationale}</p>
+        </div>
+      )}
+
+      {evaluation.engine === "jev" ? (
+        <>
+          <p className="text-sm">{evaluation.summary}</p>
+          <CriteriaList criteria={evaluation.criteria ?? []} />
+          {(evaluation.concerns ?? []).length > 0 && (
+            <div>
+              <p className="mb-1 text-sm font-medium">What to look at</p>
+              <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
+                {evaluation.concerns!.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {a.review?.status === "reviewing"
+            ? "Jev is reading your documents and scoring your application against the buyer’s criteria. This takes a minute or two."
+            : "Scored by YES Hub’s eligibility rules. Jev reviews it before the buyer decides."}
+        </p>
+      )}
+
+      {(a.quote !== null || a.attachments.length > 0 || a.proposal) && (
+        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+          {a.quote !== null && (
+            <div>
+              <dt className="text-xs text-muted-foreground">Your price</dt>
+              <dd>{rand(a.quote)}</dd>
+            </div>
+          )}
+          {a.attachments.length > 0 && (
+            <div>
+              <dt className="text-xs text-muted-foreground">Documents you sent</dt>
+              <dd>{a.attachments.map((f) => f.label).join(", ")}</dd>
+            </div>
+          )}
+          {a.proposal && (
+            <div className="sm:col-span-2">
+              <dt className="text-xs text-muted-foreground">Your proposal</dt>
+              <dd className="whitespace-pre-line">{a.proposal}</dd>
+            </div>
+          )}
+        </dl>
+      )}
     </div>
   );
 }

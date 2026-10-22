@@ -16,11 +16,15 @@ import type * as email from "../email.js";
 import type * as enterprise from "../enterprise.js";
 import type * as http from "../http.js";
 import type * as lib_evaluation from "../lib/evaluation.js";
+import type * as lib_jev from "../lib/jev.js";
 import type * as lib_opportunities from "../lib/opportunities.js";
 import type * as lib_organizationSettings from "../lib/organizationSettings.js";
+import type * as lib_procurement from "../lib/procurement.js";
 import type * as lib_samplePdf from "../lib/samplePdf.js";
 import type * as lib_staff from "../lib/staff.js";
 import type * as platform from "../platform.js";
+import type * as review from "../review.js";
+import type * as reviewActions from "../reviewActions.js";
 import type * as seed from "../seed.js";
 import type * as smeOpportunities from "../smeOpportunities.js";
 import type * as smes from "../smes.js";
@@ -40,11 +44,15 @@ declare const fullApi: ApiFromModules<{
   enterprise: typeof enterprise;
   http: typeof http;
   "lib/evaluation": typeof lib_evaluation;
+  "lib/jev": typeof lib_jev;
   "lib/opportunities": typeof lib_opportunities;
   "lib/organizationSettings": typeof lib_organizationSettings;
+  "lib/procurement": typeof lib_procurement;
   "lib/samplePdf": typeof lib_samplePdf;
   "lib/staff": typeof lib_staff;
   platform: typeof platform;
+  review: typeof review;
+  reviewActions: typeof reviewActions;
   seed: typeof seed;
   smeOpportunities: typeof smeOpportunities;
   smes: typeof smes;
@@ -79,4 +87,5 @@ export declare const internal: FilterApi<
 export declare const components: {
   betterAuth: import("../betterAuth/_generated/component.js").ComponentApi<"betterAuth">;
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
+  workflow: import("@convex-dev/workflow/_generated/component.js").ComponentApi<"workflow">;
 };

@@ -1,6 +1,5 @@
-import { ADMIN_NAV } from "@/components/admin/nav";
-import { ComingSoon } from "@/components/portal/coming-soon";
+import { JevDecisions } from "@/components/admin/jev-decisions";
 
 export default function Page() {
-  return <ComingSoon title={ADMIN_NAV.opportunities.label} icon={ADMIN_NAV.opportunities.icon} />;
+  return <JevDecisions />;
 }

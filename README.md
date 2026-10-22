@@ -19,6 +19,24 @@ YES Hub has a portal for each side of the match:
 
 Matching uses what SMEs put in their profile, so a complete, current profile means more and better matches.
 
+### How applications are decided
+
+SMEs apply with a quoted price, a short proposal and supporting documents (stored in Convex file storage).
+**Jev** ([TypeSafe’s router model](https://openrouter.ai/typesafe/jev-router) on OpenRouter) then reviews them
+in two durable [Convex workflows](https://www.convex.dev/components/workflow) (`convex/review.ts`):
+
+1. **Review**, when the SME applies: Jev reads every document behind the application (the profile’s compliance
+   documents the opportunity asks for, and the files sent with it), records what each says and any mismatch with
+   the profile, then scores the application against each of the buyer’s evaluation criteria with evidence.
+2. **Decision**, when the buyer asks: price and B-BBEE points are calculated with the preferential procurement
+   formulas (80/20 or 90/10, `convex/lib/procurement.ts`), Jev decides who is approved, and guardrails make sure
+   only eligible applicants are approved and never more than the buyer asked for.
+
+Every step goes on a **paper trail** (`reviewTrail`): what Jev read, how it scored and why, the points arithmetic,
+the decision and its reasons, the model OpenRouter used and what each call cost, and any change a person made
+(which needs a reason). Buyers see it per applicant and per decision, SMEs see their own outcome and reasons, and
+YES Hub staff see every decision under **Admin → Jev decisions**.
+
 ## Stack
 
 - [Next.js 16](https://nextjs.org) (App Router, TypeScript, Cache Components) with [shadcn/ui](https://ui.shadcn.com) (radix-nova) and Tailwind CSS 4
@@ -43,6 +61,7 @@ Leave that running (it pushes `convex/` as you save), then set the backend's env
 pnpm exec convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
 pnpm exec convex env set SITE_URL http://localhost:3000
 pnpm exec convex env set RESEND_API_KEY re_...
+pnpm exec convex env set OPENROUTER_API_KEY sk-or-...   # Jev; the OpenRouter account needs credits
 # Optional. The default, onboarding@resend.dev, only delivers to your own Resend account's address
 pnpm exec convex env set AUTH_EMAIL_FROM "YES Hub <auth@your-verified-domain.com>"
 ```
@@ -69,6 +88,13 @@ It refuses to run unless the deployment's `SITE_URL` is on localhost (or `ALLOW_
 deployment; unset it again afterwards), and it's safe to re-run. Every seed account
 uses the password in `SEED_PASSWORD` (`convex/seed.ts`); `naledi@yeshub.test` is a super admin, `musa@`,
 `lindiwe@` and `tumi@yeshub.test` are an admin, a moderator and a viewer.
+
+Seeded applications are scored by the rules until Jev reviews them. To have Jev review them (about 5 US cents each):
+
+```bash
+pnpm exec convex run seed:sampleProposals     # sample quotes and proposals for Jev to score
+pnpm exec convex run review:reviewExisting    # also retries failed reviews
+```
 
 ### Accounts and organisations
 
@@ -111,6 +137,8 @@ pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'   # a
 | `BETTER_AUTH_SECRET` | Convex | Signs sessions and tokens |
 | `SITE_URL` | Convex | The app's public URL; used in email links and to validate requests |
 | `RESEND_API_KEY` | Convex | Emails are sent from Convex, not Next.js |
+| `OPENROUTER_API_KEY` | Convex | Jev, for reviewing and deciding applications. The OpenRouter account needs credits: a key’s limit is only a cap |
+| `JEV_MODEL` | Convex | Optional. Defaults to `typesafe/jev-router` |
 | `SUPER_ADMIN_EMAILS` | Convex | Comma-separated emails that become YES Hub super admins when they sign up |
 | `AUTH_EMAIL_FROM` | Convex | Sender address on a domain verified in Resend. Until one is set, mail only reaches the Resend account owner, so sign-up doesn’t require email verification (see `convex/auth.ts`) |
 | `CONVEX_DEPLOY_KEY` | Vercel | See below |
@@ -167,6 +195,8 @@ sign-in to work. Until then, `git.deploymentEnabled` in `vercel.json` only deplo
 | `convex/admin.ts` | The admin area's queries and mutations (SMEs, organisations, staff), each checked against the caller's access level |
 | `convex/platform.ts`, `convex/audit.ts` | Account state, staff roles and the audit log |
 | `convex/seed.ts` | Development sample data |
+| `convex/review.ts`, `convex/reviewActions.ts` | Jev’s review and decision workflows, the paper trail, and the Jev calls |
+| `convex/lib/jev.ts`, `convex/lib/procurement.ts` | The OpenRouter client, and the price and B-BBEE points formulas |
 | `convex/email.tsx` | Auth emails via Resend, using `@better-auth-ui/react/email` templates |
 | `convex/http.ts` | Mounts the Better Auth HTTP routes on Convex |
 | `src/app/api/auth/[...all]/route.ts` | Proxies `/api/auth/*` from Next.js to Convex |

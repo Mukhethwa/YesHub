@@ -2,6 +2,7 @@ import { components } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { OpportunityKind, OpportunityListing, OpportunityStatus } from "../schema";
+import { deleteDecisionData, deleteReviewData } from "../review";
 import { evaluateApplication } from "./evaluation";
 
 /** Most applications read for one opportunity. Enough for any tender we expect during the pilot. */
@@ -18,6 +19,8 @@ export const TENDER_DOC_MIME_TYPES = [
 export const TENDER_DOC_MAX_MB = 10;
 
 async function deleteApplication(ctx: MutationCtx, applicationId: Id<"applications">) {
+  const application = await ctx.db.get("applications", applicationId);
+  if (application) await deleteReviewData(ctx, application);
   for await (const entry of ctx.db.query("applicationActivity").withIndex("by_application", (q) => q.eq("applicationId", applicationId))) {
     await ctx.db.delete("applicationActivity", entry._id);
   }
@@ -45,6 +48,7 @@ export async function deleteOpportunitiesForOrganization(ctx: MutationCtx, organ
       await ctx.storage.delete(doc.storageId);
       await ctx.db.delete("opportunityDocuments", doc._id);
     }
+    await deleteDecisionData(ctx, opportunity._id);
     await ctx.db.delete("opportunities", opportunity._id);
   }
 }
@@ -283,6 +287,29 @@ export function sampleDocumentLabelsFor(title: string) {
   return code ? SAMPLE_LISTINGS[code].documents : [];
 }
 
+/**
+ * A response from a seeded SME, built from its profile, so Jev has something to assess. Some are detailed
+ * (capacity, references, supervision) and some thin, so decisions show both outcomes.
+ */
+export function sampleProposal(sme: Doc<"smes">, title: string) {
+  const detailed = sme.companyName.length % 3 !== 0;
+  return [
+    `${sme.companyName} would like to be considered for ${title}.`,
+    sme.capabilities,
+    `We have been trading for ${sme.yearsTrading} with ${sme.employees} employees, based in ${sme.city}, ${sme.hqProvince}.`,
+    sme.accreditations.length ? `Accreditations: ${sme.accreditations.join(", ")}.` : "",
+    ...(detailed
+      ? [
+          "Capacity: a dedicated team lead for this contract, a standby crew for absences, and our own vehicles and equipment.",
+          `References: two current corporate clients in ${sme.hqProvince} (contacts available on request) and a municipal contract completed last year.`,
+          "Supervision: weekly site inspections with a written checklist, a monthly report to the buyer, and a named escalation contact.",
+        ]
+      : []),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /** "Capitec Bank" → "CAP". */
 export function referencePrefix(name: string) {
   const letters = name.replace(/[^A-Za-z]/g, "").toUpperCase();
@@ -345,6 +372,9 @@ export async function insertSampleOpportunities(
         status: sample.status === "closed" && best?.sme._id === sme._id ? "shortlisted" : "submitted",
         submittedAt: Date.now() - (1 + ((i * 3 + j * 2) % 9)) * DAY,
         evaluation,
+        // Quotes spread between 82% and 118% of the estimate, so price points differ
+        quote: sample.value ? Math.round((sample.value * (0.82 + ((i * 7 + j * 11) % 37) / 100)) / 100) * 100 : undefined,
+        proposal: sampleProposal(sme, sample.title),
       });
     }
   }

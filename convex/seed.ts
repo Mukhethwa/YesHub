@@ -5,7 +5,7 @@ import type { DocKey, SmeDetails } from "./schema";
 import { components, internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { createAuth } from "./auth";
-import { sampleDocumentLabelsFor, sampleListingFor, sampleTeamIdFor } from "./lib/opportunities";
+import { sampleDocumentLabelsFor, sampleListingFor, sampleProposal, sampleTeamIdFor } from "./lib/opportunities";
 import { samplePdf } from "./lib/samplePdf";
 
 /*
@@ -637,5 +637,35 @@ export const sampleDocuments = internalAction({
       });
     }
     return created + missing.length;
+  },
+});
+
+/**
+ * Gives seeded applications on demo opportunities a sample quote and proposal, for Jev to score. Safe to
+ * re-run; real applications are never touched.
+ *
+ *   pnpm exec convex run seed:sampleProposals
+ */
+export const sampleProposals = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    assertDevSite();
+    let updated = 0;
+    for await (const opportunity of ctx.db.query("opportunities")) {
+      if (!opportunity.isDemo) continue;
+      for await (const application of ctx.db
+        .query("applications")
+        .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))) {
+        const sme = await ctx.db.get("smes", application.smeId);
+        if (!sme?.isDemo) continue;
+        const spread = 0.82 + ((sme.companyName.length * 7 + opportunity.title.length) % 37) / 100;
+        await ctx.db.patch("applications", application._id, {
+          proposal: sampleProposal(sme, opportunity.title),
+          quote: application.quote ?? (opportunity.value ? Math.round((opportunity.value * spread) / 100) * 100 : undefined),
+        });
+        updated++;
+      }
+    }
+    return updated;
   },
 });
