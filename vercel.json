@@ -3,5 +3,10 @@
   "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm convex deploy --cmd 'pnpm build'",
-  "ignoreCommand": "[ \"$VERCEL_ENV\" != \"production\" ]"
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "**": false
+    }
+  }
 }

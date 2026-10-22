@@ -154,7 +154,7 @@ pnpm exec convex env set --prod SITE_URL https://your-domain.example
 
 **Preview deployments** would need a Convex _preview_ deploy key as `CONVEX_DEPLOY_KEY` in Vercel's **Preview**
 environment, so each branch gets its own Convex backend, plus a `SITE_URL` that matches each preview's URL for
-sign-in to work. Until then, `ignoreCommand` in `vercel.json` skips every build that isn't production.
+sign-in to work. Until then, `git.deploymentEnabled` in `vercel.json` only deploys `main`.
 
 ## Project layout
 
