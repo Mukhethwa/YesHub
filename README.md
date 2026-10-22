@@ -128,7 +128,7 @@ pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'   # a
 
 ## Deployment
 
-Production runs at **https://yes-hub.vercel.app** (Vercel project `yes-hub`) against the Convex production
+Production runs at **https://yeshub-app.vercel.app** (Vercel project `yeshub-app`) against the Convex production
 deployment `posh-seahorse-411`.
 
 `vercel.json` makes every Vercel build run `pnpm convex deploy --cmd 'pnpm build'`: it deploys the Convex
@@ -139,12 +139,12 @@ Convex with the `CONVEX_DEPLOY_KEY` environment variable (Production), and the p
 To deploy from your machine:
 
 ```bash
-pnpm dlx vercel link        # once, pick the yes-hub project
+pnpm dlx vercel link        # once, pick the yeshub-app project
 pnpm dlx vercel deploy --prod
 ```
 
-Pushes to `main` deploy automatically once the Vercel project is connected to this GitHub repository
-(Vercel project **Settings → Git**; connecting needs the Vercel GitHub app installed with access to the repo).
+Pushes to `main` deploy automatically: the Vercel project is connected to this GitHub repository. It's on Vercel's
+Hobby plan, which only builds commits by the project owner, so teammates open a pull request and the owner merges it.
 
 If you use a custom domain, update the backend to match:
 
