@@ -186,7 +186,8 @@ export const reviewState = v.object({
 /** Jev's decision on one application, from a decision run on its opportunity. */
 export const applicationDecision = v.object({
   runId: v.id("decisionRuns"),
-  outcome: v.union(v.literal("approved"), v.literal("not_approved")),
+  /** Shortlisting picks who the buyer considers; the buyer makes the final decision. */
+  outcome: v.union(v.literal("shortlisted"), v.literal("not_shortlisted")),
   /** Position in the final ranking, 1 is best. Absent for applicants who weren't eligible. */
   rank: v.optional(v.number()),
   eligible: v.boolean(),
@@ -219,6 +220,7 @@ export const activityAction = v.union(
   v.literal("shortlisted"),
   v.literal("unshortlisted"),
   v.literal("declined"),
+  v.literal("awarded"),
   v.literal("document_opened"),
 );
 
@@ -282,6 +284,8 @@ export const trailKind = v.union(
   v.literal("decision"),
   v.literal("guardrail"),
   v.literal("override"),
+  /** Something a person in the buyer's organisation did, with the reason they gave. */
+  v.literal("action"),
   v.literal("error"),
 );
 export type TrailKind = Infer<typeof trailKind>;
@@ -391,6 +395,8 @@ export default defineSchema({
     /** Who in the organisation last shortlisted or declined it, and when. */
     statusChangedAt: v.optional(v.number()),
     statusChangedBy: v.optional(v.string()),
+    /** The reason given for the latest status change, shown to the SME with the outcome (PAJA s5). */
+    statusReason: v.optional(v.string()),
     evaluation,
     /** The SME's quoted price in rand, for criteria that score price. */
     quote: v.optional(v.number()),

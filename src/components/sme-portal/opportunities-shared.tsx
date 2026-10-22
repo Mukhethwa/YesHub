@@ -245,15 +245,13 @@ export function ApplyButton({
           <DialogHeader>
             <DialogTitle>Apply to {title}</DialogTitle>
             <DialogDescription>
-              YES Hub reads your compliance documents and anything you attach here, then scores your application against
-              the buyer’s criteria. The buyer sees the result and the reasons.
+              Your compliance documents and any attachments are reviewed and scored against the buyer’s criteria.
             </DialogDescription>
           </DialogHeader>
 
           {!qualifies && (
             <p className="rounded-md bg-warning/10 px-3 py-2 text-sm text-warning">
-              You don’t meet every requirement yet. The buyer will see what’s missing; fixing it first, for example by
-              renewing an expired document, gives you a better chance.
+              Some requirements are not met. The buyer will see which.
             </p>
           )}
 
@@ -270,7 +268,7 @@ export function ApplyButton({
               />
               <FieldDescription>
                 {scoresPrice
-                  ? "This buyer scores price, so a quote is required. Lower quotes score more price points."
+                  ? "Required. Price is scored with the PPPFA formula."
                   : "Leave empty if the opportunity doesn’t ask for a price."}
               </FieldDescription>
             </Field>
@@ -284,7 +282,7 @@ export function ApplyButton({
                 value={proposal}
                 onChange={(e) => setProposal(e.target.value)}
               />
-              <FieldDescription>Functionality is scored from what you write here and attach.</FieldDescription>
+              <FieldDescription>Used to score functionality.</FieldDescription>
             </Field>
 
             <div className="space-y-3">

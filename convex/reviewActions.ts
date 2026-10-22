@@ -12,7 +12,7 @@ import type { CriterionAssessment, Evaluation } from "./schema";
 
 /*
  * Jev's three jobs in a review, each called as a workflow step from review.ts: read a document, score an
- * application against the buyer's criteria, and decide who's approved. Answers are checked before they're
+ * application against the buyer's criteria, and recommend a shortlist. Answers are checked before they're
  * saved; anything malformed throws, so the workflow retries the step.
  */
 
@@ -26,7 +26,9 @@ const today = () => new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slic
 const JEV_ROLE =
   "You are Jev, the reviewer on YES Hub, a South African platform that matches SMEs with enterprise tenders, " +
   "RFQs and grants. You are careful, fair and factual: you only rely on what the documents and profile say, " +
-  "you never invent values, and you explain your reasoning so a procurement officer could audit it.";
+  "you never invent values, and you explain your reasoning so a procurement officer could audit it. You " +
+  "apply South African procurement law fairly (Constitution s217, PPPFA, PAJA), use only information " +
+  "relevant to the evaluation criteria (POPIA), and never consider personal characteristics.";
 
 /* ------------------------------------------------------------------------------------------------------ */
 /* Reading a document                                                                                     */
@@ -292,7 +294,7 @@ export const assessApplication = internalAction({
 });
 
 /* ------------------------------------------------------------------------------------------------------ */
-/* Deciding who's approved                                                                                */
+/* Recommending a shortlist                                                                               */
 /* ------------------------------------------------------------------------------------------------------ */
 
 const vCandidate = v.object({
@@ -319,7 +321,7 @@ export const decide = internalAction({
     args,
   ): Promise<{
     summary: string;
-    decisions: { applicationId: Id<"applications">; approved: boolean; rationale: string }[];
+    decisions: { applicationId: Id<"applications">; shortlisted: boolean; rationale: string }[];
     call: { model: string; generationId?: string; costUsd?: number };
   }> => {
     const input = await ctx.runQuery(internal.review.decisionInput, { runId: args.runId });
@@ -328,11 +330,11 @@ export const decide = internalAction({
     // With nobody eligible there's nothing to judge: everyone's outcome follows from the rules
     if (!args.candidates.some((c) => c.eligible)) {
       return {
-        summary: "No applicant met every requirement, so nobody was approved.",
+        summary: "No application met every requirement. Nobody was shortlisted.",
         decisions: args.candidates.map((c) => ({
           applicationId: c.applicationId,
-          approved: false,
-          rationale: `Not approved because the application didn’t meet every requirement: ${c.ineligibleReasons.join("; ")}`,
+          shortlisted: false,
+          rationale: `Not shortlisted. Requirements not met: ${c.ineligibleReasons.join("; ")}`,
         })),
         call: { model: "none (no eligible applicants)" },
       };
@@ -357,7 +359,8 @@ export const decide = internalAction({
     }));
 
     const prompt = [
-      `Decide which applicants to approve for this ${input.opportunity.kind}. Approve at most ${input.slots}.`,
+      `Recommend a shortlist for this ${input.opportunity.kind} of at most ${input.slots} applicant${input.slots === 1 ? "" : "s"}.`,
+      "The buyer makes the final award decision from your shortlist; you do not award or approve anyone.",
       "",
       "Opportunity:",
       JSON.stringify(input.opportunity, null, 2),
@@ -366,17 +369,18 @@ export const decide = internalAction({
       "orders the eligible applicants by points:",
       JSON.stringify(applicants, null, 2),
       "",
-      "Rules:",
-      "- Only eligible applicants can be approved.",
-      "- Follow the ranking. Approving a lower-ranked applicant over a higher-ranked one is only justified by",
-      "  a concrete, documented concern about the higher-ranked one (objective criteria in procurement law);",
-      "  say so explicitly in both rationales.",
-      "- You may approve fewer than the maximum if the remaining applicants have serious concerns.",
-      "- Give every applicant a rationale of one to three sentences that they could read: why they were or",
-      "  weren't approved, citing points, criteria or documents. Never name or compare with other applicants.",
+      "Rules (Constitution s217 and the PPPFA: fair, equitable, transparent, competitive and cost-effective):",
+      "- Only eligible applicants can be shortlisted.",
+      "- Follow the ranking. Shortlisting a lower-ranked applicant ahead of a higher-ranked one needs a concrete,",
+      "  documented concern about the higher-ranked one (objective criteria); state it in both reasons.",
+      "- Shortlist fewer than the limit only if the remaining applicants have serious, documented concerns.",
+      "- Decide only on the evaluation criteria, points, documents and concerns given. Ignore names, locations",
+      "  and anything about people that isn't a criterion; B-BBEE counts only through the calculated points.",
+      "- Give every applicant written reasons (PAJA s5), one to three sentences they could read: why they were",
+      "  or weren't shortlisted, citing points, criteria or documents. Never name or compare other applicants.",
       "",
       "Reply with JSON only, in this shape:",
-      '{"summary": "two or three sentences for the buyer", "decisions": [{"ref": "A1", "approved": true, "rationale": "..."}]}',
+      '{"summary": "two sentences for the buyer", "decisions": [{"ref": "A1", "shortlisted": true, "rationale": "..."}]}',
       "Include every applicant exactly once.",
     ].join("\n");
 
@@ -397,7 +401,8 @@ export const decide = internalAction({
           return [
             {
               applicationId: candidate.applicationId,
-              approved: asBoolean(row.approved) ?? false,
+              // Older answers said "approved"; treat it the same
+              shortlisted: asBoolean(row.shortlisted ?? row.approved) ?? false,
               rationale: clip(asString(row.rationale, "No rationale given."), 800),
             },
           ];

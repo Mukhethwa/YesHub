@@ -398,7 +398,7 @@ function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpp
         <CardDescription>
           {profile.canViewDocuments
             ? "Open each document to check it against the details on this profile."
-            : "You can open documents once this business applies to one of your opportunities. Until then you can see what’s on file."}
+            : "Documents can be opened once this business applies to one of your opportunities."}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0">

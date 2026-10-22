@@ -32,7 +32,7 @@ export function Evaluations() {
     <div className="space-y-5">
       <AdminPageHeader
         title="Evaluations"
-        description="Every time an enterprise evaluated an opportunity’s applicants: who was approved, and the full record of why."
+        description="Shortlisting runs across all enterprises, with the full record of each."
       />
 
       <div className="overflow-hidden rounded-xl border bg-card">
@@ -59,7 +59,7 @@ export function Evaluations() {
             {runs?.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
-                  No enterprise has evaluated an opportunity yet.
+                  No shortlisting runs yet.
                 </TableCell>
               </TableRow>
             )}
@@ -97,14 +97,14 @@ function Outcome({ run }: { run: Run }) {
     return (
       <span className="inline-flex items-center gap-1.5 text-sm">
         <Spinner className="size-3.5" />
-        Deciding
+        Shortlisting
       </span>
     );
   }
   if (run.status === "failed") return <Pill tone="danger">Failed</Pill>;
   return (
     <Pill tone="success">
-      {run.approved} of up to {run.slots} approved
+      {run.shortlisted} shortlisted, limit {run.slots}
     </Pill>
   );
 }

@@ -311,7 +311,7 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
               ? a.evaluation.engine === "jev"
                 ? `Reviewed on ${formatDateTime(a.evaluation.evaluatedAt)}, the same way the buyer sees it.`
                 : `Checked when you applied on ${formatDateTime(a.submittedAt)}, the same way the buyer sees it.`
-              : "How your current profile measures up to this opportunity, the same way the buyer will see it."}
+              : "Your profile against this opportunity’s requirements."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -337,14 +337,15 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
                   {o.organizationName} last opened your application ({a.views} time{a.views === 1 ? "" : "s"} so far)
                 </TimelineItem>
               )}
-              {a.status === "shortlisted" && (
+              {a.status !== "submitted" && (
                 <TimelineItem at={a.statusChangedAt}>
-                  You were shortlisted. {o.organizationName} can now see your contact details.
-                </TimelineItem>
-              )}
-              {a.status === "declined" && (
-                <TimelineItem at={a.statusChangedAt}>
-                  {o.organizationName} didn’t take your application further this time.
+                  {a.status === "shortlisted"
+                    ? `Shortlisted. ${o.organizationName} can now see your contact details.`
+                    : a.status === "awarded"
+                      ? `Awarded by ${o.organizationName}.`
+                      : "Not taken further."}
+                  {/* The reason given for the decision (PAJA s5) */}
+                  {a.statusReason && <span className="block text-muted-foreground">Reason: {a.statusReason}</span>}
                 </TimelineItem>
               )}
             </ol>
@@ -353,8 +354,8 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
               <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   {evaluation.qualifies
-                    ? "You meet every requirement. The buyer sees your profile and documents when you apply."
-                    : "You can still apply, but the buyer will see what’s missing. Fixing it first improves your chances."}
+                    ? "You meet every requirement."
+                    : "Requirements you don’t meet are shown to the buyer."}
                 </p>
                 <ApplyButton
                   opportunityId={o.id}
@@ -459,7 +460,7 @@ function ApplicationReview({ application: a }: { application: MyApplication }) {
       </div>
 
       {a.decision && (
-        <div className={a.decision.outcome === "approved" ? "rounded-lg bg-success/10 p-4" : "rounded-lg bg-muted p-4"}>
+        <div className="rounded-lg border bg-muted/40 p-4">
           <div className="flex flex-wrap items-center gap-2">
             <DecisionPill decision={a.decision} />
             {a.decision.totalPoints !== null && (
@@ -488,8 +489,8 @@ function ApplicationReview({ application: a }: { application: MyApplication }) {
       ) : (
         <p className="text-sm text-muted-foreground">
           {a.review?.status === "reviewing"
-            ? "Your documents are being read and your application scored against the buyer’s criteria. This takes a minute or two."
-            : "Scored by YES Hub’s eligibility rules. Your documents are reviewed before the buyer decides."}
+            ? "Review in progress."
+            : "Scored on eligibility rules. Document review pending."}
         </p>
       )}
 

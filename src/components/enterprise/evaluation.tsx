@@ -1,9 +1,10 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useState } from "react";
+import { DownloadIcon } from "lucide-react";
+import { type FormEvent, useState } from "react";
 
-import { Pill } from "@/components/admin/page-header";
+import { Status } from "@/components/app/status";
 import { formatDateTime, runMutation } from "@/components/admin/shared";
 import {
   CriteriaList,
@@ -11,20 +12,18 @@ import {
   DocumentReadings,
   ReviewStatus,
   TrailDialog,
+  type TrailRow,
   TrailList,
 } from "@/components/review/review-parts";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -33,14 +32,25 @@ import { formatBytes } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { rand } from "../../../convex/lib/procurement";
-import type { Evaluation } from "../../../convex/schema";
+import type { ApplicationStatus, Evaluation } from "../../../convex/schema";
 
 /*
- * Jev on the buyer's side: asking Jev to decide an opportunity, and for each applicant, how Jev scored it,
- * what it read from the documents, the decision and the paper trail behind it.
+ * Shortlisting on the buyer's side. YES Hub recommends a shortlist with written reasons for every applicant;
+ * the buyer then awards or declines from it, and gives a reason for each action. Everything is on the record.
  */
 
-/** Asks Jev to decide who's approved, and shows the latest decision with its trail. */
+/** Saves a run's record as a JSON file, for audit and for anyone who asks for reasons. */
+function downloadRecord(name: string, entries: TrailRow[]) {
+  const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${name.replace(/[^\w-]+/g, "-").toLowerCase()}-record.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Runs shortlisting for an opportunity and shows the latest result with its record. */
 export function EvaluationCard({
   opportunityId,
   applicants,
@@ -50,67 +60,32 @@ export function EvaluationCard({
 }) {
   const data = useQuery(api.review.opportunityDecisions, { opportunityId });
   const request = useMutation(api.review.requestDecision);
-  const [slots, setSlots] = useState("1");
+  const [slots, setSlots] = useState("3");
   const [confirming, setConfirming] = useState(false);
+  const [pending, setPending] = useState(false);
 
-  if (data === undefined) return null;
-  if (data === null) return null;
+  if (!data) return null;
   const latest = data.runs[0];
   const running = latest?.status === "running";
   const slotsValue = Math.floor(Number(slots));
+  const valid = slotsValue >= 1 && slotsValue <= 50;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Evaluation</CardTitle>
-        <CardDescription>
-          Checks every application’s documents, calculates price and B-BBEE points with the preferential procurement
-          formulas, and decides who to approve. Every step is on the record.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {latest && (
-          <div className="rounded-lg border p-4 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              {latest.status === "running" && (
-                <span className="inline-flex items-center gap-1.5 font-medium">
-                  <Spinner className="size-3.5" />
-                  Evaluating applicants
-                </span>
-              )}
-              {latest.status === "decided" && (
-                <Pill tone="success">
-                  {latest.approved} of up to {latest.slots} approved
-                </Pill>
-              )}
-              {latest.status === "failed" && <Pill tone="danger">Evaluation failed</Pill>}
-              <span className="text-muted-foreground">
-                Started by {latest.requestedBy} on {formatDateTime(latest.at)}
-              </span>
-            </div>
-            {latest.status === "running" && (
-              <p className="mt-2 text-muted-foreground">
-                Reviews still in progress finish first. This usually takes a few minutes; you can leave this page.
-              </p>
-            )}
-            {latest.summary && <p className="mt-2">{latest.summary}</p>}
-            {latest.error && <p className="mt-2 text-destructive">{latest.error}</p>}
-            <div className="mt-3">
-              <TrailDialog
-                entries={data.trail}
-                title="Decision paper trail"
-                description="Every step of the latest decision, newest first: points, decisions, guardrails and changes made by people."
-              />
-            </div>
-          </div>
-        )}
-
-        {data.canDecide ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <Field className="sm:w-48">
-              <FieldLabel htmlFor="jev-slots">Applicants to approve</FieldLabel>
+    <section className="space-y-3 rounded-lg border bg-card p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold">Shortlisting</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Applicants are ranked on PPPFA price and B-BBEE points after their documents are checked. Reasons are
+            recorded for every applicant.
+          </p>
+        </div>
+        {data.canDecide && (
+          <div className="flex shrink-0 items-end gap-2">
+            <Field className="w-28">
+              <FieldLabel htmlFor="shortlist-size">Shortlist size</FieldLabel>
               <Input
-                id="jev-slots"
+                id="shortlist-size"
                 type="number"
                 min={1}
                 max={50}
@@ -118,62 +93,216 @@ export function EvaluationCard({
                 onChange={(e) => setSlots(e.target.value)}
               />
             </Field>
-            <Button
-              disabled={running || applicants === 0 || !(slotsValue >= 1 && slotsValue <= 50)}
-              onClick={() => setConfirming(true)}
-            >
+            <Button disabled={running || applicants === 0 || !valid} onClick={() => setConfirming(true)}>
               {running && <Spinner />}
-              {latest ? "Evaluate again" : "Evaluate applicants"}
+              {latest ? "Shortlist again" : "Shortlist applicants"}
             </Button>
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Owners and admins in your organisation can run an evaluation.</p>
         )}
-      </CardContent>
+      </div>
 
-      <AlertDialog open={confirming} onOpenChange={setConfirming}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Evaluate applicants?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Up to {slotsValue} of {applicants} applicant{applicants === 1 ? "" : "s"} will be approved. Approved
-              applicants are marked awarded and the rest not successful, and each sees the outcome with the reasons. You
-              can change any decision afterwards, with a reason that’s kept on the record.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => runMutation("Evaluating applicants", () => request({ opportunityId, slots: slotsValue }))}
+      {latest && (
+        <div className="space-y-2 border-t pt-3 text-sm">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {latest.status === "running" && (
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <Spinner className="size-3.5" />
+                Shortlisting
+              </span>
+            )}
+            {latest.status === "decided" && (
+              <Status tone="success">
+                {latest.shortlisted} shortlisted, limit {latest.slots}
+              </Status>
+            )}
+            {latest.status === "failed" && <Status tone="danger">Did not complete</Status>}
+            <span className="text-muted-foreground">
+              {latest.requestedBy}, {formatDateTime(latest.at)}
+            </span>
+          </div>
+          {latest.status === "running" && (
+            <p className="text-muted-foreground">Applications still under review are completed first.</p>
+          )}
+          {latest.summary && <p>{latest.summary}</p>}
+          {latest.error && <p className="text-destructive">Did not complete. Run shortlisting again.</p>}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <TrailDialog
+              entries={data.trail}
+              title="Shortlisting record"
+              description="Each step of the latest run, newest first."
+              label="View record"
+            />
+            {data.trail.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => downloadRecord("shortlisting", data.trail)}>
+                <DownloadIcon />
+                Download
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!data.canDecide && <p className="text-sm text-muted-foreground">Owners and admins can run shortlisting.</p>}
+
+      <Dialog open={confirming} onOpenChange={(next) => !pending && setConfirming(next)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Shortlist applicants</DialogTitle>
+            <DialogDescription>
+              Up to {slotsValue} of {applicants} applicant{applicants === 1 ? "" : "s"} will be shortlisted. The others
+              are marked not shortlisted. Each applicant receives the reasons. You make the final decision from the
+              shortlist.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" disabled={pending} onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={pending}
+              onClick={async () => {
+                setPending(true);
+                const ok = await runMutation("Shortlisting started", () =>
+                  request({ opportunityId, slots: slotsValue }),
+                );
+                setPending(false);
+                if (ok) setConfirming(false);
+              }}
             >
-              Evaluate
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+              {pending && <Spinner />}
+              Start
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </section>
   );
 }
 
-/** The review status and decision for an applicant's row. */
+/** The review status and shortlisting outcome for an applicant's row. */
 export function ApplicantReviewStatus({
   applicant,
 }: {
   applicant: {
     review: { status: "reviewing" | "reviewed" | "failed" } | null;
-    decision: { outcome: "approved" | "not_approved"; overriddenBy?: string } | null;
+    decision: { outcome: "shortlisted" | "not_shortlisted"; overriddenBy?: string } | null;
     evaluation: Evaluation;
   };
 }) {
   return (
-    <span className="mt-1 flex flex-wrap items-center gap-1.5">
+    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
       <ReviewStatus review={applicant.review} engine={applicant.evaluation.engine} />
       <DecisionPill decision={applicant.decision} />
     </span>
   );
 }
 
-/** Jev's full review of one applicant: criteria, the documents it read, the decision and the trail. */
+type ActionStatus = ApplicationStatus;
+
+const ACTIONS: Record<ActionStatus, { label: string; title: string; done: string }> = {
+  shortlisted: { label: "Shortlist", title: "Shortlist", done: "Shortlisted" },
+  submitted: { label: "Remove from shortlist", title: "Remove from shortlist", done: "Removed from shortlist" },
+  declined: { label: "Decline", title: "Decline", done: "Declined" },
+  awarded: { label: "Award", title: "Award", done: "Awarded" },
+};
+
+/**
+ * The buyer's actions on one applicant. Each asks for a reason, which goes on the record and to the SME.
+ * Awarding is only offered from the shortlist, to owners and admins.
+ */
+export function ApplicantActions({
+  applicationId,
+  companyName,
+  status,
+  canAct,
+  canAward,
+}: {
+  applicationId: Id<"applications">;
+  companyName: string;
+  status: ApplicationStatus;
+  canAct: boolean;
+  canAward: boolean;
+}) {
+  const setStatus = useMutation(api.enterprise.setApplicationStatus);
+  const [target, setTarget] = useState<ActionStatus | null>(null);
+  const [reason, setReason] = useState("");
+  const [pending, setPending] = useState(false);
+
+  if (status === "awarded") return null;
+  const options: ActionStatus[] =
+    status === "shortlisted"
+      ? [...(canAward ? (["awarded"] as const) : []), "submitted", "declined"]
+      : status === "declined"
+        ? ["shortlisted"]
+        : ["shortlisted", "declined"];
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!target) return;
+    setPending(true);
+    const ok = await runMutation(`${ACTIONS[target].done}: ${companyName}`, () =>
+      setStatus({ applicationId, status: target, reason }),
+    );
+    setPending(false);
+    if (ok) {
+      setTarget(null);
+      setReason("");
+    }
+  };
+
+  return (
+    <>
+      {options.map((option, i) => (
+        <Button
+          key={option}
+          size="sm"
+          variant={i === 0 ? "default" : "outline"}
+          disabled={!canAct}
+          title={canAct ? undefined : "Only owners and admins in your organisation can change an applicant’s status"}
+          onClick={() => setTarget(option)}
+        >
+          {ACTIONS[option].label}
+        </Button>
+      ))}
+
+      <Dialog open={!!target} onOpenChange={(next) => !pending && !next && setTarget(null)}>
+        <DialogContent>
+          <form onSubmit={submit} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>
+                {target ? ACTIONS[target].title : ""}: {companyName}
+              </DialogTitle>
+              <DialogDescription>The reason is recorded and shared with the applicant.</DialogDescription>
+            </DialogHeader>
+            <Field>
+              <FieldLabel htmlFor="action-reason">Reason</FieldLabel>
+              <Textarea
+                id="action-reason"
+                rows={4}
+                maxLength={1000}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                required
+              />
+              <FieldDescription>Refer to the evaluation criteria, points or documents.</FieldDescription>
+            </Field>
+            <DialogFooter>
+              <Button type="button" variant="ghost" disabled={pending} onClick={() => setTarget(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={pending || reason.trim().length < 10}>
+                {pending && <Spinner />}
+                {target ? ACTIONS[target].label : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/** One applicant's review: criteria, documents read, shortlisting outcome and the record. */
 export function ApplicantReview({
   applicationId,
   companyName,
@@ -192,29 +321,34 @@ export function ApplicantReview({
   return (
     <div className="space-y-5 border-t pt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs font-medium text-muted-foreground">Review</p>
+        <p className="text-sm font-medium">Review</p>
         <div className="flex flex-wrap items-center gap-2">
           <ReviewStatus review={review.review} engine={evaluation.engine} />
           {review.review?.status !== "reviewing" && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => runMutation("Reviewing it again", () => retry({ applicationId }))}
+              onClick={() => runMutation("Review restarted", () => retry({ applicationId }))}
             >
               Review again
             </Button>
           )}
           <TrailDialog
             entries={review.trail}
-            title={`Paper trail: ${companyName}`}
-            description="Everything that happened to this application, newest first: what the review read, how it scored, the decision and any changes."
+            title={`Record: ${companyName}`}
+            description="Every step for this application, newest first."
+            label="View record"
           />
+          {review.trail.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => downloadRecord(companyName, review.trail)}>
+              <DownloadIcon />
+              Download
+            </Button>
+          )}
         </div>
       </div>
 
-      {review.decision && (
-        <DecisionBox applicationId={applicationId} decision={review.decision} companyName={companyName} />
-      )}
+      {review.decision && <Outcome decision={review.decision} />}
 
       {evaluation.engine === "jev" && (
         <div className="space-y-3">
@@ -235,7 +369,7 @@ export function ApplicantReview({
 
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="space-y-2">
-          <p className="text-sm font-medium">What the SME sent</p>
+          <p className="text-sm font-medium">Submission</p>
           <dl className="space-y-2 text-sm">
             <div>
               <dt className="text-xs text-muted-foreground">Price</dt>
@@ -255,7 +389,7 @@ export function ApplicantReview({
                   <span className="min-w-0">
                     <span className="block font-medium">{f.label}</span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {f.name}, {formatBytes(f.size)}
+                      {f.name} ({formatBytes(f.size)})
                     </span>
                   </span>
                   {f.url && (
@@ -278,7 +412,7 @@ export function ApplicantReview({
 
       {review.trail.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-medium">Latest on the trail</p>
+          <p className="text-sm font-medium">Latest on the record</p>
           <TrailList entries={review.trail.slice(0, 3)} />
         </div>
       )}
@@ -286,87 +420,32 @@ export function ApplicantReview({
   );
 }
 
-function DecisionBox({
-  applicationId,
+function Outcome({
   decision,
-  companyName,
 }: {
-  applicationId: Id<"applications">;
   decision: NonNullable<NonNullable<ReturnType<typeof useQuery<typeof api.review.applicationReview>>>["decision"]>;
-  companyName: string;
 }) {
-  const override = useMutation(api.review.overrideDecision);
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
-  const [pending, setPending] = useState(false);
-  const target = decision.outcome === "approved" ? "not_approved" : "approved";
-
   return (
-    <div className={decision.outcome === "approved" ? "rounded-lg bg-success/10 p-4" : "rounded-lg bg-muted p-4"}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <DecisionPill decision={decision} />
-          {decision.rank !== undefined && <span>Ranked {decision.rank}</span>}
-          {decision.totalPoints !== undefined && (
-            <span className="text-muted-foreground">
-              {decision.totalPoints} points
-              {decision.pricePoints !== undefined && ` (price ${decision.pricePoints}`}
-              {decision.bbbeePoints !== undefined && `, B-BBEE ${decision.bbbeePoints}`}
-              {decision.pricePoints !== undefined && ")"}
-            </span>
-          )}
-          {!decision.eligible && <span className="text-muted-foreground">Not eligible</span>}
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-          {target === "approved" ? "Approve instead" : "Don’t approve"}
-        </Button>
+    <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <DecisionPill decision={decision} />
+        {decision.rank !== undefined && <span>Ranked {decision.rank}</span>}
+        {decision.totalPoints !== undefined && (
+          <span className="text-muted-foreground tabular-nums">
+            {decision.totalPoints} points
+            {decision.pricePoints !== undefined && ` (price ${decision.pricePoints}`}
+            {decision.bbbeePoints !== undefined && `, B-BBEE ${decision.bbbeePoints}`}
+            {decision.pricePoints !== undefined && ")"}
+          </span>
+        )}
+        {!decision.eligible && <span className="text-muted-foreground">Not eligible</span>}
       </div>
-      <p className="mt-2 text-sm">{decision.rationale}</p>
+      <p className="mt-2">{decision.rationale}</p>
       {decision.overriddenBy && (
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-muted-foreground">
           Changed by {decision.overriddenBy}: {decision.overrideReason}
         </p>
       )}
-
-      <AlertDialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {target === "approved" ? `Approve ${companyName}?` : `Don’t approve ${companyName}?`}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This changes the evaluation’s decision. Your name and reason go on the paper trail, and the SME sees the
-              new outcome.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Field>
-            <FieldLabel htmlFor="override-reason">Reason</FieldLabel>
-            <Textarea id="override-reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
-            <FieldDescription>At least a sentence: what you checked and why it changes the outcome.</FieldDescription>
-          </Field>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={pending || reason.trim().length < 10}
-              onClick={async (e) => {
-                e.preventDefault();
-                setPending(true);
-                const ok = await runMutation("Decision changed", () =>
-                  override({ applicationId, outcome: target, reason }),
-                );
-                setPending(false);
-                if (ok) {
-                  setReason("");
-                  setOpen(false);
-                }
-              }}
-            >
-              {pending && <Spinner />}
-              Change decision
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

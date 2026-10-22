@@ -48,10 +48,10 @@ export function DecisionPill({
   decision: Pick<ApplicationDecision, "outcome" | "overriddenBy"> | null | undefined;
 }) {
   if (!decision) return null;
-  return decision.outcome === "approved" ? (
-    <Pill tone="success">{decision.overriddenBy ? "Approved (changed)" : "Approved"}</Pill>
+  return decision.outcome === "shortlisted" ? (
+    <Pill tone="success">{decision.overriddenBy ? "Shortlisted, changed later" : "Shortlisted"}</Pill>
   ) : (
-    <Pill tone="danger">{decision.overriddenBy ? "Not approved (changed)" : "Not approved"}</Pill>
+    <Pill tone="neutral">{decision.overriddenBy ? "Not shortlisted, changed later" : "Not shortlisted"}</Pill>
   );
 }
 
@@ -208,11 +208,12 @@ const TRAIL_LABELS: Record<TrailKind, string> = {
   submitted: "Application",
   extraction: "Document read",
   assessment: "Scored",
-  decision_started: "Decision requested",
+  decision_started: "Shortlisting started",
   points: "Points",
-  decision: "Decision",
-  guardrail: "Guardrail",
-  override: "Changed by a person",
+  decision: "Shortlisting",
+  guardrail: "Rule applied",
+  override: "Changed by buyer",
+  action: "Buyer action",
   error: "Error",
 };
 
@@ -241,9 +242,9 @@ export function TrailList({ entries, technical = false }: { entries: TrailRow[];
               e.kind === "override" && "font-medium",
             )}
           >
-            {e.summary}
+            {technical ? e.summary : e.summary.replace(/\bJev\b/g, "The review")}
           </p>
-          {e.details.length > 0 && (
+          {e.details.length > 0 && (technical || e.kind !== "error") && (
             <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
               {e.details.map((d, i) => (
                 <li key={i}>{d}</li>

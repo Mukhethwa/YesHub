@@ -21,21 +21,36 @@ Matching uses what SMEs put in their profile, so a complete, current profile mea
 
 ### How applications are decided
 
-SMEs apply with a quoted price, a short proposal and supporting documents (stored in Convex file storage).
-**Jev** ([TypeSafe’s router model](https://openrouter.ai/typesafe/jev-router) on OpenRouter) then reviews them
-in two durable [Convex workflows](https://www.convex.dev/components/workflow) (`convex/review.ts`):
+YES Hub is the fairness layer between buyers and SMEs. SMEs apply with a quoted price, a short proposal and
+supporting documents (stored in Convex file storage). **Jev**, the evaluation engine
+([TypeSafe’s router model](https://openrouter.ai/typesafe/jev-router) on OpenRouter), works in two durable
+[Convex workflows](https://www.convex.dev/components/workflow) (`convex/review.ts`):
 
 1. **Review**, when the SME applies: Jev reads every document behind the application (the profile’s compliance
    documents the opportunity asks for, and the files sent with it), records what each says and any mismatch with
    the profile, then scores the application against each of the buyer’s evaluation criteria with evidence.
-2. **Decision**, when the buyer asks: price and B-BBEE points are calculated with the preferential procurement
-   formulas (80/20 or 90/10, `convex/lib/procurement.ts`), Jev decides who is approved, and guardrails make sure
-   only eligible applicants are approved and never more than the buyer asked for.
+2. **Shortlisting**, when the buyer asks: price and B-BBEE points are calculated with the preferential procurement
+   formulas (80/20 or 90/10, `convex/lib/procurement.ts`), and Jev recommends a shortlist of the size the buyer
+   chose, with written reasons for every applicant. Guardrails make sure only eligible applicants are shortlisted
+   and never more than the limit. **Jev never awards:** the buyer decides from the shortlist.
+3. **The buyer’s decision**: shortlisting, removing, declining and awarding (owners and admins, from the shortlist
+   only) each require a written reason, which goes on the record and to the SME.
 
-Every step goes on a **paper trail** (`reviewTrail`): what Jev read, how it scored and why, the points arithmetic,
-the decision and its reasons, the model OpenRouter used and what each call cost, and any change a person made
-(which needs a reason). Buyers see it per applicant and per decision, SMEs see their own outcome and reasons, and
-YES Hub staff see every decision under **Admin → Jev decisions**.
+How it maps to South African law:
+
+- **Constitution s217 and the PPPFA**: procurement that is fair, equitable, transparent, competitive and
+  cost-effective. Points use the statutory formulas; ranking follows points, and departing from it needs a
+  documented, objective reason.
+- **PAJA s5**: written reasons. Every applicant gets reasons for the shortlisting outcome, and every buyer action
+  needs one; SMEs see both.
+- **POPIA**: consent at registration, only criteria-relevant information is used to evaluate, sensitive fields are
+  encrypted at rest, and access is limited to the applicant, the buyer and YES Hub staff.
+
+Every step is on the **record** (`reviewTrail`), which can be viewed and downloaded per applicant and per
+shortlisting run: what was read, how it scored and why, the points arithmetic, Jev’s recommendation and reasons,
+guardrails applied, and every person’s action with their reason. YES Hub staff see every run under
+**Admin → Evaluations**, including the model used and its cost. The interface never names Jev to buyers or SMEs
+(DESIGN.md).
 
 ### Audit trail and encryption
 
