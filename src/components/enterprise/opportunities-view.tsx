@@ -26,6 +26,7 @@ import { formatBytes, formatDate } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
 import { CreateOrganisation } from "./create-organisation";
 import { OpportunityTable } from "./enterprise-overview";
+import { ApplicantJevReview, ApplicantJevStatus, JevDecisionCard } from "./jev-review";
 import { DepartmentSelect } from "./team-view";
 import { closingLabel, formatRand, KIND_LABELS, percent, PhasePill, phaseOf } from "./tenders";
 
@@ -265,13 +266,16 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="applicants">
+        <TabsContent value="applicants" className="space-y-6">
+          <JevDecisionCard opportunityId={detail.id} applicants={detail.applicants.length} />
           <Card>
             <CardHeader>
               <CardTitle>Applicants</CardTitle>
               <CardDescription>
                 Ranked best fit first: SMEs that meet every requirement, then by score.{" "}
-                {usesJev ? "Ranked by Jev." : "Checked by YES Hub’s eligibility rules until Jev ranking is connected."}
+                {usesJev
+                  ? "Scored by Jev from each SME’s documents and proposal, against your evaluation criteria."
+                  : "Checked by YES Hub’s eligibility rules while Jev reviews the documents."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 px-0">
@@ -615,6 +619,7 @@ function ApplicantTable({
                 </TableCell>
                 <TableCell>
                   {a.evaluation.qualifies ? <Pill tone="success">Qualifies</Pill> : <Pill tone="danger">Doesn’t qualify</Pill>}
+                  <ApplicantJevStatus applicant={a} />
                   <span className="mt-1 block text-xs text-muted-foreground">
                     {a.lastViewed ? `Viewed by ${a.lastViewed.by}, ${formatDateTime(a.lastViewed.at)}` : "Not viewed yet"}
                   </span>
@@ -694,6 +699,11 @@ function ApplicantChecks({ applicant }: { applicant: Applicant }) {
         Applied {formatDateTime(applicant.submittedAt)} · checked {formatDateTime(evaluation.evaluatedAt)} by{" "}
         {evaluation.engine === "jev" ? "Jev" : "YES Hub’s eligibility rules"}
       </p>
+      <ApplicantJevReview
+        applicationId={applicant.id}
+        companyName={applicant.sme.companyName}
+        evaluation={applicant.evaluation}
+      />
       <ApplicationLog applicationId={applicant.id} companyName={applicant.sme.companyName} />
     </div>
   );

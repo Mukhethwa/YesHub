@@ -184,7 +184,12 @@ export function MatchCard({ match, sme }: { match: Match; sme: SmeProfile }) {
           <Button variant="outline" size="sm" asChild>
             <Link href={`/sme/opportunities?id=${match.id}`}>View details</Link>
           </Button>
-          <ApplyButton opportunityId={match.id} title={match.title} qualifies={match.evaluation.qualifies} />
+          <ApplyButton
+            opportunityId={match.id}
+            title={match.title}
+            qualifies={match.evaluation.qualifies}
+            scoresPrice={match.scoresPrice}
+          />
         </div>
       </div>
     </li>
