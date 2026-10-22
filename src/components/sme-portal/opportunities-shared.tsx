@@ -147,7 +147,7 @@ export function ChecksList({ evaluation }: { evaluation: Evaluation }) {
     <div className="grid gap-6 md:grid-cols-2">
       {groups.map((group) => (
         <div key={group.title}>
-          <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">{group.title}</p>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">{group.title}</p>
           <ul className="space-y-2">
             {group.checks.map((c) => (
               <li key={c.id} className="flex items-baseline justify-between gap-4 text-sm">
@@ -223,7 +223,7 @@ export function ApplyButton({
         proposal: proposal.trim() || undefined,
         attachments: uploaded,
       });
-      toast.success(`Applied to ${title}. Jev is reviewing your documents.`);
+      toast.success(`Applied to ${title}. Your documents are being reviewed.`);
       setOpen(false);
     } catch (error) {
       toast.error(errorMessage(error, "Couldn’t send your application."));
@@ -245,8 +245,8 @@ export function ApplyButton({
           <DialogHeader>
             <DialogTitle>Apply to {title}</DialogTitle>
             <DialogDescription>
-              Jev, YES Hub’s reviewer, reads your compliance documents and anything you attach here, then scores your
-              application against the buyer’s criteria. The buyer sees the result and the reasons.
+              YES Hub reads your compliance documents and anything you attach here, then scores your application against
+              the buyer’s criteria. The buyer sees the result and the reasons.
             </DialogDescription>
           </DialogHeader>
 
@@ -284,7 +284,7 @@ export function ApplyButton({
                 value={proposal}
                 onChange={(e) => setProposal(e.target.value)}
               />
-              <FieldDescription>Jev scores functionality from what you write here and attach.</FieldDescription>
+              <FieldDescription>Functionality is scored from what you write here and attach.</FieldDescription>
             </Field>
 
             <div className="space-y-3">

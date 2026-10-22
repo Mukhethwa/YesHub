@@ -81,7 +81,7 @@ export async function askJev<T>({
 
   if (res.status === 402) {
     throw new JevError(
-      "The OpenRouter account Jev uses is out of credits. Add credits at openrouter.ai/settings/credits, then review again.",
+      "The review service is out of credits (OpenRouter). YES Hub needs to add credits, then review again.",
     );
   }
   if (!res.ok || !body) {

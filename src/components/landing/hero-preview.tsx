@@ -12,7 +12,7 @@ export function HeroPreview() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="font-semibold">Ubuntu Facilities Services</p>
-            <p className="text-xs text-muted-foreground">Cleaning & Facilities · Durban, KwaZulu-Natal</p>
+            <p className="text-xs text-muted-foreground">Cleaning & Facilities, Durban, KwaZulu-Natal</p>
           </div>
           <Badge variant="secondary">B-BBEE Level 1</Badge>
         </div>

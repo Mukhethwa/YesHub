@@ -33,6 +33,8 @@ Convex agent skills for common tasks can be installed by running
   `_generated/server` (ESLint enforces it). Those builders log every change as a command with before/after state and
   encrypt sensitive fields (`convex/lib/encryption.ts`); add new sensitive fields to `ENCRYPTED_FIELDS` and new tables
   to `LOGGED_TABLES`.
+- **Follow DESIGN.md** for anything you build in the interface: colour from the logo, actions instead of
+  coloured markers, no middle dots, and never naming internal systems (Jev, OpenRouter, Resend) in the UI.
 - **Format with Prettier** (`pnpm format`; `pnpm format:check` in CI). Registry components, generated Convex files and Markdown are ignored (`.prettierignore`).
 - `src/components/auth/**` and `src/components/ui/**` are generated from registries; prefer composing them over editing.
 - Better Auth runs as a **locally installed Convex component** (`convex/betterAuth`). After changing plugins or

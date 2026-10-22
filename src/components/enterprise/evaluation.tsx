@@ -41,7 +41,7 @@ import type { Evaluation } from "../../../convex/schema";
  */
 
 /** Asks Jev to decide who's approved, and shows the latest decision with its trail. */
-export function JevDecisionCard({
+export function EvaluationCard({
   opportunityId,
   applicants,
 }: {
@@ -62,9 +62,9 @@ export function JevDecisionCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Jev’s decision</CardTitle>
+        <CardTitle>Evaluation</CardTitle>
         <CardDescription>
-          Jev checks every application’s documents, calculates price and B-BBEE points with the preferential procurement
+          Checks every application’s documents, calculates price and B-BBEE points with the preferential procurement
           formulas, and decides who to approve. Every step is on the record.
         </CardDescription>
       </CardHeader>
@@ -75,7 +75,7 @@ export function JevDecisionCard({
               {latest.status === "running" && (
                 <span className="inline-flex items-center gap-1.5 font-medium">
                   <Spinner className="size-3.5" />
-                  Jev is deciding
+                  Evaluating applicants
                 </span>
               )}
               {latest.status === "decided" && (
@@ -83,10 +83,9 @@ export function JevDecisionCard({
                   {latest.approved} of up to {latest.slots} approved
                 </Pill>
               )}
-              {latest.status === "failed" && <Pill tone="danger">Decision failed</Pill>}
+              {latest.status === "failed" && <Pill tone="danger">Evaluation failed</Pill>}
               <span className="text-muted-foreground">
-                Asked by {latest.requestedBy}, {formatDateTime(latest.at)}
-                {latest.model && ` · ${latest.model}`}
+                Started by {latest.requestedBy} on {formatDateTime(latest.at)}
               </span>
             </div>
             {latest.status === "running" && (
@@ -100,7 +99,7 @@ export function JevDecisionCard({
               <TrailDialog
                 entries={data.trail}
                 title="Decision paper trail"
-                description="Every step of the latest decision, newest first: points, Jev’s decisions, guardrails and changes made by people."
+                description="Every step of the latest decision, newest first: points, decisions, guardrails and changes made by people."
               />
             </div>
           </div>
@@ -124,30 +123,30 @@ export function JevDecisionCard({
               onClick={() => setConfirming(true)}
             >
               {running && <Spinner />}
-              {latest ? "Ask Jev to decide again" : "Ask Jev to decide"}
+              {latest ? "Evaluate again" : "Evaluate applicants"}
             </Button>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Owners and admins in your organisation can ask Jev to decide.</p>
+          <p className="text-sm text-muted-foreground">Owners and admins in your organisation can run an evaluation.</p>
         )}
       </CardContent>
 
       <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ask Jev to decide?</AlertDialogTitle>
+            <AlertDialogTitle>Evaluate applicants?</AlertDialogTitle>
             <AlertDialogDescription>
-              Jev approves up to {slotsValue} of {applicants} applicant{applicants === 1 ? "" : "s"}. Approved
-              applicants are marked awarded and the rest not successful, and they see the outcome with Jev’s reasons.
-              You can change any decision afterwards, with a reason that’s kept on the record.
+              Up to {slotsValue} of {applicants} applicant{applicants === 1 ? "" : "s"} will be approved. Approved
+              applicants are marked awarded and the rest not successful, and each sees the outcome with the reasons. You
+              can change any decision afterwards, with a reason that’s kept on the record.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => runMutation("Jev is deciding", () => request({ opportunityId, slots: slotsValue }))}
+              onClick={() => runMutation("Evaluating applicants", () => request({ opportunityId, slots: slotsValue }))}
             >
-              Ask Jev
+              Evaluate
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -157,7 +156,7 @@ export function JevDecisionCard({
 }
 
 /** The review status and decision for an applicant's row. */
-export function ApplicantJevStatus({
+export function ApplicantReviewStatus({
   applicant,
 }: {
   applicant: {
@@ -175,7 +174,7 @@ export function ApplicantJevStatus({
 }
 
 /** Jev's full review of one applicant: criteria, the documents it read, the decision and the trail. */
-export function ApplicantJevReview({
+export function ApplicantReview({
   applicationId,
   companyName,
   evaluation,
@@ -193,14 +192,14 @@ export function ApplicantJevReview({
   return (
     <div className="space-y-5 border-t pt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Jev’s review</p>
+        <p className="text-xs font-medium text-muted-foreground">Review</p>
         <div className="flex flex-wrap items-center gap-2">
           <ReviewStatus review={review.review} engine={evaluation.engine} />
           {review.review?.status !== "reviewing" && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => runMutation("Jev is reviewing it again", () => retry({ applicationId }))}
+              onClick={() => runMutation("Reviewing it again", () => retry({ applicationId }))}
             >
               Review again
             </Button>
@@ -208,7 +207,7 @@ export function ApplicantJevReview({
           <TrailDialog
             entries={review.trail}
             title={`Paper trail: ${companyName}`}
-            description="Everything that happened to this application, newest first: what Jev read, how it scored, the decision and any changes."
+            description="Everything that happened to this application, newest first: what the review read, how it scored, the decision and any changes."
           />
         </div>
       </div>
@@ -256,7 +255,7 @@ export function ApplicantJevReview({
                   <span className="min-w-0">
                     <span className="block font-medium">{f.label}</span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {f.name} · {formatBytes(f.size)}
+                      {f.name}, {formatBytes(f.size)}
                     </span>
                   </span>
                   {f.url && (
@@ -272,7 +271,7 @@ export function ApplicantJevReview({
           )}
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Documents Jev read</p>
+          <p className="text-sm font-medium">Documents read</p>
           <DocumentReadings documents={review.documents} />
         </div>
       </div>
@@ -336,7 +335,8 @@ function DecisionBox({
               {target === "approved" ? `Approve ${companyName}?` : `Don’t approve ${companyName}?`}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This changes Jev’s decision. Your name and reason go on the paper trail, and the SME sees the new outcome.
+              This changes the evaluation’s decision. Your name and reason go on the paper trail, and the SME sees the
+              new outcome.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Field>

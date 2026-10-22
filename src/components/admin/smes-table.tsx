@@ -143,7 +143,7 @@ export function SmesTable() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {sme.industry}
-                        {sme.owner && ` · ${sme.owner.email}`}
+                        {sme.owner && `, ${sme.owner.email}`}
                       </p>
                     </button>
                   </TableCell>

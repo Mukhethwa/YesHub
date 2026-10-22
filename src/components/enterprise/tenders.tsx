@@ -1,5 +1,7 @@
-import { Pill } from "@/components/admin/page-header";
-import { Progress } from "@/components/ui/progress";
+import { AwardIcon, ClipboardListIcon, ClockIcon, FileTextIcon, HandCoinsIcon, type LucideIcon } from "lucide-react";
+
+import { Status, type Tone } from "@/components/app/status";
+import { cn } from "@/lib/utils";
 import type { OpportunityKind, OpportunityStatus } from "../../../convex/schema";
 
 export const KIND_LABELS: Record<OpportunityKind, string> = { tender: "Tender", rfq: "RFQ", grant: "Grant" };
@@ -46,33 +48,59 @@ export function percent(part: number, whole: number) {
   return whole === 0 ? 0 : Math.round((part / whole) * 100);
 }
 
-const PHASE_PILLS: Record<Phase, { label: string; tone: "neutral" | "success" | "warning" | "info" }> = {
+const PHASES: Record<Phase, { label: string; tone: Tone; icon?: LucideIcon }> = {
   open: { label: "Open", tone: "success" },
-  closing: { label: "Closing soon", tone: "warning" },
+  closing: { label: "Closing soon", tone: "warning", icon: ClockIcon },
   closed: { label: "Closed", tone: "neutral" },
   draft: { label: "Draft", tone: "neutral" },
-  awarded: { label: "Awarded", tone: "info" },
+  awarded: { label: "Awarded", tone: "info", icon: AwardIcon },
 };
 
 export function PhasePill({ phase }: { phase: Phase }) {
-  const { label, tone } = PHASE_PILLS[phase];
-  return <Pill tone={tone}>{label}</Pill>;
+  const { label, tone, icon } = PHASES[phase];
+  return (
+    <Status tone={tone} icon={icon}>
+      {label}
+    </Status>
+  );
 }
 
-/** "4 of 8" with a bar showing the qualifying share of applicants. */
+/** "4 of 8": plain numbers, no bar (DESIGN.md). */
 export function QualifiedShare({ qualified, applications }: { qualified: number; applications: number }) {
   if (applications === 0) return <span className="text-muted-foreground">No applicants</span>;
   return (
-    <div className="min-w-28">
-      <p className="tabular-nums">
-        <span className="font-medium">{qualified}</span>
-        <span className="text-muted-foreground"> of {applications}</span>
-      </p>
-      <Progress
-        value={percent(qualified, applications)}
-        className="mt-1.5"
-        aria-label={`${qualified} of ${applications} qualify`}
-      />
-    </div>
+    <span className="tabular-nums">
+      <span className="font-medium">{qualified}</span>
+      <span className="text-muted-foreground"> of {applications}</span>
+    </span>
+  );
+}
+
+/** An icon for each kind of opportunity, to tell them apart in lists. */
+export const KIND_ICONS: Record<OpportunityKind, LucideIcon> = {
+  tender: FileTextIcon,
+  rfq: ClipboardListIcon,
+  grant: HandCoinsIcon,
+};
+
+/** Each kind takes a colour from the logo, so lists of opportunities read at a glance (DESIGN.md). */
+const KIND_TILES: Record<OpportunityKind, string> = {
+  tender: "bg-brand-blue text-white",
+  rfq: "bg-brand-green text-brand-navy",
+  grant: "bg-brand-yellow text-brand-navy",
+};
+
+/** A small solid tile in the kind's logo colour, with its icon. Identifies tenders, RFQs and grants in lists. */
+export function KindTile({ kind, className }: { kind: OpportunityKind; className?: string }) {
+  const Icon = KIND_ICONS[kind];
+  return (
+    <span
+      role="img"
+      aria-label={KIND_LABELS[kind]}
+      title={KIND_LABELS[kind]}
+      className={cn("grid size-7 shrink-0 place-items-center rounded-md", KIND_TILES[kind], className)}
+    >
+      <Icon className="size-3.5" aria-hidden />
+    </span>
   );
 }

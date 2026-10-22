@@ -20,6 +20,7 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import type { PortalNavItem } from "./types";
 
 /** The nav item a path belongs to: an exact match, or the longest one it's under (e.g. /admin/users?id=…). */
@@ -43,7 +44,7 @@ export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHre
           href={homeHref}
           onClick={() => setOpenMobile(false)}
           aria-label={`${label} home`}
-          className="flex items-center group-data-[collapsible=icon]:justify-center"
+          className="flex items-center text-white group-data-[collapsible=icon]:justify-center"
         >
           {/* The mark is wide and short, so size it by width to fit the 3rem rail */}
           {collapsed ? <LogoMark className="h-auto w-9" /> : <Logo />}
@@ -52,12 +53,17 @@ export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHre
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{label}</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/60">{label}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {nav.map(({ href, label: itemLabel, icon: Icon, badge, badgeLabel }) => (
                 <SidebarMenuItem key={href}>
-                  <SidebarMenuButton asChild isActive={active?.href === href} tooltip={itemLabel}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active?.href === href}
+                    tooltip={itemLabel}
+                    className="data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground data-[active=true]:hover:bg-sidebar-primary"
+                  >
                     <Link href={href} onClick={() => setOpenMobile(false)}>
                       <Icon />
                       <span>{itemLabel}</span>
@@ -76,7 +82,10 @@ export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHre
           size={collapsed ? "icon" : "default"}
           variant="ghost"
           align={collapsed ? "start" : "center"}
-          className={collapsed ? "mx-auto" : "w-full justify-start"}
+          className={cn(
+            "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&_.text-muted-foreground]:text-sidebar-foreground/60",
+            collapsed ? "mx-auto" : "w-full justify-start",
+          )}
         />
       </SidebarFooter>
 

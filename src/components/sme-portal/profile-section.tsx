@@ -326,7 +326,7 @@ function DocLine({ sme, docKey, url }: { sme: SmeProfile; docKey: DocKey; url?: 
     <span className="flex flex-wrap items-baseline gap-x-3">
       <span className="min-w-0 break-all">{doc.name}</span>
       <span className="text-muted-foreground">
-        {formatBytes(doc.size)} · uploaded {formatDate(doc.uploadedAt)}
+        {formatBytes(doc.size)}, uploaded {formatDate(doc.uploadedAt)}
       </span>
       {url && (
         <a href={url} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">

@@ -194,7 +194,7 @@ function AccountSection({ user }: { user: AdminUser }) {
             <dt className="text-muted-foreground">Ban</dt>
             <dd>
               {user.banReason || "No reason given"}
-              {user.banExpires ? ` · until ${formatDateTime(user.banExpires)}` : " · until unbanned"}
+              {user.banExpires ? `, until ${formatDateTime(user.banExpires)}` : ", until unbanned"}
             </dd>
           </div>
         )}
@@ -585,7 +585,7 @@ function SessionsSection({ user, disabled }: { user: AdminUser; disabled: boolea
                   )}
                 </p>
                 <p className="text-muted-foreground">
-                  {s.ipAddress ? `${s.ipAddress} · ` : ""}since {formatDateTime(s.createdAt)}
+                  {s.ipAddress ? `${s.ipAddress}, ` : ""}since {formatDateTime(s.createdAt)}
                 </p>
               </div>
               <Button

@@ -46,7 +46,7 @@ export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   const all = detail ? [...crumbs, { label: detail }] : crumbs;
 
   return (
-    <Breadcrumb className="min-w-0">
+    <Breadcrumb className="min-w-0 flex-1">
       <BreadcrumbList className="flex-nowrap">
         {all.map((crumb, i) => {
           const last = i === all.length - 1;

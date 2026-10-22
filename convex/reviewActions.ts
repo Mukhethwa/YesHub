@@ -78,12 +78,12 @@ export const extractDocument = internalAction({
       }
     } else if (document.type.startsWith("image/")) {
       if (blob.size > MAX_IMAGE_BYTES) {
-        await unreadable("The image is too large for Jev to read.");
+        await unreadable("The image is too large to read.");
         return null;
       }
       image = `data:${document.type};base64,${Buffer.from(await blob.arrayBuffer()).toString("base64")}`;
     } else {
-      await unreadable("Jev reads PDFs and images only.");
+      await unreadable("Only PDFs and images can be read.");
       return null;
     }
 
@@ -267,7 +267,7 @@ export const assessApplication = internalAction({
       label: "Documents consistent with the profile",
       required: false,
       passed: documentIssues.length === 0,
-      detail: documentIssues.length ? documentIssues.slice(0, 3).join(" ") : "Jev found no problems in the documents",
+      detail: documentIssues.length ? documentIssues.slice(0, 3).join(" ") : "No problems found in the documents",
     });
 
     // Jev may only disqualify for a reason it states

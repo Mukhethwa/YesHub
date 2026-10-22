@@ -88,7 +88,7 @@ function Inspector({ organizationId, onClose }: { organizationId: string; onClos
       <SheetHeader className="border-b p-6">
         <SheetTitle className="text-lg">{org.name}</SheetTitle>
         <SheetDescription>
-          @{org.slug} · created {formatDate(org.createdAt)}
+          @{org.slug}, created {formatDate(org.createdAt)}
         </SheetDescription>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <VerificationPill status={org.verificationStatus} />
@@ -155,7 +155,7 @@ function Inspector({ organizationId, onClose }: { organizationId: string; onClos
                   <li key={invitation.id} className="flex items-center justify-between gap-3 p-3">
                     <span className="truncate">{invitation.email}</span>
                     <span className="shrink-0 text-muted-foreground">
-                      {invitation.role ? roleLabel(invitation.role) : "Member"} · expires{" "}
+                      {invitation.role ? roleLabel(invitation.role) : "Member"}, expires{" "}
                       {formatDate(invitation.expiresAt)}
                     </span>
                   </li>

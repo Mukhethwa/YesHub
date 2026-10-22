@@ -39,7 +39,7 @@ const TABLE_LABELS: Record<string, string> = {
   opportunityDocuments: "Tender document",
   applications: "Application",
   documentExtractions: "Document reading",
-  decisionRuns: "Jev decision",
+  decisionRuns: "Evaluation",
 };
 
 const OPERATION: Record<ChangeRow["operation"], { label: string; tone: "success" | "info" | "danger" }> = {
@@ -171,7 +171,6 @@ function CommandItem({ command }: { command: Command }) {
           </span>
           <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <span className="tabular-nums">{formatDateTime(command.at)}</span>
-            <span>·</span>
             <span>
               {command.changeCount} change{command.changeCount === 1 ? "" : "s"} to{" "}
               {command.tables.map((t) => TABLE_LABELS[t] ?? t).join(", ")}
@@ -254,7 +253,7 @@ export function ChangeDiff({ change, showHistory = true }: { change: ChangeRow; 
                 {change.operation === "update" && sameValue(change, field) ? (
                   // Only an encrypted field can change in storage without changing in value
                   <td colSpan={2} className="px-3 py-2 text-xs text-muted-foreground">
-                    <Value field={field} value={change.after?.[field]} /> · unchanged, now stored encrypted
+                    <Value field={field} value={change.after?.[field]} />, unchanged, now stored encrypted
                   </td>
                 ) : (
                   <>
@@ -334,12 +333,7 @@ function HistoryBody({ table, documentId }: { table: string; documentId: string 
     <div key={change.id} className="space-y-1.5">
       <p className="text-xs text-muted-foreground">
         <span className="tabular-nums">{formatDateTime(change.at)}</span>
-        {change.command && (
-          <>
-            {" "}
-            · <code>{change.command.replace(/\.js:/, ".")}</code>
-          </>
-        )}
+        {change.command && <code className="ml-2">{change.command.replace(/\.js:/, ".")}</code>}
       </p>
       <ChangeDiff change={change} showHistory={false} />
     </div>

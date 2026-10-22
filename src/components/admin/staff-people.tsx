@@ -73,7 +73,7 @@ export function StaffPeople() {
                   <div className="min-w-0">
                     <p className="truncate font-medium">{invitation.email}</p>
                     <p className="text-xs text-muted-foreground">
-                      {STAFF_ROLE_OPTIONS[invitation.role ?? ""] ?? "Viewer"} · expires{" "}
+                      {STAFF_ROLE_OPTIONS[invitation.role ?? ""] ?? "Viewer"}, expires{" "}
                       {formatDate(invitation.expiresAt)}
                     </p>
                   </div>

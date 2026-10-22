@@ -506,7 +506,7 @@ export function ReviewStep({ form, errors, update, onEdit }: StepProps & { onEdi
                 file ? (
                   <span key={label} className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs">
                     <span className="font-medium">{label}</span>
-                    <span className="text-muted-foreground">· {formatBytes(file.size)}</span>
+                    <span className="text-muted-foreground">({formatBytes(file.size)})</span>
                   </span>
                 ) : null,
               )}
@@ -516,7 +516,7 @@ export function ReviewStep({ form, errors, update, onEdit }: StepProps & { onEdi
       </ReviewCard>
 
       <ReviewCard title="Primary contact" onEdit={() => onEdit("contact")}>
-        <Row label="Name" value={[form.contactName, form.contactRole].filter(Boolean).join(" · ")} />
+        <Row label="Name" value={[form.contactName, form.contactRole].filter(Boolean).join(", ")} />
         <Row label="Email" value={form.email} />
         <Row label="Mobile" value={form.phone} />
       </ReviewCard>

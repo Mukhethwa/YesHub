@@ -151,7 +151,7 @@ function SupplierDirectory() {
                         {s.verified && <Pill tone="info">Verified</Pill>}
                       </span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        {s.city}, {s.hqProvince} · {s.industry}
+                        {s.city}, {s.hqProvince}, {s.industry}
                       </span>
                     </TableCell>
                     <TableCell className="max-w-56 truncate text-sm">
@@ -237,7 +237,7 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
           {profile.suspended && <Pill tone="danger">Suspended</Pill>}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          {profile.industry} · {profile.city}, {profile.hqProvince}
+          {profile.industry}, {profile.city}, {profile.hqProvince}
         </p>
       </div>
 
@@ -366,7 +366,7 @@ function TagList({ label, items }: { label: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <div>
-      <p className="mb-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
       <div className="flex flex-wrap gap-1.5">
         {items.map((item) => (
           <span key={item} className="rounded-md bg-secondary px-2 py-0.5 text-xs">
@@ -425,7 +425,7 @@ function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpp
                   </p>
                   {doc && (
                     <p className="truncate text-xs text-muted-foreground">
-                      {doc.name} · {formatBytes(doc.size)} · uploaded {formatDate(doc.uploadedAt)}
+                      {doc.name}, {formatBytes(doc.size)}, uploaded {formatDate(doc.uploadedAt)}
                     </p>
                   )}
                 </div>
@@ -459,7 +459,7 @@ function HistoryCard({ profile }: { profile: Profile }) {
         <CardDescription>
           {profile.history.length === 0
             ? "This business hasn’t applied to your opportunities yet."
-            : `${profile.history.length} application${profile.history.length === 1 ? "" : "s"} · ${shortlisted} shortlisted`}
+            : `${profile.history.length} application${profile.history.length === 1 ? "" : "s"}, ${shortlisted} shortlisted`}
         </CardDescription>
       </CardHeader>
       {profile.history.length > 0 && (
@@ -484,7 +484,7 @@ function HistoryCard({ profile }: { profile: Profile }) {
                       {h.title}
                     </Link>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {KIND_LABELS[h.kind]} · {h.reference}
+                      {KIND_LABELS[h.kind]}, {h.reference}
                     </span>
                   </TableCell>
                   <TableCell className="text-sm">{formatDate(h.submittedAt)}</TableCell>

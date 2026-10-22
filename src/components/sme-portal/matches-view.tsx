@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Pill } from "@/components/admin/page-header";
+import { Score } from "@/components/app/score";
 import { FilterTabs } from "@/components/admin/shared";
 import { closingLabel, formatRand, KIND_LABELS } from "@/components/enterprise/tenders";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
@@ -163,12 +163,11 @@ export function MatchCard({ match, sme }: { match: Match; sme: SmeProfile }) {
             {match.title}
           </Link>
           <p className="text-sm text-muted-foreground">
-            {match.organizationName} · {KIND_LABELS[match.kind]} · {match.reference}
+            {match.organizationName}, {KIND_LABELS[match.kind]}, {match.reference}
           </p>
           <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
             <Pill tone={match.reach === "outside" ? "warning" : "neutral"}>{reachLabel(match.reach, match, sme)}</Pill>
             <span className="text-muted-foreground">{formatRand(match.value)}</span>
-            <span className="text-muted-foreground">·</span>
             <span className="text-muted-foreground">{closingLabel(match.closesAt)}</span>
           </div>
         </div>
@@ -176,13 +175,8 @@ export function MatchCard({ match, sme }: { match: Match; sme: SmeProfile }) {
           <FitPill evaluation={match.evaluation} />
           <div className="w-28">
             <p className="text-right text-xs text-muted-foreground">
-              Fit <span className="font-medium text-foreground tabular-nums">{match.evaluation.score}</span>
+              Fit <Score value={match.evaluation.score} className="text-foreground" />
             </p>
-            <Progress
-              value={match.evaluation.score}
-              className="mt-1"
-              aria-label={`Fit ${match.evaluation.score} out of 100`}
-            />
           </div>
         </div>
       </div>

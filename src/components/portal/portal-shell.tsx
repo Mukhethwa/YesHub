@@ -72,7 +72,7 @@ export function PortalShell({
             />
 
             {searchPlaceholder && (
-              <InputGroup className="ml-4 hidden max-w-md md:flex">
+              <InputGroup className="ml-auto hidden w-64 shrink md:flex lg:w-80">
                 <InputGroupAddon>
                   <SearchIcon />
                 </InputGroupAddon>
@@ -80,7 +80,7 @@ export function PortalShell({
               </InputGroup>
             )}
 
-            <div className="ml-auto flex items-center gap-1">
+            <div className="ml-auto flex items-center gap-1 md:ml-2">
               <ThemeToggle />
             </div>
           </header>

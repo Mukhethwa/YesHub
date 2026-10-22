@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { ExternalLinkIcon, FileTextIcon } from "lucide-react";
+import { CheckIcon, ExternalLinkIcon, FileTextIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -68,7 +68,7 @@ function Inspector({ smeId, onClose }: { smeId: Id<"smes">; onClose: () => void 
       <SheetHeader className="border-b p-6">
         <SheetTitle className="text-lg">{sme.companyName}</SheetTitle>
         <SheetDescription>
-          {sme.industry} · {sme.city}, {sme.hqProvince}
+          {sme.industry}, {sme.city}, {sme.hqProvince}
         </SheetDescription>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <StatusPill sme={sme} />
@@ -137,7 +137,7 @@ function Inspector({ smeId, onClose }: { smeId: Id<"smes">; onClose: () => void 
                           ? doc.required
                             ? "Required, not uploaded"
                             : "Not uploaded"
-                          : `${sme.documents[doc.key]?.name}${expiry ? ` · expires ${formatDate(expiry)}` : ""}`}
+                          : `${sme.documents[doc.key]?.name}${expiry ? `, expires ${formatDate(expiry)}` : ""}`}
                       </p>
                     </div>
                   </div>
@@ -164,9 +164,13 @@ function Inspector({ smeId, onClose }: { smeId: Id<"smes">; onClose: () => void 
         <Section title="Readiness" description="What’s holding this SME back from being matched.">
           <ul className="space-y-1.5 text-sm">
             {checks.map((check) => (
-              <li key={check.id} className="flex gap-2">
-                <span className={check.passed ? "text-success" : "text-destructive"}>{check.passed ? "✓" : "✗"}</span>
-                <span className={check.passed ? "" : "text-muted-foreground"}>{check.label}</span>
+              <li key={check.id} className="flex items-center gap-2">
+                {check.passed ? (
+                  <CheckIcon className="size-4 shrink-0 text-muted-foreground" aria-label="Met" />
+                ) : (
+                  <XIcon className="size-4 shrink-0 text-destructive" aria-label="Not met" />
+                )}
+                <span>{check.label}</span>
               </li>
             ))}
           </ul>
@@ -246,7 +250,7 @@ function Moderation({ sme, onDeleted }: { sme: SmeDetail; onDeleted: () => void 
           title={sme.suspendedAt ? "Suspended" : "Suspend"}
           description={
             sme.suspendedAt
-              ? `${sme.suspendedReason || "No reason given"} · since ${formatDateTime(sme.suspendedAt)}`
+              ? `${sme.suspendedReason || "No reason given"}, since ${formatDateTime(sme.suspendedAt)}`
               : "Hide the SME from matching. Their account still works."
           }
         >

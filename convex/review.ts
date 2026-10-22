@@ -38,7 +38,8 @@ export const workflow = new WorkflowManager(components.workflow, {
   },
 });
 
-const JEV = "Jev";
+/** How the automated review appears on the trail. The model behind it is an implementation detail. */
+const JEV = "Automated review";
 /** Most files sent with one application. */
 export const MAX_ATTACHMENTS = 5;
 /** How long a decision waits for reviews that are still running before deciding without them. */
@@ -136,8 +137,7 @@ export const reviewFinished = internalMutation({
       applicationId: application._id,
       kind: "error",
       actor: JEV,
-      summary:
-        "Jev couldn’t finish reviewing this application. It keeps YES Hub’s eligibility check until it’s retried.",
+      summary: "The review couldn’t finish. The application keeps YES Hub’s eligibility check until it’s retried.",
       details: [error.slice(0, 1000)],
     });
   },
@@ -418,7 +418,7 @@ export const decideOpportunity = workflow
     const failed = await step.runQuery(internal.review.failedReviews, args);
     if (failed.count > 0) {
       throw new Error(
-        `Jev couldn’t review ${failed.count} application${failed.count === 1 ? "" : "s"}, so nobody was decided. ${failed.error ?? ""}`.trim(),
+        `${failed.count} application${failed.count === 1 ? "" : "s"} couldn’t be reviewed, so nobody was decided. ${failed.error ?? ""}`.trim(),
       );
     }
 
@@ -444,7 +444,7 @@ export const decisionFinished = internalMutation({
       runId: run._id,
       kind: "error",
       actor: JEV,
-      summary: "Jev couldn’t finish the decision. Nobody’s status was changed.",
+      summary: "The evaluation couldn’t finish. Nobody’s status was changed.",
       details: [error.slice(0, 1000)],
     });
   },
@@ -537,7 +537,7 @@ export const calculatePoints = internalMutation({
       if (!sme) continue;
       const evaluation = application.evaluation;
       const reasons = evaluation.qualifies ? [] : [evaluation.summary];
-      if (application.review?.status !== "reviewed") reasons.push("Jev hasn’t finished reviewing this application");
+      if (application.review?.status !== "reviewed") reasons.push("The review of this application hasn’t finished");
       if (price && !(application.quote && application.quote > 0)) reasons.push("No price quoted");
       rows.push({ application, sme, reasons });
     }
@@ -572,7 +572,7 @@ export const calculatePoints = internalMutation({
         lines.push(
           supported
             ? `B-BBEE: ${sme.bbbeeLevel || "non-compliant"} scores ${bbbeePts} of ${bbbee.points} points`
-            : `B-BBEE: 0 of ${bbbee.points} points. Jev found the certificate doesn’t support ${sme.bbbeeLevel}`,
+            : `B-BBEE: 0 of ${bbbee.points} points. The certificate doesn’t support ${sme.bbbeeLevel}`,
         );
       }
       if (eligible) {
@@ -586,7 +586,7 @@ export const calculatePoints = internalMutation({
           lines.push(
             scored.length
               ? `Average of ${scored.length} criterion score${scored.length === 1 ? "" : "s"}: ${total}`
-              : `Jev’s overall score: ${total}`,
+              : `Overall review score: ${total}`,
           );
         }
       }
@@ -686,13 +686,13 @@ export const applyDecision = internalMutation({
     for (const c of ranked) {
       const jev = byId.get(c.applicationId);
       let ok = jev?.approved ?? false;
-      let rationale = jev?.rationale || "Jev didn’t give a decision for this applicant, so it isn’t approved.";
+      let rationale = jev?.rationale || "No decision was made for this applicant, so it isn’t approved.";
       if (!jev) {
         await trail({
           applicationId: c.applicationId,
           kind: "guardrail",
           actor: "YES Hub",
-          summary: `No decision from Jev for ${c.companyName}; not approved.`,
+          summary: `No decision was made for ${c.companyName}, so they weren’t approved.`,
         });
       }
       if (ok && !c.eligible) {
@@ -702,7 +702,7 @@ export const applyDecision = internalMutation({
           applicationId: c.applicationId,
           kind: "guardrail",
           actor: "YES Hub",
-          summary: `Jev approved ${c.companyName}, but they aren’t eligible, so they weren’t approved.`,
+          summary: `${c.companyName} was put forward but isn’t eligible, so they weren’t approved.`,
           details: c.ineligibleReasons,
         });
       }
@@ -713,7 +713,7 @@ export const applyDecision = internalMutation({
           applicationId: c.applicationId,
           kind: "guardrail",
           actor: "YES Hub",
-          summary: `Jev approved more applicants than the ${run.slots} asked for; ${c.companyName} (ranked ${c.rank}) wasn’t approved.`,
+          summary: `More applicants were put forward than the ${run.slots} asked for, so ${c.companyName} (ranked ${c.rank}) wasn’t approved.`,
         });
       }
       if (ok) approved.push(c);
@@ -799,7 +799,7 @@ export const requestDecision = mutation({
       throw new ConvexError("That opportunity isn’t available.");
     }
     if (!canManage(enterprise.organization.role))
-      throw new ConvexError("Only owners and admins can ask Jev to decide.");
+      throw new ConvexError("Only owners and admins can evaluate applicants.");
     if (enterprise.organization.verificationStatus !== "verified") {
       throw new ConvexError("YES Hub needs to verify your organisation first.");
     }
@@ -811,7 +811,7 @@ export const requestDecision = mutation({
       .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
       .order("desc")
       .take(1);
-    if (runs[0]?.status === "running") throw new ConvexError("Jev is already deciding this opportunity.");
+    if (runs[0]?.status === "running") throw new ConvexError("This opportunity is already being evaluated.");
     const applications = await ctx.db
       .query("applications")
       .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
@@ -839,7 +839,7 @@ export const requestDecision = mutation({
       runId,
       kind: "decision_started",
       actor: enterprise.user.name,
-      summary: `${enterprise.user.name} asked Jev to decide, approving up to ${slots} applicant${slots === 1 ? "" : "s"}.`,
+      summary: `${enterprise.user.name} started an evaluation, approving up to ${slots} applicant${slots === 1 ? "" : "s"}.`,
     });
     return runId;
   },
@@ -860,7 +860,7 @@ export const overrideDecision = mutation({
     }
     if (!canManage(enterprise.organization.role))
       throw new ConvexError("Only owners and admins can change a decision.");
-    if (!application.decision) throw new ConvexError("Jev hasn’t decided on this application yet.");
+    if (!application.decision) throw new ConvexError("This application hasn’t been evaluated yet.");
     const reason = args.reason.trim();
     if (reason.length < 10) throw new ConvexError("Give a reason of at least a sentence. It’s kept on the record.");
     if (args.outcome === application.decision.outcome) return null;
@@ -884,7 +884,7 @@ export const overrideDecision = mutation({
       runId: application.decision.runId,
       kind: "override",
       actor: enterprise.user.name,
-      summary: `${enterprise.user.name} changed Jev’s decision on ${sme?.companyName ?? "this applicant"} to ${args.outcome === "approved" ? "approved" : "not approved"}.`,
+      summary: `${enterprise.user.name} changed the decision on ${sme?.companyName ?? "this applicant"} to ${args.outcome === "approved" ? "approved" : "not approved"}.`,
       details: [reason],
     });
     return null;
@@ -900,7 +900,7 @@ export const retryReview = mutation({
     if (!enterprise || !application || application.organizationId !== enterprise.organization.id) {
       throw new ConvexError("That application isn’t available.");
     }
-    if (application.review?.status === "reviewing") throw new ConvexError("Jev is already reviewing it.");
+    if (application.review?.status === "reviewing") throw new ConvexError("It’s already being reviewed.");
     await startReview(ctx, application._id);
     return null;
   },

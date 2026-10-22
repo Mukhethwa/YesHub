@@ -5,6 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* The four colours of the YES Hub logo, and the navy the sidebar is made of (DESIGN.md) */
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-green: var(--brand-green);
+  --color-brand-yellow: var(--brand-yellow);
+  --color-brand-red: var(--brand-red);
+  --color-brand-navy: var(--brand-navy);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-background: var(--background);
@@ -49,7 +55,7 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
   --font-serif: Google Sans Flex, ui-sans-serif, sans-serif, system-ui;
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
   --tracking-tight: calc(var(--tracking-normal) - 0.025em);
   --tracking-wide: calc(var(--tracking-normal) + 0.025em);
@@ -87,7 +93,8 @@
   --secondary: oklch(0.955 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.9612 0 0);
-  --muted-foreground: oklch(0.605 0 180);
+  /* 0.55 keeps muted text above 4.5:1 on white */
+  --muted-foreground: oklch(0.55 0 0);
   --accent: oklch(0.965 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: #e3073c;
@@ -99,14 +106,21 @@
   --chart-3: #ffd200;
   --chart-4: #e3073c;
   --chart-5: #1a6fd1;
-  --radius: 0.75rem;
-  --sidebar: oklch(0.9761 0 0);
-  --sidebar-foreground: oklch(0 0 0);
+  --radius: 0.5rem;
+  --brand-blue: #1f84ef;
+  --brand-green: #06e07f;
+  --brand-yellow: #ffd200;
+  --brand-red: #e3073c;
+  --brand-navy: #0f2747;
+
+  /* The sidebar is YES Hub navy in both themes */
+  --sidebar: var(--brand-navy);
+  --sidebar-foreground: #c9d6e8;
   --sidebar-primary: #1a6fd1;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: oklch(0.94 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.9401 0 0);
+  --sidebar-accent: rgb(255 255 255 / 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.08);
   --sidebar-ring: #1f84ef;
   --destructive-foreground: #ffffff;
   --font-sans: Google Sans Flex, ui-sans-serif, sans-serif, system-ui;
@@ -131,6 +145,13 @@
   --tracking-normal: 0em;
   --success: #047a45;
   --warning: #8a6d00;
+
+  /* unDraw illustrations (src/components/illustrations): brand blue, and greys that follow the theme */
+  --illustration-primary: #1a6fd1;
+  --illustration-ink: oklch(0.3 0 0);
+  --illustration-mid: oklch(0.62 0 0);
+  --illustration-surface: oklch(0.92 0 0);
+  --illustration-paper: #ffffff;
 }
 
 .dark {
@@ -157,16 +178,22 @@
   --chart-3: #ffd200;
   --chart-4: #e3073c;
   --chart-5: #1a6fd1;
-  --sidebar: oklch(0.19 0 0);
-  --sidebar-foreground: oklch(0.9881 0 0);
+  --brand-blue: #1f84ef;
+  --brand-green: #06e07f;
+  --brand-yellow: #ffd200;
+  --brand-red: #e3073c;
+  --brand-navy: #0c1f38;
+
+  --sidebar: var(--brand-navy);
+  --sidebar-foreground: #c9d6e8;
   --sidebar-primary: #1a6fd1;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: oklch(0.27 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-accent: rgb(255 255 255 / 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.08);
   --sidebar-ring: #4d9ef2;
   --destructive-foreground: #ffffff;
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   --font-sans: Google Sans Flex, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Google Sans Flex, ui-sans-serif, sans-serif, system-ui;
   --font-mono: Source Code Pro, ui-monospace, monospace;
@@ -188,6 +215,12 @@
   --shadow-2xl: 0 8px 12px 2px hsl(0 0% 0% / 0.01);
   --success: #06e07f;
   --warning: #ffd200;
+
+  --illustration-primary: #4d9ef2;
+  --illustration-ink: oklch(0.8 0 0);
+  --illustration-mid: oklch(0.52 0 0);
+  --illustration-surface: oklch(0.3 0 0);
+  --illustration-paper: oklch(0.24 0 0);
 }
 
 @layer base {

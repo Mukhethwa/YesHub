@@ -85,7 +85,7 @@ export function TeamView() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Team"
-        description={`${team.organization.name} · You’re ${roleWithArticle(me.role)}${
+        description={`${team.organization.name}, You’re ${roleWithArticle(me.role)}${
           myDepartments.length ? ` in ${myDepartments.map((d) => d.name).join(" and ")}` : ", not in a department yet"
         }.`}
       />
@@ -195,7 +195,7 @@ function DepartmentCard({
           {mine && <Pill tone="info">Your department</Pill>}
         </CardTitle>
         <CardDescription>
-          {members.length} member{members.length === 1 ? "" : "s"} · {open.length} open ·{" "}
+          {members.length} member{members.length === 1 ? "" : "s"}, {open.length} open,{" "}
           {opportunities.length - open.length} closed
         </CardDescription>
       </CardHeader>
@@ -365,7 +365,7 @@ function UnassignedCard({
               <Link href={`/dashboard/opportunities?id=${o.id}`} className="min-w-0 text-sm">
                 <span className="block truncate font-medium hover:underline">{o.title}</span>
                 <span className="block text-xs text-muted-foreground">
-                  {o.reference} · {closingLabel(o.closesAt)}
+                  {o.reference}, {closingLabel(o.closesAt)}
                 </span>
               </Link>
               <DepartmentSelect opportunityId={o.id} value={null} departments={departments} allowed={allowed} />
@@ -644,16 +644,14 @@ function InvitationsCard({ team }: { team: Team }) {
 
         {team.invitations.length > 0 && (
           <div>
-            <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Pending invitations
-            </p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Pending invitations</p>
             <ul className="divide-y rounded-lg border">
               {team.invitations.map((i) => (
                 <li key={i.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{i.email}</span>
                     <span className="block text-xs text-muted-foreground">
-                      {roleLabel(i.role ?? "member")} · expires {formatDate(i.expiresAt)}
+                      {roleLabel(i.role ?? "member")}, expires {formatDate(i.expiresAt)}
                     </span>
                   </span>
                   <Button

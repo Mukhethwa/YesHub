@@ -184,7 +184,7 @@ function ApplicationCard({ row }: { row: Row }) {
             {o.title}
           </Link>
           <p className="text-sm text-muted-foreground">
-            {o.organizationName} · {KIND_LABELS[o.kind]} · {o.reference}
+            {o.organizationName}, {KIND_LABELS[o.kind]}, {o.reference}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -206,10 +206,10 @@ function ApplicationCard({ row }: { row: Row }) {
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">
-            {a.evaluation.engine === "jev" ? "Jev’s review" : "When you applied"}
+            {a.evaluation.engine === "jev" ? "Review" : "When you applied"}
           </dt>
           <dd>
-            {a.evaluation.qualifies ? "Qualified" : "Didn’t qualify"} · score {a.evaluation.score}
+            {a.evaluation.qualifies ? "Qualified" : "Didn’t qualify"}, score {a.evaluation.score}
           </dd>
         </div>
         <div>
@@ -277,12 +277,12 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
           <PhasePill phase={phase} />
           {a && <ApplicationStatusPill status={a.status} />}
           <span className="text-sm text-muted-foreground">
-            {KIND_LABELS[o.kind]} · {o.reference}
+            {KIND_LABELS[o.kind]}, {o.reference}
           </span>
         </div>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">{o.title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {o.organizationName} · {reachLabel(reachOf(o, sme), o, sme)}
+          {o.organizationName}, {reachLabel(reachOf(o, sme), o, sme)}
         </p>
       </div>
 
@@ -309,7 +309,7 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
           <CardDescription>
             {a
               ? a.evaluation.engine === "jev"
-                ? `Reviewed by Jev on ${formatDateTime(a.evaluation.evaluatedAt)}, the same way the buyer sees it.`
+                ? `Reviewed on ${formatDateTime(a.evaluation.evaluatedAt)}, the same way the buyer sees it.`
                 : `Checked when you applied on ${formatDateTime(a.submittedAt)}, the same way the buyer sees it.`
               : "How your current profile measures up to this opportunity, the same way the buyer will see it."}
           </CardDescription>
@@ -327,31 +327,26 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
             )}
           </div>
           <ChecksList evaluation={evaluation} />
-          {a && <JevReview application={a} />}
+          {a && <ApplicationReview application={a} />}
 
           {a ? (
             <ol className="space-y-2 border-t pt-4 text-sm">
-              <li>
-                <span className="text-muted-foreground tabular-nums">{formatDateTime(a.submittedAt)}</span> · You
-                applied
-              </li>
+              <TimelineItem at={a.submittedAt}>You applied</TimelineItem>
               {a.views > 0 && (
-                <li>
-                  <span className="text-muted-foreground tabular-nums">
-                    {formatDateTime(a.lastViewedAt ?? undefined)}
-                  </span>{" "}
-                  · {o.organizationName} last opened your application ({a.views} time{a.views === 1 ? "" : "s"} so far)
-                </li>
+                <TimelineItem at={a.lastViewedAt}>
+                  {o.organizationName} last opened your application ({a.views} time{a.views === 1 ? "" : "s"} so far)
+                </TimelineItem>
               )}
               {a.status === "shortlisted" && (
-                <li>
-                  <span className="text-muted-foreground tabular-nums">
-                    {formatDateTime(a.statusChangedAt ?? undefined)}
-                  </span>{" "}
-                  · You were shortlisted. {o.organizationName} can now see your contact details.
-                </li>
+                <TimelineItem at={a.statusChangedAt}>
+                  You were shortlisted. {o.organizationName} can now see your contact details.
+                </TimelineItem>
               )}
-              {a.status === "declined" && <li>{o.organizationName} didn’t take your application further this time.</li>}
+              {a.status === "declined" && (
+                <TimelineItem at={a.statusChangedAt}>
+                  {o.organizationName} didn’t take your application further this time.
+                </TimelineItem>
+              )}
             </ol>
           ) : (
             phase !== "closed" && (
@@ -395,7 +390,7 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
                 </ul>
               </ListingItem>
               <ListingItem label="Enquiries">
-                {o.listing.enquiriesName} ·{" "}
+                {o.listing.enquiriesName},{" "}
                 <a href={`mailto:${o.listing.enquiriesEmail}`} className="underline underline-offset-2">
                   {o.listing.enquiriesEmail}
                 </a>
@@ -420,7 +415,7 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
                   <span className="min-w-0">
                     <span className="block text-sm font-medium">{doc.label}</span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {doc.name} · {formatBytes(doc.size)}
+                      {doc.name}, {formatBytes(doc.size)}
                     </span>
                   </span>
                   {doc.url && (
@@ -443,7 +438,7 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
 function ListingItem({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</dt>
+      <dt className="mb-1 text-xs font-medium text-muted-foreground">{label}</dt>
       <dd>{children}</dd>
     </div>
   );
@@ -454,12 +449,12 @@ type MyApplication = NonNullable<
 >;
 
 /** Jev's review of the SME's own application: how each criterion scored, and the decision with its reasons. */
-function JevReview({ application: a }: { application: MyApplication }) {
+function ApplicationReview({ application: a }: { application: MyApplication }) {
   const { evaluation } = a;
   return (
     <div className="space-y-4 border-t pt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Jev’s review</p>
+        <p className="text-xs font-medium text-muted-foreground">Review</p>
         <ReviewStatus review={a.review} engine={evaluation.engine} />
       </div>
 
@@ -493,8 +488,8 @@ function JevReview({ application: a }: { application: MyApplication }) {
       ) : (
         <p className="text-sm text-muted-foreground">
           {a.review?.status === "reviewing"
-            ? "Jev is reading your documents and scoring your application against the buyer’s criteria. This takes a minute or two."
-            : "Scored by YES Hub’s eligibility rules. Jev reviews it before the buyer decides."}
+            ? "Your documents are being read and your application scored against the buyer’s criteria. This takes a minute or two."
+            : "Scored by YES Hub’s eligibility rules. Your documents are reviewed before the buyer decides."}
         </p>
       )}
 
@@ -521,5 +516,15 @@ function JevReview({ application: a }: { application: MyApplication }) {
         </dl>
       )}
     </div>
+  );
+}
+
+/** One line of an application's history: the date in its own column, then what happened. */
+function TimelineItem({ at, children }: { at: number | null | undefined; children: React.ReactNode }) {
+  return (
+    <li className="grid gap-x-4 sm:grid-cols-[10rem_1fr]">
+      <span className="text-muted-foreground tabular-nums">{at ? formatDateTime(at) : ""}</span>
+      <span>{children}</span>
+    </li>
   );
 }
