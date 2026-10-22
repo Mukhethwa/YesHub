@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Logo } from "@/components/logo";
+import { UserButton } from "@/components/auth/user/user-button";
+import { Logo, LogoMark } from "@/components/logo";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -15,19 +17,35 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
 import type { PortalNavItem } from "./types";
 
+/** The nav item a path belongs to: an exact match, or the longest one it's under (e.g. /admin/users?id=…). */
+export function activeNavItem(nav: PortalNavItem[], pathname: string) {
+  return nav
+    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+}
+
+/** Collapses to icons on desktop (the header button, the rail or Ctrl/⌘+B); a sheet on phones. */
 export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHref: string; nav: PortalNavItem[] }) {
   const pathname = usePathname();
-  const { setOpenMobile } = useSidebar();
+  const { setOpenMobile, state, isMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
+  const active = activeNavItem(nav, pathname);
 
   return (
-    <Sidebar>
-      <SidebarHeader className="h-14 justify-center px-4">
-        <Link href={homeHref} onClick={() => setOpenMobile(false)} aria-label={`${label} home`}>
-          <Logo />
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border px-4 group-data-[collapsible=icon]:px-2">
+        <Link
+          href={homeHref}
+          onClick={() => setOpenMobile(false)}
+          aria-label={`${label} home`}
+          className="flex items-center group-data-[collapsible=icon]:justify-center"
+        >
+          {collapsed ? <LogoMark /> : <Logo />}
         </Link>
       </SidebarHeader>
 
@@ -38,7 +56,7 @@ export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHre
             <SidebarMenu>
               {nav.map(({ href, label: itemLabel, icon: Icon, badge, badgeLabel }) => (
                 <SidebarMenuItem key={href}>
-                  <SidebarMenuButton asChild isActive={pathname === href}>
+                  <SidebarMenuButton asChild isActive={active?.href === href} tooltip={itemLabel}>
                     <Link href={href} onClick={() => setOpenMobile(false)}>
                       <Icon />
                       <span>{itemLabel}</span>
@@ -51,6 +69,17 @@ export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHre
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="border-t border-sidebar-border">
+        <UserButton
+          size={collapsed ? "icon" : "default"}
+          variant="ghost"
+          align={collapsed ? "start" : "center"}
+          className={collapsed ? "mx-auto" : "w-full justify-start"}
+        />
+      </SidebarFooter>
+
+      <SidebarRail />
     </Sidebar>
   );
 }
