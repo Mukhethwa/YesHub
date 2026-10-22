@@ -2,7 +2,8 @@ import { ConvexError, v } from "convex/values";
 
 import { getSettings } from "../src/lib/sme/settings";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, mutation, type MutationCtx, type QueryCtx, query } from "./_generated/server";
+import { type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internalMutation, mutation, query } from "./functions";
 import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
 import { components } from "./_generated/api";

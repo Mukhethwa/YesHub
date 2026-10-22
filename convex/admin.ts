@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values";
 
 import { isStaffRole } from "../src/lib/permissions";
 import { components } from "./_generated/api";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./functions";
 import { audit } from "./audit";
 import { deleteOpportunitiesForOrganization } from "./lib/opportunities";
 import { deleteOrganizationSettings } from "./lib/organizationSettings";

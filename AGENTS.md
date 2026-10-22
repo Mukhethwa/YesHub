@@ -29,6 +29,10 @@ Convex agent skills for common tasks can be installed by running
 - **Better Auth versions are pinned** because `@convex-dev/better-auth` doesn't support better-auth 1.7 yet:
   `better-auth` and `@better-auth/*` stay on `~1.6.33`, `@better-auth-ui/*` on exactly `1.6.45`.
   Don't run `pnpm dlx shadcn add @better-auth-ui/...` (the hosted registry serves 1.7 components). See README.
+- **Convex functions import `query`, `mutation`, `internalQuery` and `internalMutation` from `convex/functions.ts`**, not
+  `_generated/server` (ESLint enforces it). Those builders log every change as a command with before/after state and
+  encrypt sensitive fields (`convex/lib/encryption.ts`); add new sensitive fields to `ENCRYPTED_FIELDS` and new tables
+  to `LOGGED_TABLES`.
 - **Format with Prettier** (`pnpm format`; `pnpm format:check` in CI). Registry components, generated Convex files and Markdown are ignored (`.prettierignore`).
 - `src/components/auth/**` and `src/components/ui/**` are generated from registries; prefer composing them over editing.
 - Better Auth runs as a **locally installed Convex component** (`convex/betterAuth`). After changing plugins or

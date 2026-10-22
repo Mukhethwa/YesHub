@@ -2,7 +2,8 @@ import { ConvexError, v } from "convex/values";
 
 import { components } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, type MutationCtx, type QueryCtx, query } from "./_generated/server";
+import { type MutationCtx, type QueryCtx } from "./_generated/server";
+import { mutation, query } from "./functions";
 import { authComponent } from "./auth";
 import { evaluateApplication } from "./lib/evaluation";
 import { APPLICATION_LIMIT } from "./lib/opportunities";

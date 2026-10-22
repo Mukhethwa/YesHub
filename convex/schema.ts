@@ -471,6 +471,35 @@ export default defineSchema({
     .index("by_opportunity", ["opportunityId"])
     .index("by_run", ["runId"]),
 
+  /**
+   * The command log: one row per mutation that changed data (convex/functions.ts). Each command's changes
+   * are in `changes`. Rows are only ever inserted.
+   */
+  commands: defineTable({
+    /** The Convex function, e.g. "smes:update". */
+    name: v.string(),
+    visibility: v.union(v.literal("public"), v.literal("internal")),
+    /** Better Auth user id, absent for internal functions run by the system. */
+    actorId: v.optional(v.string()),
+    actorName: v.optional(v.string()),
+    changeCount: v.number(),
+    tables: v.array(v.string()),
+  }),
+
+  /** What a command did to one document: the state before and after, and which fields changed. */
+  changes: defineTable({
+    commandId: v.id("commands"),
+    table: v.string(),
+    documentId: v.string(),
+    operation: v.union(v.literal("insert"), v.literal("update"), v.literal("delete")),
+    fields: v.array(v.string()),
+    /** The document without system fields. Encrypted fields stay encrypted. */
+    before: v.optional(v.any()),
+    after: v.optional(v.any()),
+  })
+    .index("by_command", ["commandId"])
+    .index("by_document", ["table", "documentId"]),
+
   /** Every action YES Hub staff take in the admin area, newest first by _creationTime. */
   auditLog: defineTable({
     actorId: v.string(),

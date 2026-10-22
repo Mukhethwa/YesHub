@@ -9,7 +9,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "../../../convex/_generated/api";
-import { AdminPageHeader, Pill } from "./page-header";
+import { Pill } from "./page-header";
 import { FilterTabs, formatDateTime, TablePagination, usePagination } from "./shared";
 
 type Entry = NonNullable<FunctionReturnType<typeof api.audit.list>>[number];
@@ -50,6 +50,7 @@ const TARGET_LABELS: Record<Entry["targetType"], string> = {
   staff: "Staff",
 };
 
+/** Staff actions in the admin area: who banned, verified or invited whom, in words. */
 export function AuditLog() {
   const entries = useQuery(api.audit.list, { limit: 500 });
   const [search, setSearch] = useState("");
@@ -76,7 +77,6 @@ export function AuditLog() {
   if (entries === null) {
     return (
       <div className="space-y-5">
-        <AdminPageHeader title="Audit log" description="Every action YES Hub staff take in the admin area." />
         <p className="text-sm text-muted-foreground">Your access level can’t view the audit log.</p>
       </div>
     );
@@ -84,11 +84,6 @@ export function AuditLog() {
 
   return (
     <div className="space-y-5">
-      <AdminPageHeader
-        title="Audit log"
-        description="Every action YES Hub staff take in the admin area, newest first."
-      />
-
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterTabs
           label="Filter entries"

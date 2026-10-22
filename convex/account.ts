@@ -1,6 +1,7 @@
 import { isStaffRole } from "../src/lib/permissions";
 import { components } from "./_generated/api";
-import { query, type QueryCtx } from "./_generated/server";
+import { type QueryCtx } from "./_generated/server";
+import { query } from "./functions";
 import { authComponent } from "./auth";
 
 /** The organisations a user belongs to (at most one by policy). */

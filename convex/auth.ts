@@ -18,7 +18,7 @@ import {
 } from "../src/lib/permissions";
 import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
-import { query } from "./_generated/server";
+import { query } from "./functions";
 import authConfig from "./auth.config";
 import authSchema from "./betterAuth/schema";
 import {

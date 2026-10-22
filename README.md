@@ -37,6 +37,31 @@ the decision and its reasons, the model OpenRouter used and what each call cost,
 (which needs a reason). Buyers see it per applicant and per decision, SMEs see their own outcome and reasons, and
 YES Hub staff see every decision under **Admin → Jev decisions**.
 
+### Audit trail and encryption
+
+- **Every mutation is a command.** The function builders in `convex/functions.ts` (which every module uses
+  instead of `_generated/server`) record each mutation that changes data in `commands` (which function, who ran
+  it) and each document it inserted, updated or deleted in `changes` (the document before and after, and the fields
+  that changed). **Admin → Audit log → All changes** shows them as field-by-field diffs, with each record's full
+  history. Staff actions also appear in words under **Staff actions**. Append-only logs (the audit log, Jev's trail,
+  buyer activity) aren't logged again, and Better Auth's own tables (accounts, organisations) are covered by the
+  staff-action log rather than diffs.
+- **Sensitive fields are encrypted at rest** with AES-256-GCM (`convex/lib/encryption.ts`): SME contact details,
+  registration and CSD numbers and address, application proposals, and the text Jev read from documents. The same
+  builders encrypt on write and decrypt on read, so the rest of the code sees plaintext, and the change log only
+  stores ciphertext. Uploaded files are in Convex storage, which Convex encrypts at rest.
+
+The encryption key is `DATA_ENCRYPTION_KEY` on each Convex deployment. **Back it up** (`pnpm exec convex env get
+DATA_ENCRYPTION_KEY`, add `--prod` for production) somewhere safe such as a password manager: without it the
+encrypted fields can't be read, and changing it makes existing values unreadable. To set one up, or after restoring
+rows from before encryption:
+
+```bash
+pnpm exec convex env set DATA_ENCRYPTION_KEY "$(openssl rand -base64 32)"   # once per deployment
+pnpm exec convex run encryption:encryptExisting                             # encrypts any plaintext rows
+pnpm exec convex run encryption:status                                      # what's encrypted, read from storage
+```
+
 ## Stack
 
 - [Next.js 16](https://nextjs.org) (App Router, TypeScript, Cache Components) with [shadcn/ui](https://ui.shadcn.com) (radix-nova) and Tailwind CSS 4
@@ -62,6 +87,7 @@ pnpm exec convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
 pnpm exec convex env set SITE_URL http://localhost:3000
 pnpm exec convex env set RESEND_API_KEY re_...
 pnpm exec convex env set OPENROUTER_API_KEY sk-or-...   # Jev; the OpenRouter account needs credits
+pnpm exec convex env set DATA_ENCRYPTION_KEY "$(openssl rand -base64 32)"   # back this up
 # Optional. The default, onboarding@resend.dev, only delivers to your own Resend account's address
 pnpm exec convex env set AUTH_EMAIL_FROM "YES Hub <auth@your-verified-domain.com>"
 ```
@@ -138,6 +164,7 @@ pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'   # a
 | `SITE_URL` | Convex | The app's public URL; used in email links and to validate requests |
 | `RESEND_API_KEY` | Convex | Emails are sent from Convex, not Next.js |
 | `OPENROUTER_API_KEY` | Convex | Jev, for reviewing and deciding applications. The OpenRouter account needs credits: a key’s limit is only a cap |
+| `DATA_ENCRYPTION_KEY` | Convex | 32 random bytes, base64, for encrypting sensitive fields. Back it up: losing it loses that data |
 | `JEV_MODEL` | Convex | Optional. Defaults to `typesafe/jev-router` |
 | `SUPER_ADMIN_EMAILS` | Convex | Comma-separated emails that become YES Hub super admins when they sign up |
 | `AUTH_EMAIL_FROM` | Convex | Sender address on a domain verified in Resend. Until one is set, mail only reaches the Resend account owner, so sign-up doesn’t require email verification (see `convex/auth.ts`) |
@@ -151,6 +178,7 @@ pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'   # a
 | `pnpm dev:convex` | Convex dev deployment, watching `convex/` |
 | `pnpm build` | Production build |
 | `pnpm lint` | ESLint |
+| `pnpm format` | Prettier (`pnpm format:check` to check only) |
 | `pnpm typecheck` | Route type generation + `tsc` |
 | `pnpm auth:generate` | Regenerate the Better Auth schema in `convex/betterAuth` after changing auth plugins or fields |
 
@@ -194,6 +222,8 @@ sign-in to work. Until then, `git.deploymentEnabled` in `vercel.json` only deplo
 | `convex/betterAuth/` | Locally installed Better Auth component: generated schema, adapter, component functions |
 | `convex/admin.ts` | The admin area's queries and mutations (SMEs, organisations, staff), each checked against the caller's access level |
 | `convex/platform.ts`, `convex/audit.ts` | Account state, staff roles and the audit log |
+| `convex/functions.ts` | The query and mutation builders every module uses: command log and field encryption |
+| `convex/lib/encryption.ts`, `convex/encryption.ts` | AES-256-GCM field encryption, and its migration and status |
 | `convex/seed.ts` | Development sample data |
 | `convex/review.ts`, `convex/reviewActions.ts` | Jev’s review and decision workflows, the paper trail, and the Jev calls |
 | `convex/lib/jev.ts`, `convex/lib/procurement.ts` | The OpenRouter client, and the price and B-BBEE points formulas |
