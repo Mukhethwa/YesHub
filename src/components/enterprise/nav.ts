@@ -12,7 +12,7 @@ import type { PortalNavItem } from "@/components/portal/types";
 
 export const ENTERPRISE_NAV = {
   overview: { href: "/dashboard", label: "Overview", icon: LayoutDashboardIcon },
-  opportunities: { href: "/dashboard/opportunities", label: "Opportunities", icon: BriefcaseBusinessIcon },
+  opportunities: { href: "/dashboard/opportunities", label: "Listings", icon: BriefcaseBusinessIcon },
   suppliers: { href: "/dashboard/suppliers", label: "Find suppliers", icon: SearchCheckIcon },
   shortlists: { href: "/dashboard/shortlists", label: "Shortlists", icon: ListChecksIcon },
   team: { href: "/dashboard/team", label: "Team", icon: UsersIcon },

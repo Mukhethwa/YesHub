@@ -54,7 +54,7 @@ function matches(row: Parameters<typeof phaseOf>[0], filter: Filter) {
   return phase === filter;
 }
 
-/** The Opportunities page: the full list, or one opportunity when the URL has ?id=. */
+/** The Listings page: the full list, or one listing when the URL has ?id=. */
 export function OpportunitiesView() {
   const params = useSearchParams();
   const id = params.get("id");
@@ -105,15 +105,15 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
 
   return (
     <div className="space-y-5">
-      <AdminPageHeader title="Opportunities">
+      <AdminPageHeader title="Listings">
         <Button asChild>
-          <Link href="/dashboard/opportunities/new">New opportunity</Link>
+          <Link href="/dashboard/opportunities/new">New listing</Link>
         </Button>
       </AdminPageHeader>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterTabs
-          label="Filter opportunities"
+          label="Filter listings"
           value={filter}
           onChange={setFilter}
           options={[
@@ -144,7 +144,7 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
           <Input
             type="search"
             placeholder="Search by title or reference"
-            aria-label="Search opportunities"
+            aria-label="Search listings"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="sm:w-72"
@@ -155,13 +155,13 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
       <div className="overflow-hidden rounded-xl border bg-card">
         {visible.length === 0 ? (
           <p className="px-6 py-10 text-center text-sm text-muted-foreground">
-            {rows.length === 0 ? "You haven’t listed any opportunities yet." : "No opportunities match."}
+            {rows.length === 0 ? "You haven’t published any listings yet." : "No listings match."}
           </p>
         ) : (
           <OpportunityTable rows={pagination.rows} />
         )}
       </div>
-      <TablePagination pagination={pagination} noun="opportunities" />
+      <TablePagination pagination={pagination} noun="listings" />
     </div>
   );
 }
@@ -195,12 +195,12 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
   if (detail === null) {
     return (
       <div className="py-24 text-center">
-        <p className="font-medium">This opportunity isn’t available</p>
+        <p className="font-medium">This listing isn’t available</p>
         <p className="mt-1 text-sm text-muted-foreground">
           It may have been removed, or it belongs to another organisation.
         </p>
         <Button variant="outline" className="mt-4" asChild>
-          <Link href="/dashboard/opportunities">All opportunities</Link>
+          <Link href="/dashboard/opportunities">All listings</Link>
         </Button>
       </div>
     );
@@ -218,7 +218,7 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
     <div className="space-y-6">
       <Part id="opp-back">
         <Button variant="link" size="sm" className="-ml-3 text-muted-foreground" asChild>
-          <Link href="/dashboard/opportunities">All opportunities</Link>
+          <Link href="/dashboard/opportunities">All listings</Link>
         </Button>
       </Part>
 
@@ -387,7 +387,7 @@ function ListingCard({ detail }: { detail: Detail }) {
       <Card>
         <CardHeader>
           <CardTitle>Listing</CardTitle>
-          <CardDescription>This opportunity was created before full listings were captured.</CardDescription>
+          <CardDescription>This listing was created before its full details were captured.</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -472,7 +472,7 @@ function ReleasedDocumentsCard({ detail }: { detail: Detail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Documents released with this opportunity</CardTitle>
+        <CardTitle>Documents released with this listing</CardTitle>
         <CardDescription>
           The documents SMEs download to respond: the RFQ or terms of reference, specifications, pricing schedules and
           forms.

@@ -852,7 +852,7 @@ export const requestDecision = mutation({
     const enterprise = await getEnterprise(ctx);
     const opportunity = await ctx.db.get("opportunities", args.opportunityId);
     if (!enterprise || !opportunity || opportunity.organizationId !== enterprise.organization.id) {
-      throw new ConvexError("That opportunity isn’t available.");
+      throw new ConvexError("That listing isn’t available.");
     }
     if (!canManage(enterprise.organization.role)) throw new ConvexError("Only owners and admins can run shortlisting.");
     if (enterprise.organization.verificationStatus !== "verified") {
@@ -866,7 +866,7 @@ export const requestDecision = mutation({
       .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
       .order("desc")
       .take(1);
-    if (runs[0]?.status === "running") throw new ConvexError("Shortlisting is already running for this opportunity.");
+    if (runs[0]?.status === "running") throw new ConvexError("Shortlisting is already running for this listing.");
     const applications = await ctx.db
       .query("applications")
       .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
