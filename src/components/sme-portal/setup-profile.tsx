@@ -67,7 +67,7 @@ export function ClearDemoButton() {
   if (!isDev) return null;
 
   return (
-    <div className="mx-auto max-w-6xl pt-2 text-right">
+    <div className="scene-hide mx-auto max-w-6xl pt-2 text-right">
       <Button variant="link" size="sm" className="text-muted-foreground" onClick={() => clear()}>
         Dev: remove sample business
       </Button>

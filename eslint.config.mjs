@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "convex/**/_generated/**",
+    // Local video exports and their helpers (gitignored)
+    "renders/**",
   ]),
   {
     // Convex functions must come from convex/functions.ts, which logs every change and encrypts sensitive

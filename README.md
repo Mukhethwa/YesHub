@@ -23,16 +23,24 @@ Matching uses what SMEs put in their profile, so a complete, current profile mea
 
 MASLink is the fairness layer between buyers and SMEs. SMEs apply with a quoted price, a short proposal and
 supporting documents (stored in Convex file storage). **Jev**, the evaluation engine
-([TypeSafe’s router model](https://openrouter.ai/typesafe/jev-router) on OpenRouter), works in two durable
+([TypeSafe’s System One model](https://docs.typesafe.ai/api), called through TypeSafe’s own API), works in two durable
 [Convex workflows](https://www.convex.dev/components/workflow) (`convex/review.ts`):
 
-1. **Review**, when the SME applies: Jev reads every document behind the application (the profile’s compliance
-   documents the opportunity asks for, and the files sent with it), records what each says and any mismatch with
-   the profile, then scores the application against each of the buyer’s evaluation criteria with evidence.
+   Jev doesn’t write text: it answers typed questions with probabilities (yes/no, a choice, or a level on a rubric
+   MASLink defines), and every reason on the record is composed from those answers, so each one can be traced back
+   to the question and the probability it rests on (`convex/reviewActions.ts`).
+
+1. **Review**, when the SME applies: Jev checks every document behind the application (the profile’s compliance
+   documents the opportunity asks for, and the files sent with it): what it is, whether it’s issued to the SME and
+   still valid, whether it shows the profile’s B-BBEE level, and whether it’s complete or marked as a sample. Then
+   it answers each of the buyer’s evaluation criteria: gates and B-BBEE as yes/no, functionality and other criteria
+   on a five-level evidence rubric (0–100), plus an overall fit.
 2. **Shortlisting**, when the buyer asks: price and B-BBEE points are calculated with the preferential procurement
-   formulas (80/20 or 90/10, `convex/lib/procurement.ts`), and Jev recommends a shortlist of the size the buyer
-   chose, with written reasons for every applicant. Guardrails make sure only eligible applicants are shortlisted
-   and never more than the limit. **Jev never awards:** the buyer decides from the shortlist.
+   formulas (80/20 or 90/10, `convex/lib/procurement.ts`), and the shortlist follows the points ranking up to the
+   size the buyer chose. Jev’s only judgement here is whether an applicant’s recorded concern is serious enough to
+   keep it off; nobody is held back without a concern they can read. Every applicant gets a reason, and guardrails
+   make sure only eligible applicants are shortlisted and never more than the limit. **Jev never awards:** the
+   buyer decides from the shortlist.
 3. **The buyer’s decision**: shortlisting, removing, declining and awarding (owners and admins, from the shortlist
    only) each require a written reason, which goes on the record and to the SME.
 
@@ -101,7 +109,7 @@ Leave that running (it pushes `convex/` as you save), then set the backend's env
 pnpm exec convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
 pnpm exec convex env set SITE_URL http://localhost:3000
 pnpm exec convex env set RESEND_API_KEY re_...
-pnpm exec convex env set OPENROUTER_API_KEY sk-or-...   # Jev; the OpenRouter account needs credits
+pnpm exec convex env set TYPESAFE_API_KEY apikey_...    # Jev, from console.typesafe.ai; the account needs credits
 pnpm exec convex env set DATA_ENCRYPTION_KEY "$(openssl rand -base64 32)"   # back this up
 # Optional. The default, onboarding@resend.dev, only delivers to your own Resend account's address
 pnpm exec convex env set AUTH_EMAIL_FROM "MASLink <auth@your-verified-domain.com>"
@@ -127,20 +135,20 @@ pnpm exec convex run seed:devData '{"inviterEmail":"you@example.com"}'   # invit
 
 It refuses to run unless the deployment's `SITE_URL` is on localhost (or `ALLOW_SEED` is `true`, for a shared test
 deployment; unset it again afterwards), and it's safe to re-run. Every seed account
-uses the password in `SEED_PASSWORD` (`convex/seed.ts`); `naledi@yeshub.test` is a super admin, `musa@`,
-`lindiwe@` and `tumi@yeshub.test` are an admin, a moderator and a viewer.
+uses the password in `SEED_PASSWORD` (`convex/seed.ts`); `naledi@maslink.test` is a super admin, `musa@`,
+`lindiwe@` and `tumi@maslink.test` are an admin, a moderator and a viewer.
 
-Seeded applications are scored by the rules until Jev reviews them. To have Jev review them (about 5 US cents each):
+Seeded applications are scored by the rules until Jev reviews them. To have Jev review them (a fraction of a cent each):
 
 ```bash
 pnpm exec convex run seed:sampleProposals     # sample quotes and proposals for Jev to score
-pnpm exec convex run review:reviewExisting    # also retries failed reviews
+pnpm exec convex run review:reviewExisting    # also retries failed reviews; add '{"force": true}' to review again
 ```
 
 ### Accounts and organisations
 
 - **SMEs** are business accounts: one account, one SME profile, no teammates.
-- **Enterprises** (Capitec, Boxer, …) are Better Auth organisations with members, teams and invitations. Anyone can
+- **Enterprises** (companies and funders) are Better Auth organisations with members, teams and invitations. Anyone can
   create one, but it stays **unverified** until MASLink staff approve it, and only verified organisations can post
   opportunities.
 - **MASLink staff** are members of the staff organisation (slug `yeshub`). Their role there is their access level
@@ -178,9 +186,9 @@ pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'   # a
 | `BETTER_AUTH_SECRET` | Convex | Signs sessions and tokens |
 | `SITE_URL` | Convex | The app's public URL; used in email links and to validate requests |
 | `RESEND_API_KEY` | Convex | Emails are sent from Convex, not Next.js |
-| `OPENROUTER_API_KEY` | Convex | Jev, for reviewing and deciding applications. The OpenRouter account needs credits: a key’s limit is only a cap |
+| `TYPESAFE_API_KEY` | Convex | Jev, for reviewing and shortlisting applications (TypeSafe’s API, billed on input tokens). The account needs credits |
 | `DATA_ENCRYPTION_KEY` | Convex | 32 random bytes, base64, for encrypting sensitive fields. Back it up: losing it loses that data |
-| `JEV_MODEL` | Convex | Optional. Defaults to `typesafe/jev-router` |
+| `JEV_MODEL` | Convex | Optional. Defaults to `jev-latest`; pin a version such as `jev-1.14.0` for repeatable reviews |
 | `SUPER_ADMIN_EMAILS` | Convex | Comma-separated emails that become MASLink super admins when they sign up |
 | `AUTH_EMAIL_FROM` | Convex | Sender address on a domain verified in Resend. Until one is set, mail only reaches the Resend account owner, so sign-up doesn’t require email verification (see `convex/auth.ts`) |
 | `CONVEX_DEPLOY_KEY` | Vercel | See below |
@@ -241,7 +249,7 @@ sign-in to work. Until then, `git.deploymentEnabled` in `vercel.json` only deplo
 | `convex/lib/encryption.ts`, `convex/encryption.ts` | AES-256-GCM field encryption, and its migration and status |
 | `convex/seed.ts` | Development sample data |
 | `convex/review.ts`, `convex/reviewActions.ts` | Jev’s review and decision workflows, the paper trail, and the Jev calls |
-| `convex/lib/jev.ts`, `convex/lib/procurement.ts` | The OpenRouter client, and the price and B-BBEE points formulas |
+| `convex/lib/jev.ts`, `convex/lib/procurement.ts` | The TypeSafe client, and the price and B-BBEE points formulas |
 | `convex/email.tsx` | Auth emails via Resend, using `@better-auth-ui/react/email` templates |
 | `convex/http.ts` | Mounts the Better Auth HTTP routes on Convex |
 | `src/app/api/auth/[...all]/route.ts` | Proxies `/api/auth/*` from Next.js to Convex |

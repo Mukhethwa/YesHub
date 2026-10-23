@@ -1,4 +1,12 @@
-import { AwardIcon, ClipboardListIcon, ClockIcon, FileTextIcon, HandCoinsIcon, type LucideIcon } from "lucide-react";
+import {
+  AwardIcon,
+  BanIcon,
+  ClipboardListIcon,
+  ClockIcon,
+  FileTextIcon,
+  HandCoinsIcon,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Status, type Tone } from "@/components/app/status";
 import { cn } from "@/lib/utils";
@@ -17,11 +25,12 @@ export function daysUntil(isoDate: string) {
   return Math.round((Date.parse(isoDate) - Date.parse(todayIso())) / 86_400_000);
 }
 
-export type Phase = "open" | "closing" | "closed" | "draft" | "awarded";
+export type Phase = "open" | "closing" | "closed" | "draft" | "awarded" | "cancelled";
 
 /** Where an opportunity is in its life: closing means it closes within a week. */
 export function phaseOf(opportunity: { status: OpportunityStatus; closesAt: string }): Phase {
-  if (opportunity.status === "draft" || opportunity.status === "awarded") return opportunity.status;
+  if (opportunity.status === "draft" || opportunity.status === "awarded" || opportunity.status === "cancelled")
+    return opportunity.status;
   const days = daysUntil(opportunity.closesAt);
   if (opportunity.status === "closed" || days < 0) return "closed";
   return days <= 7 ? "closing" : "open";
@@ -54,7 +63,11 @@ const PHASES: Record<Phase, { label: string; tone: Tone; icon?: LucideIcon }> = 
   closed: { label: "Closed", tone: "neutral" },
   draft: { label: "Draft", tone: "neutral" },
   awarded: { label: "Awarded", tone: "info", icon: AwardIcon },
+  cancelled: { label: "Cancelled", tone: "danger", icon: BanIcon },
 };
+
+/** Opportunities that no longer take applications: past their closing date, awarded or cancelled. */
+export const isFinished = (phase: Phase) => phase === "closed" || phase === "awarded" || phase === "cancelled";
 
 export function PhasePill({ phase }: { phase: Phase }) {
   const { label, tone, icon } = PHASES[phase];

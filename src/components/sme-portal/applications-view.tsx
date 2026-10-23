@@ -8,7 +8,7 @@ import { useMemo, useState } from "react";
 
 import { FilterTabs, formatDateTime } from "@/components/admin/shared";
 import { useBreadcrumb } from "@/components/portal/breadcrumbs";
-import { closingLabel, formatRand, KIND_LABELS, PhasePill, phaseOf } from "@/components/enterprise/tenders";
+import { closingLabel, formatRand, KIND_LABELS, PhasePill, isFinished, phaseOf } from "@/components/enterprise/tenders";
 import { CriteriaList, DecisionPill, ReviewStatus } from "@/components/review/review-parts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { evaluateApplication, type EvaluableOpportunity } from "../../../convex/
 import { rand } from "../../../convex/lib/procurement";
 import { ApplicationStatusPill, ApplyButton, ChecksList, FitPill, reachLabel, reachOf } from "./opportunities-shared";
 import { SectionHeader } from "./require-sme";
+import { TenderFeedback, TenderPreview } from "./tender-feedback";
 
 /** The Opportunities tab: the SME's applications, or one opportunity when the URL has ?id=. */
 export function ApplicationsView({ sme }: { sme: SmeProfile }) {
@@ -35,7 +36,7 @@ export function ApplicationsView({ sme }: { sme: SmeProfile }) {
 type Row = NonNullable<FunctionReturnType<typeof api.smeOpportunities.myApplications>>[number];
 type Filter = "all" | "active" | "shortlisted" | "past";
 
-const isPast = (row: Row) => phaseOf(row.opportunity) === "closed" || row.application.status === "declined";
+const isPast = (row: Row) => isFinished(phaseOf(row.opportunity)) || row.application.status === "declined";
 
 function matchesFilter(row: Row, filter: Filter) {
   switch (filter) {
@@ -286,6 +287,15 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
         </p>
       </div>
 
+      {o.cancellation && (
+        <div className="rounded-md border-l-4 border-l-destructive bg-destructive/10 p-4 text-sm">
+          <p className="font-medium">
+            {o.organizationName} cancelled this opportunity on {formatDate(o.cancellation.at)}
+          </p>
+          <p className="mt-1 text-muted-foreground">Their reason: {o.cancellation.reason}</p>
+        </div>
+      )}
+
       <dl className="grid gap-x-6 gap-y-4 rounded-xl border bg-card p-5 sm:grid-cols-2 lg:grid-cols-4">
         <Fact label="Closes">
           {formatDate(o.closesAt)}{" "}
@@ -350,7 +360,7 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
               )}
             </ol>
           ) : (
-            phase !== "closed" && (
+            !isFinished(phase) && (
               <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   {evaluation.qualifies
@@ -369,6 +379,31 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
           )}
         </CardContent>
       </Card>
+
+      {o.tender && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{a ? "Against the tender’s requirements" : "What the tender asks for"}</CardTitle>
+            <CardDescription>
+              {a
+                ? "What your application already has, and what you still need to qualify and score well."
+                : "Mandatory requirements, scored criteria and the documents to return, from the buyer’s tender."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {a ? (
+              <TenderFeedback
+                tender={o.tender}
+                evaluation={a.evaluation}
+                application={a}
+                canChange={!isFinished(phase) && a.status === "submitted" && !a.decision}
+              />
+            ) : (
+              <TenderPreview tender={o.tender} sme={sme} />
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {o.listing && (
         <Card>

@@ -1,0 +1,823 @@
+{
+  "version": 1,
+  "id": "steps",
+  "title": "How it works",
+  "description": "Post, match, evaluate and decide arrive from four directions and step forward in turn.",
+  "definition": {
+    "scene": {
+      "version": 3,
+      "camera": {
+        "rotateZ": 0,
+        "x": -220,
+        "y": 70,
+        "z": -100,
+        "perspective": 1600,
+        "rotateX": 14,
+        "rotateY": -22
+      },
+      "focus": {
+        "distance": 1500,
+        "fStop": 5.6,
+        "focalLength": 100,
+        "maxBlur": 6
+      },
+      "nodes": [
+        {
+          "id": "board"
+        },
+        {
+          "id": "heading",
+          "parentId": "board"
+        },
+        {
+          "id": "step-0",
+          "parentId": "board"
+        },
+        {
+          "id": "step-1",
+          "parentId": "board"
+        },
+        {
+          "id": "step-2",
+          "parentId": "board"
+        },
+        {
+          "id": "step-3",
+          "parentId": "board"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 5200,
+      "speed": 0.65,
+      "tracks": [
+        {
+          "target": {
+            "kind": "surface",
+            "id": "heading"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -140,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1300,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "heading"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 900,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-0"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -760,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 250,
+              "value": -760,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1750,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-0"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 250,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1750,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-0"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -55,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 250,
+              "value": -55,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1750,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-0"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 250,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1750,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-0"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -420,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 250,
+              "value": -420,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1750,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3000,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3400,
+              "value": 170,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3900,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-0"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 250,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 950,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-1"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 580,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2080,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-1"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 560,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 580,
+              "value": 560,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2080,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-1"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 580,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2080,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-1"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 55,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 580,
+              "value": 55,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2080,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-1"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -420,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 580,
+              "value": -420,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2080,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3300,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3700,
+              "value": 170,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4200,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-1"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 580,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1280,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-2"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 910,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2410,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-2"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -560,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 910,
+              "value": -560,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2410,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-2"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 910,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2410,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-2"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -55,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 910,
+              "value": -55,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2410,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-2"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -420,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 910,
+              "value": -420,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2410,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3600,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4000,
+              "value": 170,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4500,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-2"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 910,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1610,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-3"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 760,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1240,
+              "value": 760,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2740,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-3"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1240,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2740,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-3"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 55,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1240,
+              "value": 55,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2740,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-3"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1240,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2740,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-3"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -420,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1240,
+              "value": -420,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2740,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3900,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4300,
+              "value": 170,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4800,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "step-3"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1240,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1940,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -220,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5200,
+              "value": 170,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 70,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5200,
+              "value": -30,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -100,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5200,
+              "value": -300,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -22,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5200,
+              "value": 12,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 14,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5200,
+              "value": 6,
+              "easing": "cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    "width": 1920,
+    "height": 1080
+  }
+}

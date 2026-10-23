@@ -1,138 +1,112 @@
 /*
- * Jev, TypeSafe's router model on OpenRouter: it picks a model and reasoning effort per request. Every call
- * returns what the paper trail needs (the model it chose, OpenRouter's generation id and the cost) with the
- * parsed JSON answer.
+ * Jev, TypeSafe's System One model, through TypeSafe's own API. Jev doesn't write text: it answers typed
+ * questions about a piece of content (`state`) with probabilities, so every judgement on the paper trail is
+ * a yes/no probability, a choice with its confidence, or a level on a rubric we wrote. The reasons people
+ * read are composed from those answers and the buyer's criteria (reviewActions.ts).
  *
- * Needs OPENROUTER_API_KEY on the Convex deployment. JEV_MODEL overrides the model (default
- * typesafe/jev-router).
+ * Needs TYPESAFE_API_KEY on the Convex deployment. JEV_MODEL overrides the model (default jev-latest).
  */
 
-const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+const ENDPOINT = "https://api.typesafe.ai/v1/systemone";
+/** TypeSafe bills input tokens only, at $42 per billion (docs.typesafe.ai/models). */
+const USD_PER_INPUT_TOKEN = 42 / 1_000_000_000;
+/** Above this, the request asks for the long-context limits (slower, so only when needed). */
+const LONG_CONTEXT_CHARS = 100_000;
 
-type Content = string | ({ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } })[];
+export type Question =
+  | { type: "noul"; instructions?: string; criteria?: { true?: string; false?: string } }
+  | { type: "choice"; instructions?: string; criteria: Record<string, string> }
+  | { type: "score"; instructions?: string; criteria: string[] };
 
-export type JevResult<T> = {
-  answer: T;
+export type NoulAnswer = { type: "noul"; noul: number };
+export type ChoiceAnswer = {
+  type: "choice";
+  choice: string;
+  confidence: number;
+  probabilities: Record<string, number>;
+};
+export type ScoreAnswer = {
+  type: "score";
+  score: number;
+  confidence: number;
+  legend: Record<string, string>;
+  probabilities: Record<string, number>;
+};
+export type Answer = NoulAnswer | ChoiceAnswer | ScoreAnswer;
+
+/** The answers to one request, keyed like its questions, with what the paper trail records about the call. */
+export type JevResult<Q extends Record<string, Question>> = {
+  answers: {
+    [K in keyof Q]: Q[K]["type"] extends "noul"
+      ? NoulAnswer
+      : Q[K]["type"] extends "choice"
+        ? ChoiceAnswer
+        : ScoreAnswer;
+  };
   model: string;
-  generationId?: string;
-  costUsd?: number;
+  inputTokens: number;
+  costUsd: number;
 };
 
-/** A failure worth retrying (rate limits, provider outages, an answer that wasn't JSON). */
+/** A failure worth retrying (rate limits, overload, outages, a malformed answer). */
 export class JevError extends Error {}
 
-/** The first JSON object in a reply, tolerating code fences and text around it. */
-export function parseJsonObject(text: string): unknown {
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text);
-  const body = fenced ? fenced[1] : text;
-  const start = body.indexOf("{");
-  const end = body.lastIndexOf("}");
-  if (start === -1 || end <= start) throw new JevError("The review’s answer wasn’t JSON.");
-  try {
-    return JSON.parse(body.slice(start, end + 1));
-  } catch {
-    throw new JevError("The review’s answer wasn’t valid JSON.");
-  }
-}
-
-export async function askJev<T>({
-  system,
-  user,
-  maxTokens,
-  parse,
+export async function askJev<Q extends Record<string, Question>>({
+  state,
+  questions,
 }: {
-  system: string;
-  user: Content;
-  maxTokens: number;
-  /** Checks the shape of the answer and returns it typed; throw to have the step retried. */
-  parse: (value: unknown) => T;
-}): Promise<JevResult<T>> {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) throw new Error("OPENROUTER_API_KEY isn’t set on this Convex deployment.");
+  /** What every question is about: the document, application or shortlist, as text or JSON. */
+  state: string | Record<string, unknown>;
+  questions: Q;
+}): Promise<JevResult<Q>> {
+  const key = process.env.TYPESAFE_API_KEY;
+  if (!key) throw new Error("TYPESAFE_API_KEY isn’t set on this Convex deployment.");
 
+  const body = JSON.stringify({ model: process.env.JEV_MODEL || "jev-latest", state, questions });
   const res = await fetch(ENDPOINT, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
-      "HTTP-Referer": process.env.SITE_URL ?? "https://yeshub-app.vercel.app",
-      "X-Title": "MASLink",
+      ...(body.length > LONG_CONTEXT_CHARS ? { "TypeSafe-Danger-Zone-Long-Context": "true" } : {}),
     },
-    body: JSON.stringify({
-      model: process.env.JEV_MODEL || "typesafe/jev-router",
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      // Router models may reason before answering; reasoning tokens count towards this
-      max_tokens: maxTokens,
-      temperature: 0,
-      usage: { include: true },
-    }),
+    body,
   });
 
-  const body = (await res.json().catch(() => null)) as {
-    id?: string;
+  const json = (await res.json().catch(() => null)) as {
     model?: string;
-    choices?: { message?: { content?: string | null }; finish_reason?: string }[];
-    usage?: { cost?: number };
-    error?: { message?: string };
+    answers?: Record<string, Answer>;
+    usage?: { input_tokens?: number };
+    error?: { message?: string } | string;
+    message?: string;
   } | null;
+  const message = typeof json?.error === "string" ? json.error : (json?.error?.message ?? json?.message ?? "");
 
+  if (res.status === 401) throw new Error("The review service rejected MASLink’s API key (TypeSafe 401).");
   if (res.status === 402) {
     throw new JevError(
-      "The review service is out of credits (OpenRouter). MASLink needs to add credits, then review again.",
+      "The review service is out of credits (TypeSafe). MASLink needs to add credits, then review again.",
     );
   }
-  if (!res.ok || !body) {
-    throw new JevError(`OpenRouter returned ${res.status}${body?.error?.message ? `: ${body.error.message}` : ""}`);
+  if (!res.ok || !json?.answers) {
+    throw new JevError(`TypeSafe returned ${res.status}${message ? `: ${message}` : ""}`);
   }
-  const content = body.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new JevError(`The review returned no answer (${body.choices?.[0]?.finish_reason ?? "no choices"}).`);
+  for (const [name, question] of Object.entries(questions)) {
+    if (json.answers[name]?.type !== question.type)
+      throw new JevError(`The review gave no ${question.type} answer for ${name}.`);
   }
 
+  const inputTokens = json.usage?.input_tokens ?? 0;
   return {
-    answer: parse(parseJsonObject(content)),
-    model: body.model ?? "unknown",
-    generationId: body.id,
-    costUsd: body.usage?.cost,
+    answers: json.answers as JevResult<Q>["answers"],
+    model: json.model ?? "jev",
+    inputTokens,
+    costUsd: inputTokens * USD_PER_INPUT_TOKEN,
   };
 }
 
-/* Small validators for Jev's answers. They coerce where it's safe and throw where it isn't. */
-
-export function asObject(value: unknown, what: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new JevError(`Expected ${what} to be an object.`);
-  return value as Record<string, unknown>;
-}
-
-export function asString(value: unknown, fallback = ""): string {
-  if (typeof value === "string") return value.trim();
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return fallback;
-}
-
-export function asStrings(value: unknown, limit = 20): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((v) => asString(v))
-    .filter(Boolean)
-    .slice(0, limit);
-}
-
-export function asScore(value: unknown): number | undefined {
-  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
-  return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : undefined;
-}
-
-export function asBoolean(value: unknown): boolean | undefined {
-  if (typeof value === "boolean") return value;
-  if (value === "true" || value === "yes") return true;
-  if (value === "false" || value === "no") return false;
-  return undefined;
-}
+/** A probability as a whole percentage, for reasons people read: 0.823 → "82%". */
+export const percent = (p: number) => `${Math.round(Math.max(0, Math.min(1, p)) * 100)}%`;
 
 /** Trims long strings before they go to the database. */
 export const clip = (text: string, max = 2000) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);

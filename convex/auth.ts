@@ -295,7 +295,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         schema: {
           organization: {
             additionalFields: {
-              /** "enterprise" (Capitec, Boxer, …) or "staff" (MASLink itself). Set by the server only. */
+              /** "enterprise" (a company or funder) or "staff" (MASLink itself). Set by the server only. */
               kind: { type: "string", required: false, defaultValue: "enterprise", input: false },
               /** Enterprises can't post opportunities until MASLink staff verify them. */
               verificationStatus: { type: "string", required: false, defaultValue: "unverified", input: false },

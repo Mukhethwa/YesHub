@@ -18,6 +18,7 @@ import type * as encryption from "../encryption.js";
 import type * as enterprise from "../enterprise.js";
 import type * as functions from "../functions.js";
 import type * as http from "../http.js";
+import type * as lib_audit from "../lib/audit.js";
 import type * as lib_encryption from "../lib/encryption.js";
 import type * as lib_evaluation from "../lib/evaluation.js";
 import type * as lib_jev from "../lib/jev.js";
@@ -26,6 +27,9 @@ import type * as lib_organizationSettings from "../lib/organizationSettings.js";
 import type * as lib_procurement from "../lib/procurement.js";
 import type * as lib_samplePdf from "../lib/samplePdf.js";
 import type * as lib_staff from "../lib/staff.js";
+import type * as lib_tender from "../lib/tender.js";
+import type * as opportunities from "../opportunities.js";
+import type * as organizationAudit from "../organizationAudit.js";
 import type * as platform from "../platform.js";
 import type * as public_ from "../public.js";
 import type * as rename from "../rename.js";
@@ -34,6 +38,8 @@ import type * as reviewActions from "../reviewActions.js";
 import type * as seed from "../seed.js";
 import type * as smeOpportunities from "../smeOpportunities.js";
 import type * as smes from "../smes.js";
+import type * as tenderActions from "../tenderActions.js";
+import type * as tenders from "../tenders.js";
 
 import type {
   ApiFromModules,
@@ -52,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   enterprise: typeof enterprise;
   functions: typeof functions;
   http: typeof http;
+  "lib/audit": typeof lib_audit;
   "lib/encryption": typeof lib_encryption;
   "lib/evaluation": typeof lib_evaluation;
   "lib/jev": typeof lib_jev;
@@ -60,6 +67,9 @@ declare const fullApi: ApiFromModules<{
   "lib/procurement": typeof lib_procurement;
   "lib/samplePdf": typeof lib_samplePdf;
   "lib/staff": typeof lib_staff;
+  "lib/tender": typeof lib_tender;
+  opportunities: typeof opportunities;
+  organizationAudit: typeof organizationAudit;
   platform: typeof platform;
   public: typeof public_;
   rename: typeof rename;
@@ -68,6 +78,8 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   smeOpportunities: typeof smeOpportunities;
   smes: typeof smes;
+  tenderActions: typeof tenderActions;
+  tenders: typeof tenders;
 }>;
 
 /**

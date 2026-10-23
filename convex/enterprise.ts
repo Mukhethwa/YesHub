@@ -8,6 +8,8 @@ import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
 import { components } from "./_generated/api";
 import { evaluateApplication } from "./lib/evaluation";
+import { auditValue, recordAudit } from "./lib/audit";
+import { registerView } from "./lib/tender";
 import { addTrail } from "./review";
 import {
   canManage,
@@ -35,7 +37,7 @@ import {
 const OPPORTUNITY_LIMIT = 100;
 
 /** The signed-in user's enterprise organisation, or null for SMEs, staff and anyone without one. */
-async function getEnterprise(ctx: QueryCtx) {
+export async function getEnterprise(ctx: QueryCtx) {
   const user = await authComponent.safeGetAuthUser(ctx);
   if (!user) return null;
   const organization = (await organizationsFor(ctx, user._id)).find((org) => org.kind === "enterprise");
@@ -50,7 +52,7 @@ async function applicationsFor(ctx: QueryCtx, opportunity: Doc<"opportunities">)
 }
 
 /** The organisation's members, departments (Better Auth teams) and pending invitations. */
-async function organizationDetail(ctx: QueryCtx, organizationId: string) {
+export async function organizationDetail(ctx: QueryCtx, organizationId: string) {
   const detail = await ctx.runQuery(components.betterAuth.organizations.detail, { organizationId });
   return detail ?? { members: [], teams: [], invitations: [] };
 }
@@ -58,7 +60,7 @@ async function organizationDetail(ctx: QueryCtx, organizationId: string) {
 type OrganizationDetail = Awaited<ReturnType<typeof organizationDetail>>;
 
 /** The departments the signed-in user belongs to. */
-function teamIdsOf(detail: OrganizationDetail, userId: string) {
+export function teamIdsOf(detail: OrganizationDetail, userId: string) {
   return detail.members.find((m) => m.userId === userId)?.teamIds ?? [];
 }
 
@@ -213,6 +215,9 @@ export const opportunity = query({
       minBbbeeLevel: opportunity.minBbbeeLevel ?? null,
       requiredDocuments: opportunity.requiredDocuments,
       listing: opportunity.listing ?? null,
+      /** What the tender document requires, read by Jev and confirmed by the buyer. */
+      tender: registerView(opportunity.tender),
+      cancellation: opportunity.cancellation ?? null,
       documents,
       applicants,
       departments: detail.teams.map((t) => ({ id: t.id, name: t.name })),
@@ -246,7 +251,19 @@ export const setOpportunityDepartment = mutation({
       if (!fromOk || !toOk) throw new ConvexError("Only owners and admins can move work between other departments.");
     }
 
+    if ((opportunity.teamId ?? null) === args.teamId) return null;
     await ctx.db.patch("opportunities", opportunity._id, { teamId: args.teamId ?? undefined });
+    const teamName = (id?: string | null) => detail.teams.find((t) => t.id === id)?.name ?? "Unassigned";
+    await recordAudit(ctx, {
+      organizationId: opportunity.organizationId,
+      actorId: enterprise.user._id,
+      actorName: enterprise.user.name,
+      action: "opportunity.department_changed",
+      opportunityId: opportunity._id,
+      targetLabel: `${opportunity.reference}: ${opportunity.title}`,
+      summary: `${enterprise.user.name} moved ${opportunity.reference} to ${teamName(args.teamId)}.`,
+      changes: [{ field: "Department", before: teamName(opportunity.teamId), after: teamName(args.teamId) }],
+    });
     return null;
   },
 });
@@ -331,9 +348,37 @@ export const setApplicationStatus = mutation({
       }.`,
       details: [reason],
     });
+    const opportunity = await ctx.db.get("opportunities", application.opportunityId);
+    await recordAudit(ctx, {
+      organizationId: application.organizationId,
+      actorId: enterprise.user._id,
+      actorName: enterprise.user.name,
+      action: `application.${action}`,
+      opportunityId: application.opportunityId,
+      applicationId: application._id,
+      targetLabel: `${sme?.companyName ?? "Applicant"} on ${opportunity?.reference ?? "an opportunity"}`,
+      summary: `${enterprise.user.name} ${STATUS_VERBS[args.status]} ${sme?.companyName ?? "this applicant"}${
+        againstShortlisting ? ", against the shortlisting outcome" : ""
+      }.`,
+      reason,
+      changes: [
+        {
+          field: "Status",
+          before: APPLICATION_STATUS_WORDS[application.status],
+          after: APPLICATION_STATUS_WORDS[args.status],
+        },
+      ],
+    });
     return null;
   },
 });
+
+const APPLICATION_STATUS_WORDS = {
+  submitted: "Submitted",
+  shortlisted: "Shortlisted",
+  declined: "Declined",
+  awarded: "Awarded",
+} as const;
 
 /** Every SME the organisation has shortlisted, across all its opportunities, most recent first. */
 export const shortlist = query({
@@ -516,7 +561,7 @@ export const opportunityActivity = query({
 /* Documents released with an opportunity                                                                 */
 /* ------------------------------------------------------------------------------------------------------ */
 
-async function ownOpportunity(ctx: QueryCtx, opportunityId: Id<"opportunities">) {
+export async function ownOpportunity(ctx: QueryCtx, opportunityId: Id<"opportunities">) {
   const enterprise = await getEnterprise(ctx);
   const opportunity = await ctx.db.get("opportunities", opportunityId);
   if (!enterprise || !opportunity || opportunity.organizationId !== enterprise.organization.id) {
@@ -548,7 +593,7 @@ export const addOpportunityDocument = mutation({
       throw new ConvexError(problem);
     }
 
-    await ctx.db.insert("opportunityDocuments", {
+    const documentId = await ctx.db.insert("opportunityDocuments", {
       opportunityId: opportunity._id,
       organizationId: opportunity.organizationId,
       storageId: args.file.storageId,
@@ -558,7 +603,24 @@ export const addOpportunityDocument = mutation({
       type: meta.contentType!,
       uploadedBy: enterprise.user.name,
     });
-    return null;
+    await recordAudit(ctx, {
+      organizationId: opportunity.organizationId,
+      actorId: enterprise.user._id,
+      actorName: enterprise.user.name,
+      action: "document.released",
+      opportunityId: opportunity._id,
+      targetLabel: opportunity.reference + ": " + opportunity.title,
+      summary:
+        enterprise.user.name +
+        " released " +
+        args.file.name +
+        " (" +
+        (args.label.trim() || "Document") +
+        ") with " +
+        opportunity.reference +
+        ".",
+    });
+    return documentId;
   },
 });
 
@@ -567,9 +629,19 @@ export const removeOpportunityDocument = mutation({
   handler: async (ctx, args) => {
     const doc = await ctx.db.get("opportunityDocuments", args.documentId);
     if (!doc) return null;
-    await ownOpportunity(ctx, doc.opportunityId);
+    const { enterprise, opportunity } = await ownOpportunity(ctx, doc.opportunityId);
     await ctx.storage.delete(doc.storageId);
     await ctx.db.delete("opportunityDocuments", doc._id);
+    await recordAudit(ctx, {
+      organizationId: opportunity.organizationId,
+      actorId: enterprise.user._id,
+      actorName: enterprise.user.name,
+      action: "document.removed",
+      opportunityId: opportunity._id,
+      targetLabel: opportunity.reference + ": " + opportunity.title,
+      summary:
+        enterprise.user.name + " removed " + doc.name + " (" + doc.label + ") from " + opportunity.reference + ".",
+    });
     return null;
   },
 });
@@ -838,27 +910,56 @@ export const updateOrganizationSettings = mutation({
       throw new ConvexError("Enter a valid procurement email address.");
     }
 
-    await saveOrganizationSettings(
-      ctx,
-      enterprise.organization.id,
-      {
-        ...s,
-        about: s.about.trim().slice(0, 1000),
-        industry: s.industry.trim(),
-        website: s.website.trim(),
-        procurementEmail: s.procurementEmail.trim().toLowerCase(),
-        defaultRequiredDocuments: s.defaultRequiredDocuments.filter((key) => VALID_DOC_KEYS.has(key)),
-        defaultEvaluationCriteria: s.defaultEvaluationCriteria
-          .map((c) => c.trim())
-          .filter(Boolean)
-          .slice(0, 20),
-        defaultSubmission: s.defaultSubmission.trim().slice(0, 1000),
-      },
-      enterprise.user.name,
-    );
+    const before = await getOrganizationSettings(ctx, enterprise.organization.id);
+    const next = {
+      ...s,
+      about: s.about.trim().slice(0, 1000),
+      industry: s.industry.trim(),
+      website: s.website.trim(),
+      procurementEmail: s.procurementEmail.trim().toLowerCase(),
+      defaultRequiredDocuments: s.defaultRequiredDocuments.filter((key) => VALID_DOC_KEYS.has(key)),
+      defaultEvaluationCriteria: s.defaultEvaluationCriteria
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .slice(0, 20),
+      defaultSubmission: s.defaultSubmission.trim().slice(0, 1000),
+    };
+    await saveOrganizationSettings(ctx, enterprise.organization.id, next, enterprise.user.name);
+    // Settings decide who may shortlist and what applicants must hold, so each change is on the record
+    const changes = (Object.keys(next) as (keyof typeof next)[]).map((key) => ({
+      field: SETTING_NAMES[key] ?? key,
+      before: auditValue(before[key]),
+      after: auditValue(next[key]),
+    }));
+    if (changes.some((c) => c.before !== c.after)) {
+      await recordAudit(ctx, {
+        organizationId: enterprise.organization.id,
+        actorId: enterprise.user._id,
+        actorName: enterprise.user.name,
+        action: "settings.updated",
+        targetLabel: enterprise.organization.name,
+        summary: enterprise.user.name + " changed the organisation’s settings.",
+        changes,
+      });
+    }
     return null;
   },
 });
+
+/** Settings as the audit log names them. Keys without a name show as they are. */
+const SETTING_NAMES: Partial<Record<string, string>> = {
+  about: "About",
+  industry: "Industry",
+  website: "Website",
+  procurementEmail: "Procurement email",
+  defaultRequiredDocuments: "Default required documents",
+  defaultEvaluationCriteria: "Default evaluation criteria",
+  defaultSubmission: "Default submission instructions",
+  defaultMinBbbeeLevel: "Default minimum B-BBEE level",
+  retentionMonths: "Keep data for (months)",
+  shortlistAdminsOnly: "Only owners and admins shortlist",
+  defaultApplicantFilter: "Default applicant filter",
+};
 
 /** Saves the signed-in member's own notification preferences. */
 export const updatePreferences = mutation({

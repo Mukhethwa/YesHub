@@ -1,0 +1,304 @@
+{
+  "version": 1,
+  "id": "finale",
+  "title": "Get started",
+  "description": "The logo comes in towards the viewer and the call to action rises from depth beneath it.",
+  "definition": {
+    "scene": {
+      "version": 3,
+      "camera": {
+        "rotateZ": 0,
+        "x": -90,
+        "y": 0,
+        "z": -40,
+        "perspective": 1600,
+        "rotateX": 2,
+        "rotateY": -12
+      },
+      "focus": {
+        "distance": 1500,
+        "fStop": 8,
+        "focalLength": 100,
+        "maxBlur": 5
+      },
+      "nodes": [
+        {
+          "id": "stage"
+        },
+        {
+          "id": "logo",
+          "parentId": "stage"
+        },
+        {
+          "id": "cta-panel",
+          "parentId": "stage"
+        },
+        {
+          "id": "cta-copy",
+          "parentId": "cta-panel"
+        },
+        {
+          "id": "cta-actions",
+          "parentId": "cta-panel"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 4600,
+      "speed": 0.65,
+      "tracks": [
+        {
+          "target": {
+            "kind": "surface",
+            "id": "logo"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 220,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1900,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "logo"
+          },
+          "property": "scale",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 1.08,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1900,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "logo"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1100,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cta-panel"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -600,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 500,
+              "value": -600,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2600,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cta-panel"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 160,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 500,
+              "value": 160,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2600,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cta-panel"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 14,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 500,
+              "value": 14,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2600,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cta-copy"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2600,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3400,
+              "value": 60,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cta-actions"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2800,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3600,
+              "value": 100,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -40,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4600,
+              "value": -300,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -90,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4600,
+              "value": 60,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -8,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4600,
+              "value": 2,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 2,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4600,
+              "value": 8,
+              "easing": "cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    "width": 1920,
+    "height": 1080
+  }
+}

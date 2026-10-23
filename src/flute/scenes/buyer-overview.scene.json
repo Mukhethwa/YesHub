@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "id": "buyer-overview",
+  "title": "Buyer dashboard",
+  "description": "The buyer's dashboard: its figures come forward, then the opportunities that need attention.",
+  "definition": {
+    "scene": {
+      "version": 3,
+      "camera": {
+        "rotateZ": 0,
+        "x": 320,
+        "y": -90,
+        "z": -380,
+        "perspective": 1600,
+        "rotateX": 6,
+        "rotateY": 16
+      },
+      "focus": {
+        "distance": 1220,
+        "fStop": 5.6,
+        "focalLength": 100,
+        "maxBlur": 6
+      },
+      "nodes": [
+        {
+          "id": "app"
+        },
+        {
+          "id": "sidebar",
+          "parentId": "app"
+        },
+        {
+          "id": "topbar",
+          "parentId": "app"
+        },
+        {
+          "id": "page",
+          "parentId": "app"
+        },
+        {
+          "id": "page-heading",
+          "parentId": "page"
+        },
+        {
+          "id": "stats",
+          "parentId": "page"
+        },
+        {
+          "id": "section-applicants-per-opportunity",
+          "parentId": "page"
+        },
+        {
+          "id": "section-needs-attention",
+          "parentId": "page"
+        },
+        {
+          "id": "section-your-opportunities",
+          "parentId": "page"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 5000,
+      "speed": 0.65,
+      "tracks": [
+        {
+          "target": {
+            "kind": "surface",
+            "id": "app"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -300,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1800,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "stats"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1900,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2800,
+              "value": 70,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "section-needs-attention"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2600,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3600,
+              "value": 160,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "section-needs-attention"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2600,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3600,
+              "value": -30,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": -60,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 16,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": 10,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "focus"
+          },
+          "property": "distance",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 1220,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2600,
+              "value": 1220,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3600,
+              "value": 1060,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": 1060,
+              "easing": "cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    "width": 1920,
+    "height": 1080
+  }
+}

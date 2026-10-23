@@ -1,0 +1,487 @@
+{
+  "version": 1,
+  "id": "coverage",
+  "title": "Across South Africa",
+  "description": "Opens on the live province map, pulls back as the national figures drop in, then lifts the map out.",
+  "definition": {
+    "scene": {
+      "version": 3,
+      "camera": {
+        "rotateZ": 0,
+        "x": -170,
+        "y": 250,
+        "z": -780,
+        "perspective": 1600,
+        "rotateX": 16,
+        "rotateY": -24
+      },
+      "focus": {
+        "distance": 820,
+        "fStop": 4,
+        "focalLength": 100,
+        "maxBlur": 6
+      },
+      "nodes": [
+        {
+          "id": "coverage"
+        },
+        {
+          "id": "cov-heading",
+          "parentId": "coverage"
+        },
+        {
+          "id": "cov-live",
+          "parentId": "coverage"
+        },
+        {
+          "id": "cov-card",
+          "parentId": "coverage"
+        },
+        {
+          "id": "figure-0",
+          "parentId": "cov-card"
+        },
+        {
+          "id": "figure-1",
+          "parentId": "cov-card"
+        },
+        {
+          "id": "figure-2",
+          "parentId": "cov-card"
+        },
+        {
+          "id": "cov-toggle",
+          "parentId": "cov-card"
+        },
+        {
+          "id": "cov-map",
+          "parentId": "cov-card"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 5000,
+      "speed": 0.65,
+      "tracks": [
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cov-heading"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -90,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 600,
+              "value": -90,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1700,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cov-heading"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 600,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1300,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cov-live"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1000,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1600,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "figure-0"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 200,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 900,
+              "value": 200,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1800,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "figure-0"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 900,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1400,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "figure-1"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 200,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1150,
+              "value": 200,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2050,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "figure-1"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1150,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1650,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "figure-2"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 200,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1400,
+              "value": 200,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2300,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "figure-2"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1400,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1900,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cov-toggle"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1400,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2000,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cov-map"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2300,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3400,
+              "value": 270,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "cov-map"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2300,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3400,
+              "value": -7,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -170,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": 60,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 250,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": 20,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -780,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2400,
+              "value": -300,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": -370,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -24,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": -6,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 16,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": 8,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "focus"
+          },
+          "property": "distance",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 820,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2400,
+              "value": 1260,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2600,
+              "value": 1260,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3400,
+              "value": 990,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": 990,
+              "easing": "cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    "width": 1920,
+    "height": 1080
+  }
+}

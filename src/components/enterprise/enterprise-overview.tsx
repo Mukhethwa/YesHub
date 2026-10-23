@@ -15,10 +15,11 @@ import { Status } from "@/components/app/status";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Part } from "@/components/scene-parts";
 import { errorMessage } from "@/lib/errors";
 import { api } from "../../../convex/_generated/api";
 import { CreateOrganisation } from "./create-organisation";
-import { closingLabel, KindTile, percent, PhasePill, phaseOf, QualifiedShare } from "./tenders";
+import { closingLabel, KindTile, percent, PhasePill, isFinished, phaseOf, QualifiedShare } from "./tenders";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -33,8 +34,8 @@ const VERIFICATION: Record<string, { label: string; tone: "success" | "warning" 
 
 /** Open opportunities first, soonest closing first, then closed ones, most recently closed first. */
 function byUrgency(a: OpportunityRow, b: OpportunityRow) {
-  const aClosed = phaseOf(a) === "closed";
-  const bClosed = phaseOf(b) === "closed";
+  const aClosed = isFinished(phaseOf(a));
+  const bClosed = isFinished(phaseOf(b));
   if (aClosed !== bClosed) return aClosed ? 1 : -1;
   return aClosed ? b.closesAt.localeCompare(a.closesAt) : a.closesAt.localeCompare(b.closesAt);
 }
@@ -52,10 +53,10 @@ export function EnterpriseOverview() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
+      <Part id="page-heading" className="flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">{organization.name}</h1>
         <Status tone={verification.tone}>{verification.label}</Status>
-      </div>
+      </Part>
 
       {organization.verificationStatus !== "verified" && (
         // An alert, so it may be tinted (DESIGN.md)
@@ -275,7 +276,7 @@ function AddSamplesButton() {
 function RemoveSamplesButton() {
   const remove = useMutation(api.enterprise.removeSampleOpportunities);
   return (
-    <div className="text-right">
+    <div className="scene-hide text-right">
       <Button variant="link" size="sm" className="text-muted-foreground" onClick={() => remove()}>
         Dev: remove sample tenders
       </Button>

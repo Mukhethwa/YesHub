@@ -222,6 +222,19 @@ export const opportunity = query({
     return {
       ...publicOpportunity(opportunity, org?.name ?? "A buyer"),
       listing: opportunity.listing ?? null,
+      // Applicants see why the buyer withdrew it, but not who did
+      cancellation: opportunity.cancellation
+        ? { reason: opportunity.cancellation.reason, at: opportunity.cancellation.at }
+        : null,
+      // The tender's requirements, once the buyer has confirmed them: what the SME is checked against
+      tender:
+        opportunity.tender?.status === "confirmed"
+          ? {
+              requirements: opportunity.tender.requirements,
+              threshold: opportunity.tender.threshold ?? null,
+              documentName: opportunity.tender.documentName ?? null,
+            }
+          : null,
       documents,
       application: application ? await applicationSummary(ctx, application) : null,
     };
@@ -337,5 +350,67 @@ export const apply = mutation({
     });
     await startReview(ctx, applicationId);
     return applicationId;
+  },
+});
+
+/**
+ * Adds documents to an application while the opportunity is still open, so an SME can supply what the review
+ * said was missing. The application is reviewed again with everything it now holds.
+ */
+export const addDocuments = mutation({
+  args: {
+    applicationId: v.id("applications"),
+    attachments: v.array(v.object({ storageId: v.id("_storage"), label: v.string(), name: v.string() })),
+    /** Earlier files to drop, by position, e.g. an unsigned form being replaced. */
+    remove: v.optional(v.array(v.number())),
+  },
+  handler: async (ctx, args) => {
+    const discard = () => Promise.all(args.attachments.map((f) => ctx.storage.delete(f.storageId).catch(() => {})));
+    const sme = await getOwnSme(ctx);
+    const application = await ctx.db.get("applications", args.applicationId);
+    if (!sme || !application || application.smeId !== sme._id) {
+      await discard();
+      throw new ConvexError("That application isn’t available.");
+    }
+    const opportunity = await ctx.db.get("opportunities", application.opportunityId);
+    const problem =
+      !opportunity || opportunity.status !== "open" || opportunity.closesAt < todayInSouthAfrica()
+        ? "This opportunity has closed, so the application can’t change."
+        : application.status !== "submitted" || application.decision
+          ? "The buyer has already decided on this application."
+          : null;
+    if (problem || !opportunity) {
+      await discard();
+      throw new ConvexError(problem ?? "This opportunity has closed.");
+    }
+
+    const removed = new Set(args.remove ?? []);
+    const kept = (application.attachments ?? []).filter((_, i) => !removed.has(i));
+    if (kept.length + args.attachments.length > MAX_ATTACHMENTS) {
+      await discard();
+      throw new ConvexError(`An application holds at most ${MAX_ATTACHMENTS} documents. Remove one to make room.`);
+    }
+    const added = await checkAttachments(ctx, args.attachments);
+    const dropped = (application.attachments ?? []).filter((_, i) => removed.has(i));
+    await Promise.all(dropped.map((f) => ctx.storage.delete(f.storageId).catch(() => {})));
+
+    await ctx.db.patch("applications", application._id, {
+      attachments: [...kept, ...added],
+      evaluation: evaluateApplication(opportunity, sme),
+    });
+    await addTrail(ctx, {
+      opportunityId: opportunity._id,
+      organizationId: opportunity.organizationId,
+      applicationId: application._id,
+      kind: "submitted",
+      actor: sme.companyName,
+      summary: `${sme.companyName} updated its application${added.length ? `, adding ${added.length} document${added.length === 1 ? "" : "s"}` : ""}${dropped.length ? `${added.length ? " and" : ","} removing ${dropped.length}` : ""}.`,
+      details: [
+        ...added.map((a) => `Added ${a.label}: ${a.name}`),
+        ...dropped.map((a) => `Removed ${a.label}: ${a.name}`),
+      ],
+    });
+    await startReview(ctx, application._id);
+    return null;
   },
 });

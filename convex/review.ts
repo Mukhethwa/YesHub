@@ -1,4 +1,4 @@
-import { vResultValidator, vWorkflowId, WorkflowManager } from "@convex-dev/workflow";
+import { vResultValidator, type WorkflowId, vWorkflowId, WorkflowManager } from "@convex-dev/workflow";
 import { ConvexError, v } from "convex/values";
 
 import { DOCUMENTS } from "../src/lib/sme/documents";
@@ -12,8 +12,10 @@ import { APPLICATION_LIMIT } from "./lib/opportunities";
 import { canManage } from "./lib/organizationSettings";
 import { evaluateApplication } from "./lib/evaluation";
 import { bbbeePoints, classifyCriteria, pricePoints, rand } from "./lib/procurement";
+import { recordAudit } from "./lib/audit";
 import { getStaff } from "./lib/staff";
-import { criterionAssessment, type DocKey, type TrailKind } from "./schema";
+import { PROFILE_RETURNABLES, returnableKey } from "./lib/tender";
+import { criterionAssessment, type DocKey, requirementResult, type TrailKind } from "./schema";
 
 /*
  * Jev reviews applications and decides who is approved, as two durable workflows:
@@ -31,7 +33,7 @@ import { criterionAssessment, type DocKey, type TrailKind } from "./schema";
 
 export const workflow = new WorkflowManager(components.workflow, {
   workpoolOptions: {
-    // Jev calls go to OpenRouter; retry outages and unparseable answers a few times with backoff
+    // Jev calls go to TypeSafe; retry rate limits, overload and outages a few times with backoff
     retryActionsByDefault: true,
     defaultRetryBehavior: { maxAttempts: 4, initialBackoffMs: 2000, base: 2 },
     maxParallelism: 5,
@@ -90,6 +92,11 @@ const vJevCall = {
 
 /** Starts Jev's review of an application. Call from the mutation that creates or resubmits it. */
 export async function startReview(ctx: MutationCtx, applicationId: Id<"applications">) {
+  // A review still running would finish after this one and overwrite it with an older reading
+  const running = await ctx.db.get("applications", applicationId);
+  if (running?.review?.status === "reviewing" && running.review.workflowId) {
+    await workflow.cancel(ctx, running.review.workflowId as WorkflowId).catch(() => {});
+  }
   const workflowId = await workflow.start(
     ctx,
     internal.review.reviewApplication,
@@ -143,14 +150,32 @@ export const reviewFinished = internalMutation({
   },
 });
 
+/** The tender register applications are checked against: only once the buyer has confirmed it. */
+export function confirmedTender(opportunity: Doc<"opportunities">) {
+  return opportunity.tender?.status === "confirmed" ? opportunity.tender : null;
+}
+
+/** The returnables in a confirmed register, as Jev looks for them in each document. */
+function returnablesOf(opportunity: Doc<"opportunities">) {
+  return (confirmedTender(opportunity)?.requirements ?? [])
+    .filter((r) => r.kind === "returnable" && r.action !== "review")
+    .map((r) => ({ id: r.id, name: r.text, action: r.action ?? "submit" }));
+}
+
 /** The documents behind an application: the profile documents the opportunity asks for, then attachments. */
 function documentsOf(sme: Doc<"smes">, opportunity: Doc<"opportunities">, application: Doc<"applications">) {
   // With no requirement listed, Jev still reads the core compliance documents
-  const wanted = (
+  const listed = (
     opportunity.requiredDocuments.length
       ? opportunity.requiredDocuments
       : ["bbbeeCertificate", "taxCertificate", "cipcCertificate"]
   ) as DocKey[];
+  // Profile documents that answer one of the tender's returnables are read as well
+  const fromTender = returnablesOf(opportunity).flatMap((r) => {
+    const key = PROFILE_RETURNABLES[returnableKey(r.name)] as DocKey | undefined;
+    return key ? [key] : [];
+  });
+  const wanted = [...new Set([...listed, ...fromTender])];
   const profile = wanted.flatMap((key) => {
     const doc = sme.documents[key];
     if (!doc?.storageId) return [];
@@ -197,6 +222,7 @@ export const extractionInput = internalQuery({
     if (!doc) return null;
     return {
       document: doc,
+      returnables: returnablesOf(opportunity),
       sampleData: !!sme.isDemo,
       profile: {
         companyName: sme.companyName,
@@ -222,6 +248,9 @@ export const saveExtraction = internalMutation({
     issues: v.array(v.string()),
     summary: v.string(),
     excerpt: v.string(),
+    returnables: v.optional(
+      v.array(v.object({ id: v.string(), contains: v.number(), completed: v.optional(v.number()) })),
+    ),
     call: v.optional(v.object(vJevCall)),
   },
   handler: async (ctx, { call, ...args }) => {
@@ -299,6 +328,13 @@ export const assessmentInput = internalQuery({
         requiredDocuments: opportunity.requiredDocuments.map((k) => DOCUMENTS.find((d) => d.key === k)?.label ?? k),
         criteria: classifyCriteria(opportunity.listing?.evaluationCriteria ?? []),
       },
+      tender: confirmedTender(opportunity),
+      /** Profile documents on file, for returnables the profile already answers. */
+      profileDocuments: Object.fromEntries(
+        Object.entries(sme.documents).flatMap(([key, doc]) =>
+          doc?.storageId ? [[key, { name: doc.name, label: DOCUMENTS.find((d) => d.key === key)?.label ?? key }]] : [],
+        ),
+      ) as Record<string, { name: string; label: string }>,
       sme: {
         companyName: sme.companyName,
         industry: sme.industry,
@@ -324,8 +360,13 @@ export const assessmentInput = internalQuery({
       // the clock is fine here: this query only runs once, from the review action, never reactively.
       rules: evaluateApplication(opportunity, sme),
       documents: extractions.map((e) => ({
+        key: e.key,
         label: e.label,
+        name: e.name,
         source: e.source,
+        returnables: e.returnables ?? [],
+        // What the SME wrote for this application is evidence for the criteria; certificates speak through their checks
+        excerpt: e.source === "application" ? e.excerpt : "",
         status: e.status,
         documentType: e.documentType,
         matchesLabel: e.matchesLabel,
@@ -348,6 +389,8 @@ export const saveAssessment = internalMutation({
     ),
     criteria: v.array(criterionAssessment),
     concerns: v.array(v.string()),
+    requirements: v.optional(v.array(requirementResult)),
+    technical: v.optional(v.object({ points: v.number(), available: v.number(), threshold: v.optional(v.number()) })),
     call: v.object(vJevCall),
   },
   handler: async (ctx, { applicationId, call, ...result }) => {
@@ -386,6 +429,14 @@ export const saveAssessment = internalMutation({
           .filter((c) => c.required && !c.passed)
           .map((c) => `Requirement not met: ${c.label}. ${c.detail}`),
         ...result.concerns.map((c) => `Concern: ${c}`),
+        ...(result.technical
+          ? [
+              `Technical points: ${result.technical.points} of ${result.technical.available}${result.technical.threshold !== undefined ? `, minimum ${result.technical.threshold}` : ""}`,
+            ]
+          : []),
+        ...(result.requirements ?? [])
+          .filter((r) => r.status !== "met")
+          .map((r) => `${r.status === "partial" ? "Partly met" : "Missing"}: ${r.needs.join(" ")}`),
       ],
       ...call,
     });
@@ -536,7 +587,13 @@ export const calculatePoints = internalMutation({
       const sme = await ctx.db.get("smes", application.smeId);
       if (!sme) continue;
       const evaluation = application.evaluation;
-      const reasons = evaluation.qualifies ? [] : [evaluation.summary];
+      // The requirements it failed, by name; a review that disqualified it says why in its concerns
+      const failed = evaluation.checks.filter((c) => c.required && !c.passed).map((c) => c.label);
+      const reasons = evaluation.qualifies
+        ? []
+        : failed.length
+          ? failed
+          : [evaluation.concerns?.[0] ?? evaluation.summary];
       if (application.review?.status !== "reviewed") reasons.push("The review of this application hasn’t finished");
       if (price && !(application.quote && application.quote > 0)) reasons.push("No price quoted");
       rows.push({ application, sme, reasons });
@@ -766,6 +823,22 @@ export const applyDecision = internalMutation({
       details: shortlist.map((c) => `Shortlisted: ${c.companyName}, ranked ${c.rank}, ${c.totalPoints} points`),
       ...args.call,
     });
+    const opportunity = await ctx.db.get("opportunities", run.opportunityId);
+    await recordAudit(ctx, {
+      organizationId: run.organizationId,
+      actorName: JEV,
+      action: "shortlisting.recommended",
+      opportunityId: run.opportunityId,
+      targetLabel: opportunity ? `${opportunity.reference}: ${opportunity.title}` : "An opportunity",
+      summary: `The automated review recommended ${shortlist.length} of ${args.candidates.length} applicant${
+        args.candidates.length === 1 ? "" : "s"
+      } for the shortlist (limit ${run.slots}), in points order. People decide from here.`,
+      changes: shortlist.map((c) => ({
+        field: c.companyName,
+        before: "Applied",
+        after: `Recommended, ranked ${c.rank}${c.totalPoints !== undefined ? `, ${c.totalPoints} points` : ""}`,
+      })),
+    });
     return null;
   },
 });
@@ -839,6 +912,15 @@ export const requestDecision = mutation({
       kind: "decision_started",
       actor: enterprise.user.name,
       summary: `${enterprise.user.name} started shortlisting, limit ${slots} applicant${slots === 1 ? "" : "s"}.`,
+    });
+    await recordAudit(ctx, {
+      organizationId: opportunity.organizationId,
+      actorId: enterprise.user._id,
+      actorName: enterprise.user.name,
+      action: "shortlisting.requested",
+      opportunityId: opportunity._id,
+      targetLabel: `${opportunity.reference}: ${opportunity.title}`,
+      summary: `${enterprise.user.name} asked for a recommended shortlist of up to ${slots} applicant${slots === 1 ? "" : "s"} on ${opportunity.reference}.`,
     });
     return runId;
   },
@@ -1060,14 +1142,23 @@ export async function deleteDecisionData(ctx: MutationCtx, opportunityId: Id<"op
  * Starts Jev reviews for applications that never had one (made before Jev, or seeded):
  *
  *   pnpm exec convex run review:reviewExisting
+ *   pnpm exec convex run review:reviewExisting '{"opportunityId": "…", "force": true}'
  */
 export const reviewExisting = internalMutation({
-  args: { limit: v.optional(v.number()) },
+  args: {
+    limit: v.optional(v.number()),
+    /** Only this opportunity's applications. */
+    opportunityId: v.optional(v.id("opportunities")),
+    /** Review again even if a review already finished, e.g. after the review itself changed. */
+    force: v.optional(v.boolean()),
+  },
   handler: async (ctx, args) => {
     let started = 0;
     for await (const application of ctx.db.query("applications")) {
       if (started >= (args.limit ?? 50)) break;
-      if (application.review && application.review.status !== "failed") continue;
+      if (args.opportunityId && application.opportunityId !== args.opportunityId) continue;
+      if (application.review?.status === "reviewing") continue;
+      if (!args.force && application.review && application.review.status !== "failed") continue;
       await startReview(ctx, application._id);
       started++;
     }

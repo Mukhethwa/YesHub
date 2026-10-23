@@ -1,0 +1,220 @@
+{
+  "version": 1,
+  "id": "admin-analytics",
+  "title": "Analytics",
+  "description": "MASLink's own analytics: down from the platform figures to the province map, which comes forward.",
+  "definition": {
+    "scene": {
+      "version": 3,
+      "camera": {
+        "rotateZ": 0,
+        "x": 140,
+        "y": -560,
+        "z": -400,
+        "perspective": 1600,
+        "rotateX": -8,
+        "rotateY": 10
+      },
+      "focus": {
+        "distance": 1200,
+        "fStop": 5.6,
+        "focalLength": 100,
+        "maxBlur": 6
+      },
+      "nodes": [
+        {
+          "id": "app"
+        },
+        {
+          "id": "sidebar",
+          "parentId": "app"
+        },
+        {
+          "id": "topbar",
+          "parentId": "app"
+        },
+        {
+          "id": "page",
+          "parentId": "app"
+        },
+        {
+          "id": "page-heading",
+          "parentId": "page"
+        },
+        {
+          "id": "stats",
+          "parentId": "page"
+        },
+        {
+          "id": "section-activity-over-time",
+          "parentId": "page"
+        },
+        {
+          "id": "section-across-south-africa",
+          "parentId": "page"
+        },
+        {
+          "id": "section-from-application-to-award",
+          "parentId": "page"
+        },
+        {
+          "id": "section-automated-shortlisting",
+          "parentId": "page"
+        },
+        {
+          "id": "section-application-outcomes",
+          "parentId": "page"
+        },
+        {
+          "id": "section-scores",
+          "parentId": "page"
+        },
+        {
+          "id": "section-opportunities-by-type",
+          "parentId": "page"
+        },
+        {
+          "id": "section-smes-by-b-bbee-level",
+          "parentId": "page"
+        },
+        {
+          "id": "section-smes-by-industry",
+          "parentId": "page"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 5600,
+      "speed": 0.65,
+      "tracks": [
+        {
+          "target": {
+            "kind": "surface",
+            "id": "app"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -300,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1800,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "section-across-south-africa"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3000,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4200,
+              "value": 170,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -560,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5600,
+              "value": 40,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 140,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5600,
+              "value": -100,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 10,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5600,
+              "value": 6,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "focus"
+          },
+          "property": "distance",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 1200,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3000,
+              "value": 1200,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4200,
+              "value": 1030,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5600,
+              "value": 1030,
+              "easing": "cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    "width": 1920,
+    "height": 1080
+  }
+}

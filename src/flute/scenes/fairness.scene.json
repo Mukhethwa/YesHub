@@ -1,0 +1,905 @@
+{
+  "version": 1,
+  "id": "fairness",
+  "title": "The fairness layer",
+  "description": "The decision record swings in, the award lifts out of it, and the four laws rise beneath.",
+  "definition": {
+    "scene": {
+      "version": 3,
+      "camera": {
+        "rotateZ": 0,
+        "x": 170,
+        "y": -320,
+        "z": -360,
+        "perspective": 1600,
+        "rotateX": -16,
+        "rotateY": 12
+      },
+      "focus": {
+        "distance": 1240,
+        "fStop": 4,
+        "focalLength": 100,
+        "maxBlur": 6
+      },
+      "nodes": [
+        {
+          "id": "fairness"
+        },
+        {
+          "id": "fair-heading",
+          "parentId": "fairness"
+        },
+        {
+          "id": "record-label",
+          "parentId": "fairness"
+        },
+        {
+          "id": "record",
+          "parentId": "fairness"
+        },
+        {
+          "id": "trail-0",
+          "parentId": "record"
+        },
+        {
+          "id": "trail-1",
+          "parentId": "record"
+        },
+        {
+          "id": "trail-2",
+          "parentId": "record"
+        },
+        {
+          "id": "trail-3",
+          "parentId": "record"
+        },
+        {
+          "id": "trail-4",
+          "parentId": "record"
+        },
+        {
+          "id": "laws",
+          "parentId": "fairness"
+        },
+        {
+          "id": "law-0",
+          "parentId": "laws"
+        },
+        {
+          "id": "law-1",
+          "parentId": "laws"
+        },
+        {
+          "id": "law-2",
+          "parentId": "laws"
+        },
+        {
+          "id": "law-3",
+          "parentId": "laws"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 5600,
+      "speed": 0.65,
+      "tracks": [
+        {
+          "target": {
+            "kind": "surface",
+            "id": "fair-heading"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -220,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1300,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "fair-heading"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 900,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "record"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 640,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1700,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "record"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -640,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1700,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "record"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -34,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1700,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "record-label"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1100,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1600,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-0"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 190,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1300,
+              "value": 190,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2100,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-0"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1300,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1700,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-1"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 190,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1580,
+              "value": 190,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2380,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-1"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1580,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1980,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-2"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 190,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1860,
+              "value": 190,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2660,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-2"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1860,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2260,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-3"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 190,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2140,
+              "value": 190,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2940,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-3"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2140,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2540,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-4"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 190,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2420,
+              "value": 190,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3220,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3700,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4500,
+              "value": 270,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-4"
+          },
+          "property": "scale",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 1,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3700,
+              "value": 1,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4500,
+              "value": 1.04,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "trail-4"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2420,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2820,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-0"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 260,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2700,
+              "value": 260,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3800,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-0"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2700,
+              "value": -320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3800,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-0"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2700,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3200,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-1"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 260,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2960,
+              "value": 260,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4060,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-1"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2960,
+              "value": -320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4060,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-1"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2960,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3460,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-2"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 260,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3220,
+              "value": 260,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4320,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-2"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3220,
+              "value": -320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4320,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-2"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3220,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3720,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-3"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 260,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3480,
+              "value": 260,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4580,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-3"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3480,
+              "value": -320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4580,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "law-3"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3480,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3980,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5600,
+              "value": 300,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 170,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5600,
+              "value": -130,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -360,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2800,
+              "value": -540,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5600,
+              "value": -420,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -16,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5600,
+              "value": -5,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 12,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5600,
+              "value": -10,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "focus"
+          },
+          "property": "distance",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 1240,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2800,
+              "value": 1060,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3700,
+              "value": 1060,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4400,
+              "value": 830,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4900,
+              "value": 830,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5600,
+              "value": 1160,
+              "easing": "cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    "width": 1920,
+    "height": 1080
+  }
+}

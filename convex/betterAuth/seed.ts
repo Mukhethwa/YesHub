@@ -120,3 +120,55 @@ export const organizations = mutation({
     return null;
   },
 });
+
+/**
+ * Renames seeded records in place: organisations by slug, users and invitations by email. Lets an existing
+ * dev deployment follow a change to the seed's names without reseeding. Missing records are skipped.
+ */
+export const renameSeedRecords = mutation({
+  args: {
+    organizations: v.array(
+      v.object({ slug: v.string(), name: v.string(), newSlug: v.string(), verificationNote: v.optional(v.string()) }),
+    ),
+    users: v.array(v.object({ email: v.string(), newEmail: v.string(), name: v.optional(v.string()) })),
+    invitations: v.array(v.object({ email: v.string(), newEmail: v.string() })),
+  },
+  returns: v.object({ organizations: v.number(), users: v.number(), invitations: v.number() }),
+  handler: async (ctx, args) => {
+    let organizations = 0;
+    for (const org of args.organizations) {
+      const existing = await ctx.db
+        .query("organization")
+        .withIndex("slug", (q) => q.eq("slug", org.slug))
+        .unique();
+      if (!existing) continue;
+      await ctx.db.patch("organization", existing._id, {
+        name: org.name,
+        slug: org.newSlug,
+        ...(org.verificationNote !== undefined ? { verificationNote: org.verificationNote } : {}),
+      });
+      organizations++;
+    }
+    let users = 0;
+    for (const user of args.users) {
+      const existing = await ctx.db
+        .query("user")
+        .withIndex("email_name", (q) => q.eq("email", user.email))
+        .first();
+      if (!existing) continue;
+      await ctx.db.patch("user", existing._id, { email: user.newEmail, ...(user.name ? { name: user.name } : {}) });
+      users++;
+    }
+    let invitations = 0;
+    for (const invitation of args.invitations) {
+      for (const existing of await ctx.db
+        .query("invitation")
+        .withIndex("email", (q) => q.eq("email", invitation.email))
+        .take(20)) {
+        await ctx.db.patch("invitation", existing._id, { email: invitation.newEmail });
+        invitations++;
+      }
+    }
+    return { organizations, users, invitations };
+  },
+});

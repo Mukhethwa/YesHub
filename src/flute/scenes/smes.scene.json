@@ -1,0 +1,1019 @@
+{
+  "version": 1,
+  "id": "smes",
+  "title": "For SMEs",
+  "description": "The SME's card rises into place, the expiring tax certificate lifts out, and a new match arrives.",
+  "definition": {
+    "scene": {
+      "version": 3,
+      "camera": {
+        "rotateZ": 0,
+        "x": 340,
+        "y": -90,
+        "z": -540,
+        "perspective": 1600,
+        "rotateX": -6,
+        "rotateY": 28
+      },
+      "focus": {
+        "distance": 1020,
+        "fStop": 4,
+        "focalLength": 100,
+        "maxBlur": 6
+      },
+      "nodes": [
+        {
+          "id": "smes"
+        },
+        {
+          "id": "aud-heading",
+          "parentId": "smes"
+        },
+        {
+          "id": "point-0",
+          "parentId": "smes"
+        },
+        {
+          "id": "point-1",
+          "parentId": "smes"
+        },
+        {
+          "id": "point-2",
+          "parentId": "smes"
+        },
+        {
+          "id": "point-3",
+          "parentId": "smes"
+        },
+        {
+          "id": "aud-cta",
+          "parentId": "smes"
+        },
+        {
+          "id": "aud-preview",
+          "parentId": "smes"
+        },
+        {
+          "id": "sme-card",
+          "parentId": "aud-preview"
+        },
+        {
+          "id": "sme-head",
+          "parentId": "sme-card"
+        },
+        {
+          "id": "doc-0",
+          "parentId": "sme-card"
+        },
+        {
+          "id": "doc-1",
+          "parentId": "sme-card"
+        },
+        {
+          "id": "doc-2",
+          "parentId": "sme-card"
+        },
+        {
+          "id": "doc-3",
+          "parentId": "sme-card"
+        },
+        {
+          "id": "sme-foot",
+          "parentId": "sme-card"
+        },
+        {
+          "id": "sme-match",
+          "parentId": "aud-preview"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 5000,
+      "speed": 0.65,
+      "tracks": [
+        {
+          "target": {
+            "kind": "surface",
+            "id": "aud-heading"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 150,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1150,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "aud-heading"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 150,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 750,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "point-0"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 300,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1300,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "point-0"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 300,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 900,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "point-1"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 450,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1450,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "point-1"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 450,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1050,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "point-2"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 600,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1600,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "point-2"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 600,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1200,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "point-3"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 750,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1750,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "point-3"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 750,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1350,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "aud-cta"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 900,
+              "value": -180,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1900,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "aud-cta"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 900,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1500,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "sme-head"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 500,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1300,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "sme-head"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 500,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1000,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-0"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 650,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1450,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-0"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 650,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1150,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-2"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 950,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1750,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-2"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 950,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1450,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-3"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1100,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1900,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-3"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1100,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1600,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "sme-foot"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1250,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2050,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "sme-foot"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1250,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1750,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-1"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 800,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1600,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2700,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3500,
+              "value": 300,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-1"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2700,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3500,
+              "value": -90,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-1"
+          },
+          "property": "scale",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 1,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2700,
+              "value": 1,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3500,
+              "value": 1.08,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-1"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2700,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3500,
+              "value": 8,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "doc-1"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 800,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1300,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "aud-preview"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -900,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1900,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "aud-preview"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 320,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1900,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "aud-preview"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 34,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1900,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "sme-match"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 240,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2900,
+              "value": 240,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4100,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "sme-match"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 220,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2900,
+              "value": 220,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4100,
+              "value": 40,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "sme-match"
+          },
+          "property": "opacity",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2900,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3500,
+              "value": 1,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 340,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": -80,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -90,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": 100,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -540,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2500,
+              "value": -290,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": -380,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 28,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": 10,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateX",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -6,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": -14,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "focus"
+          },
+          "property": "distance",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 1020,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2500,
+              "value": 1290,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2800,
+              "value": 1290,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3500,
+              "value": 1000,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4100,
+              "value": 1000,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4800,
+              "value": 1230,
+              "easing": "cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    "width": 1920,
+    "height": 1080
+  }
+}
