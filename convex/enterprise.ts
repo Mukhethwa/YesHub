@@ -723,6 +723,7 @@ export const supplier = query({
       address: sme.address,
       serviceAreas: sme.serviceAreas,
       capabilities: sme.capabilities,
+      companySummary: sme.companySummary ?? "",
       accreditations: sme.accreditations,
       website: sme.website,
       bbbeeExpiry: sme.bbbeeExpiry,

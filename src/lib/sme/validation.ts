@@ -19,6 +19,8 @@ const CSD = /^MAAA\d{7}$/i;
 const SA_PHONE = /^(\+27|0)[1-9]\d{8}$/;
 const URL_LIKE = /^(https?:\/\/)?[\w-]+(\.[\w-]+)+(\/\S*)?$/i;
 
+export const COMPANY_SUMMARY_MAX = 2000;
+
 export function normalisePhone(phone: string) {
   return phone.replace(/[\s()-]/g, "");
 }
@@ -63,6 +65,8 @@ function validateOffering(f: SmeDetails): Errors {
   const e: Errors = {};
   if (f.services.length === 0) e.services = "Add at least one service you offer";
   if (f.capabilities.trim().length < 40) e.capabilities = "Tell us a little more (at least 40 characters)";
+  if ((f.companySummary ?? "").trim().length > COMPANY_SUMMARY_MAX)
+    e.companySummary = `Keep your summary under ${COMPANY_SUMMARY_MAX.toLocaleString("en-ZA")} characters`;
   return e;
 }
 
@@ -117,6 +121,7 @@ export function normaliseDetails(d: SmeDetails): SmeDetails {
     city: d.city.trim(),
     address: d.address.trim(),
     capabilities: d.capabilities.trim(),
+    companySummary: (d.companySummary ?? "").trim(),
     website: d.website.trim(),
     contactName: d.contactName.trim(),
     phone: normalisePhone(d.phone),
