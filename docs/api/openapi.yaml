@@ -55,6 +55,8 @@ tags:
     description: "MASLink staff: users, SMEs, organisations, listings and staff. Each checks the caller's staff permissions."
   - name: analytics
     description: Platform analytics for MASLink staff.
+  - name: insights
+    description: "Insights: the gaps many SMEs share and what they hold back. Platform-wide for MASLink staff, and per organisation for its members."
   - name: audit
     description: The platform-wide audit and change log, for MASLink staff.
   - name: website
@@ -2710,6 +2712,70 @@ paths:
       description: |-
         Withdraws a submitted application while the opportunity is open. It leaves the buyer's review and
         shortlisting, and the buyer sees it as withdrawn.
+  /api/run/analytics/organisation:
+    post:
+      summary: organisation (query)
+      tags:
+        - analytics
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Request_analytics.organisation"
+        required: true
+      responses:
+        "200":
+          description: Convex executed your request and returned a result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Response_analytics.organisation"
+        "400":
+          description: Failed operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailedResponse"
+        "500":
+          description: Convex Internal Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailedResponse"
+      operationId: analytics.organisation
+      x-convex-function: analytics:organisation
+      x-convex-type: query
+      description: |-
+        Empty means nationwide. */
+                provinces: o.provinces,
+                value: o.value ?? null,
+              })),
+              applications: applications.map((a) => ({
+                t: a.submittedAt,
+                status: a.status,
+                province: smeById.get(a.smeId)?.hqProvince ?? null,
+                kind: kindById.get(a.opportunityId) ?? null,
+                /** An ESD programme (grant, funding, accelerator, support): "awarded" means accepted into it. */
+                esd: isEsd(kindById.get(a.opportunityId) ?? "tender"),
+                score: a.evaluation.score,
+                qualifies: a.evaluation.qualifies,
+                review: a.decision?.outcome ?? null,
+                overridden: !!a.decision?.overriddenBy,
+                /** Days from applying to the buyer's latest decision. A withdrawal is the SME's doing, not a decision. */
+                decidedAfter:
+                  a.statusChangedAt && a.status !== "withdrawn" ? (a.statusChangedAt - a.submittedAt) / 86_400_000 : null,
+              })),
+              // Changes people made (not the system), placed by the SME's head office where the actor is an SME
+              activity: commands
+                .filter((c) => c.visibility === "public" && c.actorId)
+                .map((c) => ({ t: c._creationTime, province: provinceByUser.get(c.actorId!) ?? null })),
+            };
+          },
+        });
+
+        /**
+        The same figures for one enterprise organisation: its listings, the applications they received, and the
+        SMEs that applied (dated by their first application to it). Shaped like `platform`, so one report reads both.
   /api/run/analytics/platform:
     post:
       summary: platform (query)
@@ -3770,6 +3836,119 @@ paths:
       x-convex-function: enterpriseAudit:opportunityCommands
       x-convex-type: query
       description: Every command that touched one opportunity or anything belonging to it, newest first.
+  /api/run/insights/organisation:
+    post:
+      summary: organisation (query)
+      tags:
+        - insights
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Request_insights.organisation"
+        required: true
+      responses:
+        "200":
+          description: Convex executed your request and returned a result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Response_insights.organisation"
+        "400":
+          description: Failed operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailedResponse"
+        "500":
+          description: Convex Internal Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailedResponse"
+      operationId: insights.organisation
+      x-convex-function: insights:organisation
+      x-convex-type: query
+      description: |-
+        yyyy-mm-dd from the browser, so expiry and "still open" don't depend on reading the clock here. */
+            today: v.string(),
+            /** Narrow to SMEs in one province or one industry. */
+            province: v.optional(v.string()),
+            industry: v.optional(v.string()),
+          },
+          handler: async (ctx, args) => {
+            if (!(await getStaff(ctx, { user: ["list"] }))) return null;
+
+            const [allSmes, opportunities, applications, organizations] = await Promise.all([
+              ctx.db.query("smes").take(LIMIT),
+              ctx.db.query("opportunities").take(LIMIT),
+              ctx.db.query("applications").take(LIMIT),
+              ctx.runQuery(components.betterAuth.organizations.list, { limit: 500 }),
+            ]);
+            const active = allSmes.filter((s) => !s.suspendedAt);
+            const smes = active.filter(
+              (s) => (!args.province || s.hqProvince === args.province) && (!args.industry || s.industry === args.industry),
+            );
+            const insights = computeInsights({
+              smes,
+              opportunities,
+              applications,
+              organizationNames: new Map(organizations.map((o) => [o.id, o.name])),
+              today: args.today,
+            });
+            const smeIds = new Set(smes.map((s) => s._id as string));
+            return {
+              insights,
+              analysed: {
+                smes: smes.length,
+                applications: applications.filter((a) => smeIds.has(a.smeId)).length,
+                openOpportunities: opportunities.filter((o) => o.status === "open" && o.closesAt >= args.today).length,
+              },
+              /** For the filters: every province and industry with active SMEs. */
+              provinces: [...new Set(active.map((s) => s.hqProvince).filter(Boolean))].sort(),
+              industries: [...new Set(active.map((s) => s.industry).filter(Boolean))].sort(),
+            };
+          },
+        });
+
+        /**
+        The same insights for one enterprise organisation: the gaps among the SMEs that applied to its listings,
+        and services its open listings ask for that few visible SMEs offer. SMEs appear by company only: contact
+        details follow each SME's own sharing setting, so they aren't part of insights.
+  /api/run/insights/platform:
+    post:
+      summary: platform (query)
+      tags:
+        - insights
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Request_insights.platform"
+        required: true
+      responses:
+        "200":
+          description: Convex executed your request and returned a result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Response_insights.platform"
+        "400":
+          description: Failed operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailedResponse"
+        "500":
+          description: Convex Internal Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailedResponse"
+      operationId: insights.platform
+      x-convex-function: insights:platform
+      x-convex-type: query
+      description: Convex query `insights:platform`.
   /api/auth/sign-up/email:
     post:
       tags:
@@ -6116,6 +6295,28 @@ components:
         errorData:
           type: object
         value: {}
+    Request_analytics.organisation:
+      type: object
+      required:
+        - args
+      properties:
+        args:
+          type: object
+    Response_analytics.organisation:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - success
+            - error
+        errorMessage:
+          type: string
+        errorData:
+          type: object
+        value: {}
     Request_analytics.platform:
       type: object
       required:
@@ -6982,6 +7183,68 @@ components:
               type: string
               description: ID from table "opportunities"
     Response_enterpriseAudit.opportunityCommands:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - success
+            - error
+        errorMessage:
+          type: string
+        errorData:
+          type: object
+        value: {}
+    Request_insights.organisation:
+      type: object
+      required:
+        - args
+      properties:
+        args:
+          type: object
+          required:
+            - today
+          properties:
+            industry:
+              type: string
+            province:
+              type: string
+            today:
+              type: string
+    Response_insights.organisation:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - success
+            - error
+        errorMessage:
+          type: string
+        errorData:
+          type: object
+        value: {}
+    Request_insights.platform:
+      type: object
+      required:
+        - args
+      properties:
+        args:
+          type: object
+          required:
+            - today
+          properties:
+            industry:
+              type: string
+            province:
+              type: string
+            today:
+              type: string
+    Response_insights.platform:
       type: object
       required:
         - status

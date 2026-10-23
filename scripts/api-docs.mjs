@@ -102,6 +102,8 @@ const AREAS = {
   enterpriseAudit: "An organisation's audit log: every change, who made it, and each field before and after.",
   admin: "MASLink staff: users, SMEs, organisations, listings and staff. Each checks the caller's staff permissions.",
   analytics: "Platform analytics for MASLink staff.",
+  insights:
+    "Insights: the gaps many SMEs share and what they hold back. Platform-wide for MASLink staff, and per organisation for its members.",
   audit: "The platform-wide audit and change log, for MASLink staff.",
 };
 const ORDER = Object.keys(AREAS);
