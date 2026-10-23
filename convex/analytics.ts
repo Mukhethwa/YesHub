@@ -3,7 +3,7 @@ import { query } from "./functions";
 import { getStaff } from "./lib/staff";
 
 /*
- * Platform analytics for YES Hub staff. Returns compact rows rather than totals: queries shouldn't read the
+ * Platform analytics for MASLink staff. Returns compact rows rather than totals: queries shouldn't read the
  * clock, so the browser buckets them into the chosen date range. Capped at hackathon scale.
  */
 

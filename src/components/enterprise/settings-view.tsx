@@ -153,7 +153,7 @@ function OrganisationSettings({ data }: { data: Data }) {
       <Section title="Organisation" description="How your organisation appears to SMEs on your listings.">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Pill tone={verification.tone}>{verification.label}</Pill>
-          <span className="text-muted-foreground">On YES Hub since {formatDate(data.organization.createdAt)}</span>
+          <span className="text-muted-foreground">On MASLink since {formatDate(data.organization.createdAt)}</span>
         </div>
         <div className="grid gap-5 md:grid-cols-2">
           <Field label="Name" htmlFor="org-name">
@@ -334,7 +334,7 @@ function OrganisationSettings({ data }: { data: Data }) {
           <p className="text-sm text-muted-foreground">
             {data.settings.updatedAt
               ? `Last saved ${formatDateTime(data.settings.updatedAt)} by ${data.settings.updatedBy}.`
-              : "Using YES Hub’s defaults until you save."}
+              : "Using MASLink’s defaults until you save."}
           </p>
           <Button onClick={submit} disabled={pending}>
             {pending && <Spinner />}

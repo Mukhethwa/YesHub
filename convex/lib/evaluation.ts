@@ -3,7 +3,7 @@ import type { Doc } from "../_generated/dataModel";
 import type { DocKey, Evaluation } from "../schema";
 
 /*
- * YES Hub's built-in eligibility check, standing in for Jev until the Jev integration ranks applications.
+ * MASLink's built-in eligibility check, standing in for Jev until the Jev integration ranks applications.
  * Jev will write an Evaluation with engine "jev" in the same shape, so the dashboards don't change.
  *
  * Required checks decide whether an SME qualifies. Everything else only moves the score, which ranks
@@ -87,10 +87,10 @@ export function evaluateApplication(opportunity: EvaluableOpportunity, sme: Doc<
     sectorCheck(opportunity, sme, serviceMatches),
     {
       id: "standing",
-      label: "In good standing on YES Hub",
+      label: "In good standing on MASLink",
       required: true,
       passed: !sme.suspendedAt,
-      detail: sme.suspendedAt ? "Profile suspended by YES Hub" : "Active profile",
+      detail: sme.suspendedAt ? "Profile suspended by MASLink" : "Active profile",
     },
   ].filter((c): c is Check => c !== null);
 
@@ -98,7 +98,7 @@ export function evaluateApplication(opportunity: EvaluableOpportunity, sme: Doc<
   const strengths: Check[] = [
     {
       id: "verified",
-      label: "Verified by YES Hub",
+      label: "Verified by MASLink",
       required: false,
       passed: !!sme.verifiedAt,
       detail: sme.verifiedAt ? "Profile and documents checked" : "Not verified yet",
@@ -140,7 +140,7 @@ export function evaluateApplication(opportunity: EvaluableOpportunity, sme: Doc<
 
   const failed = required.filter((c) => !c.passed);
   const summary = qualifies
-    ? `Meets all ${required.length} requirements${sme.verifiedAt ? " and is verified by YES Hub" : ""}`
+    ? `Meets all ${required.length} requirements${sme.verifiedAt ? " and is verified by MASLink" : ""}`
     : `Doesn’t qualify. ${failed.map((c) => c.detail).join(". ")}.`;
 
   return {

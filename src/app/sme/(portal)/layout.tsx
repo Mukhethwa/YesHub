@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { SmePortalShell } from "@/components/sme-portal/sme-portal-shell";
 
 export const metadata: Metadata = {
-  title: "SME portal | YES Hub",
+  title: "SME portal | MASLink",
 };
 
 export default function SmePortalLayout({ children }: LayoutProps<"/sme">) {

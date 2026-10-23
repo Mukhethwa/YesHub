@@ -1,4 +1,4 @@
-// YES Hub staff access levels. Shared by Better Auth (convex/auth.ts), the Convex admin functions and the
+// MASLink staff access levels. Shared by Better Auth (convex/auth.ts), the Convex admin functions and the
 // admin UI, so the same rules apply everywhere. Relative imports only: Convex bundles this file too.
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements } from "better-auth/plugins/admin/access";
@@ -72,7 +72,7 @@ const viewer = ac.newRole({
   organization: ["read"],
 });
 
-/** Everyone who isn't YES Hub staff. */
+/** Everyone who isn't MASLink staff. */
 const user = ac.newRole({ user: [], session: [] });
 
 export const roles = { superadmin, admin, moderator, viewer, user };
@@ -91,7 +91,7 @@ export const ROLE_LABELS: Record<PlatformRole, { label: string; description: str
     description: "Ban and unban users, verify SMEs and enterprises; read-only otherwise",
   },
   viewer: { label: "Viewer", description: "Read-only access to the admin area" },
-  user: { label: "User", description: "Not YES Hub staff" },
+  user: { label: "User", description: "Not MASLink staff" },
 };
 
 export function isStaffRole(role: string | null | undefined): role is StaffRole {
@@ -108,7 +108,7 @@ export function can(role: string | null | undefined, permissions: Permissions) {
 
 // ---------------------------------------------------------------------------------------------------------
 // Organisation roles. Every account belongs to at most one organisation: an enterprise (Capitec, Boxer, …)
-// or the YES Hub staff organisation. Staff access levels come from the role in the staff organisation.
+// or the MASLink staff organisation. Staff access levels come from the role in the staff organisation.
 // ---------------------------------------------------------------------------------------------------------
 
 export const orgAc = createAccessControl(orgStatements);
@@ -127,7 +127,7 @@ export type OrgRole = keyof typeof orgRoles;
 export const ENTERPRISE_ORG_ROLES: OrgRole[] = ["owner", "admin", "member"];
 export const STAFF_ORG_ROLES: OrgRole[] = ["owner", "admin", "moderator", "viewer"];
 
-/** The YES Hub staff organisation. Created on the first super admin's sign-up. */
+/** The MASLink staff organisation. Created on the first super admin's sign-up. */
 export const STAFF_ORG_SLUG = "yeshub";
 
 /** A role in the staff organisation grants the matching platform access level. */

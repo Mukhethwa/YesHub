@@ -4,7 +4,7 @@ import { authComponent } from "../auth";
 
 type Permissions = Parameters<typeof can>[1];
 
-/** The signed-in YES Hub staff member if they have every listed permission, otherwise null. */
+/** The signed-in MASLink staff member if they have every listed permission, otherwise null. */
 export async function getStaff(ctx: QueryCtx, permissions: Permissions) {
   const user = await authComponent.safeGetAuthUser(ctx);
   if (!user || !isStaffRole(user.role) || !can(user.role, permissions)) return null;

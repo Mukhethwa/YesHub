@@ -1962,6 +1962,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         },
         Name
       >;
+      renameStaffOrganization: FunctionReference<
+        "mutation",
+        "internal",
+        { from: string; to: string },
+        boolean,
+        Name
+      >;
       setVerification: FunctionReference<
         "mutation",
         "internal",

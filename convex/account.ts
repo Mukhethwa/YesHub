@@ -10,8 +10,8 @@ export async function organizationsFor(ctx: QueryCtx, userId: string) {
 }
 
 /**
- * Who the signed-in person is to YES Hub, for routing them to the right portal. Every account is exactly
- * one of: YES Hub staff (a member of the staff organisation), an enterprise member, an SME, or new.
+ * Who the signed-in person is to MASLink, for routing them to the right portal. Every account is exactly
+ * one of: MASLink staff (a member of the staff organisation), an enterprise member, an SME, or new.
  */
 export const overview = query({
   args: {},

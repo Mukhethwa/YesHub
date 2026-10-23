@@ -25,7 +25,7 @@ export function AuthButtons() {
 
       <Authenticated>
         <Button size="sm" asChild>
-          <Link href="/start">Open YES Hub</Link>
+          <Link href="/start">Open MASLink</Link>
         </Button>
       </Authenticated>
     </div>

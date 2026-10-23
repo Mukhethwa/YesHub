@@ -90,7 +90,7 @@ function SupplierDirectory() {
           options={[
             { id: "all", label: "All", count: count("all") },
             { id: "applied", label: "Applied to you", count: count("applied") },
-            { id: "verified", label: "Verified by YES Hub", count: count("verified") },
+            { id: "verified", label: "Verified by MASLink", count: count("verified") },
           ]}
         />
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -230,7 +230,7 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{profile.companyName}</h1>
-          {profile.verified && <Pill tone="info">Verified by YES Hub</Pill>}
+          {profile.verified && <Pill tone="info">Verified by MASLink</Pill>}
           {profile.suspended && <Pill tone="danger">Suspended</Pill>}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -344,7 +344,7 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
 
           <Card>
             <CardHeader>
-              <CardTitle>On YES Hub</CardTitle>
+              <CardTitle>On MASLink</CardTitle>
             </CardHeader>
             <CardContent>
               <dl className="divide-y">

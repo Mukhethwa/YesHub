@@ -20,7 +20,7 @@ import { formatDate } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
 import { AdminPageHeader } from "./page-header";
 
-// The staff organisation uses YES Hub's access levels instead of the enterprise roles
+// The staff organisation uses MASLink's access levels instead of the enterprise roles
 const STAFF_ROLE_OPTIONS = Object.fromEntries(
   STAFF_ORG_ROLES.map((role) => [role, ROLE_LABELS[staffRoleForOrgRole(role)].label]),
 ) as Record<string, string>;

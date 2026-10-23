@@ -56,7 +56,7 @@ export function CreateUserDialog({ disabled }: { disabled?: boolean }) {
           <DialogHeader>
             <DialogTitle>Create user</DialogTitle>
             <DialogDescription>
-              The account can sign in straight away with this password. To add YES Hub staff, invite them from the Staff
+              The account can sign in straight away with this password. To add MASLink staff, invite them from the Staff
               page instead.
             </DialogDescription>
           </DialogHeader>

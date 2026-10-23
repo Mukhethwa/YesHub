@@ -25,7 +25,7 @@ export function SignOut({ className }: SignOutProps) {
         replace: true
       })
     },
-    // YES Hub: signing out returns to the landing page
+    // MASLink: signing out returns to the landing page
     onSuccess: () => navigate({ to: "/", replace: true })
   })
 

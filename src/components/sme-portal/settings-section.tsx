@@ -53,7 +53,7 @@ export function SettingsSection({ sme }: { sme: SmeProfile }) {
     const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `yes-hub-${sme.companyName.replace(/[^\w]+/g, "-").toLowerCase()}-data.json`;
+    a.download = `maslink-${sme.companyName.replace(/[^\w]+/g, "-").toLowerCase()}-data.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

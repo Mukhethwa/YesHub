@@ -40,8 +40,8 @@ export default function StartPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-12 md:py-20">
-      <h1 className="text-3xl font-semibold tracking-tight">Welcome to YES Hub, {session.user.name.split(/\s+/)[0]}</h1>
-      <p className="mt-2 text-muted-foreground">How will you use YES Hub? Each account is one or the other.</p>
+      <h1 className="text-3xl font-semibold tracking-tight">Welcome to MASLink, {session.user.name.split(/\s+/)[0]}</h1>
+      <p className="mt-2 text-muted-foreground">How will you use MASLink? Each account is one or the other.</p>
 
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         {CHOICES.map(({ href, icon: Icon, title, description }) => (

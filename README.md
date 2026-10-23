@@ -1,13 +1,13 @@
-![YES Hub: Enterprise & SME Matchmaking Portal. Connecting enterprise tenders with the right SME providers.](docs/yeshub-banner.jpeg)
+![MASLink: Enterprise & SME Matchmaking Portal. Connecting enterprise tenders with the right SME providers.](docs/yeshub-banner.jpeg)
 
-# YES Hub
+# MASLink
 
-**AI SME opportunity matching** (YES AI Hub, Challenge 4). YES Hub connects enterprise tenders, RFQs and funding
+**AI SME opportunity matching** (YES AI Hub, Challenge 4). MASLink connects enterprise tenders, RFQs and funding
 with the right SME providers.
 
 ## How it works
 
-YES Hub has a portal for each side of the match:
+MASLink has a portal for each side of the match:
 
 - **SMEs** register their business once: company details, the services they offer, the provinces and areas they
   can deliver in, and the compliance documents buyers ask for (B-BBEE certificate, tax compliance status, CIPC
@@ -21,7 +21,7 @@ Matching uses what SMEs put in their profile, so a complete, current profile mea
 
 ### How applications are decided
 
-YES Hub is the fairness layer between buyers and SMEs. SMEs apply with a quoted price, a short proposal and
+MASLink is the fairness layer between buyers and SMEs. SMEs apply with a quoted price, a short proposal and
 supporting documents (stored in Convex file storage). **Jev**, the evaluation engine
 ([TypeSafe’s router model](https://openrouter.ai/typesafe/jev-router) on OpenRouter), works in two durable
 [Convex workflows](https://www.convex.dev/components/workflow) (`convex/review.ts`):
@@ -44,11 +44,11 @@ How it maps to South African law:
 - **PAJA s5**: written reasons. Every applicant gets reasons for the shortlisting outcome, and every buyer action
   needs one; SMEs see both.
 - **POPIA**: consent at registration, only criteria-relevant information is used to evaluate, sensitive fields are
-  encrypted at rest, and access is limited to the applicant, the buyer and YES Hub staff.
+  encrypted at rest, and access is limited to the applicant, the buyer and MASLink staff.
 
 Every step is on the **record** (`reviewTrail`), which can be viewed and downloaded per applicant and per
 shortlisting run: what was read, how it scored and why, the points arithmetic, Jev’s recommendation and reasons,
-guardrails applied, and every person’s action with their reason. YES Hub staff see every run under
+guardrails applied, and every person’s action with their reason. MASLink staff see every run under
 **Admin → Evaluations**, including the model used and its cost. The interface never names Jev to buyers or SMEs
 (DESIGN.md).
 
@@ -104,7 +104,7 @@ pnpm exec convex env set RESEND_API_KEY re_...
 pnpm exec convex env set OPENROUTER_API_KEY sk-or-...   # Jev; the OpenRouter account needs credits
 pnpm exec convex env set DATA_ENCRYPTION_KEY "$(openssl rand -base64 32)"   # back this up
 # Optional. The default, onboarding@resend.dev, only delivers to your own Resend account's address
-pnpm exec convex env set AUTH_EMAIL_FROM "YES Hub <auth@your-verified-domain.com>"
+pnpm exec convex env set AUTH_EMAIL_FROM "MASLink <auth@your-verified-domain.com>"
 ```
 
 In a second terminal:
@@ -141,14 +141,14 @@ pnpm exec convex run review:reviewExisting    # also retries failed reviews
 
 - **SMEs** are business accounts: one account, one SME profile, no teammates.
 - **Enterprises** (Capitec, Boxer, …) are Better Auth organisations with members, teams and invitations. Anyone can
-  create one, but it stays **unverified** until YES Hub staff approve it, and only verified organisations can post
+  create one, but it stays **unverified** until MASLink staff approve it, and only verified organisations can post
   opportunities.
-- **YES Hub staff** are members of the staff organisation (slug `yeshub`). Their role there is their access level
+- **MASLink staff** are members of the staff organisation (slug `yeshub`). Their role there is their access level
   in `/admin`, synced to the Better Auth admin role: owner → **super admin**, then **admin**, **moderator** and
   **viewer** (`src/lib/permissions.ts` lists what each can do).
 - An account belongs to at most one organisation, and an SME account can't join one.
 
-### YES Hub admins
+### MASLink admins
 
 Super admins invite staff and set access levels from **Admin → Staff**. Every staff action in the admin area is
 recorded in **Admin → Audit log**.
@@ -181,7 +181,7 @@ pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'   # a
 | `OPENROUTER_API_KEY` | Convex | Jev, for reviewing and deciding applications. The OpenRouter account needs credits: a key’s limit is only a cap |
 | `DATA_ENCRYPTION_KEY` | Convex | 32 random bytes, base64, for encrypting sensitive fields. Back it up: losing it loses that data |
 | `JEV_MODEL` | Convex | Optional. Defaults to `typesafe/jev-router` |
-| `SUPER_ADMIN_EMAILS` | Convex | Comma-separated emails that become YES Hub super admins when they sign up |
+| `SUPER_ADMIN_EMAILS` | Convex | Comma-separated emails that become MASLink super admins when they sign up |
 | `AUTH_EMAIL_FROM` | Convex | Sender address on a domain verified in Resend. Until one is set, mail only reaches the Resend account owner, so sign-up doesn’t require email verification (see `convex/auth.ts`) |
 | `CONVEX_DEPLOY_KEY` | Vercel | See below |
 
@@ -233,7 +233,7 @@ sign-in to work. Until then, `git.deploymentEnabled` in `vercel.json` only deplo
 | --- | --- |
 | `convex/schema.ts` | Database schema (`smes`: SME business profiles, keyed by Better Auth user; `auditLog`: staff actions) |
 | `convex/smes.ts` | SME profile queries and mutations |
-| `convex/auth.ts` | Better Auth options and instance: email/password, organisations (enterprises with teams, and YES Hub staff), admin, and the hooks that enforce access levels and write the audit log |
+| `convex/auth.ts` | Better Auth options and instance: email/password, organisations (enterprises with teams, and MASLink staff), admin, and the hooks that enforce access levels and write the audit log |
 | `convex/betterAuth/` | Locally installed Better Auth component: generated schema, adapter, component functions |
 | `convex/admin.ts` | The admin area's queries and mutations (SMEs, organisations, staff), each checked against the caller's access level |
 | `convex/platform.ts`, `convex/audit.ts` | Account state, staff roles and the audit log |
@@ -250,7 +250,7 @@ sign-in to work. Until then, `git.deploymentEnabled` in `vercel.json` only deplo
 | `src/app/start/` | Where sign-in lands: sends each account to its portal, or asks new accounts if they're an SME or an enterprise |
 | `src/app/sme/` | SME portal (`/sme`) and the registration wizard (`/sme/register`) |
 | `src/app/dashboard/` | Enterprise dashboard (`/dashboard`), for organisation members |
-| `src/app/admin/` | YES Hub admin (`/admin`), for staff: users, SMEs, organisations, staff and the audit log |
+| `src/app/admin/` | MASLink admin (`/admin`), for staff: users, SMEs, organisations, staff and the audit log |
 | `src/app/(app)/` | Account settings, with the app header |
 | `src/components/portal/` | Shared portal shell, sidebar and access guard |
 | `src/components/sme-portal/`, `enterprise/`, `admin/` | Each portal's navigation and screens |

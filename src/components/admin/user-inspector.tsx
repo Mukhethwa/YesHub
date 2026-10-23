@@ -52,7 +52,7 @@ const BAN_DURATIONS = [
   { id: "30d", label: "30 days", seconds: 60 * 60 * 24 * 30 },
 ] as const;
 
-/** Side panel for one account: profile, YES Hub context, security, access and sessions. */
+/** Side panel for one account: profile, MASLink context, security, access and sessions. */
 export function UserInspector({ user, onClose }: { user: AdminUser | null; onClose: () => void }) {
   return (
     <Sheet open={!!user} onOpenChange={(open) => !open && onClose()}>
@@ -165,7 +165,7 @@ function AccountSection({ user }: { user: AdminUser }) {
           <dd>{user.emailVerified ? "Yes" : "No"}</dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">On YES Hub</dt>
+          <dt className="text-muted-foreground">On MASLink</dt>
           <dd>
             {context === undefined ? (
               <Spinner />
@@ -175,7 +175,7 @@ function AccountSection({ user }: { user: AdminUser }) {
               </Link>
             ) : context?.organization ? (
               context.organization.kind === "staff" ? (
-                "YES Hub staff"
+                "MASLink staff"
               ) : (
                 <Link
                   href={`/admin/organisations?id=${context.organization.id}`}
@@ -345,7 +345,7 @@ function AccessSection({ user, locked, onDeleted }: { user: AdminUser; locked: b
         </AccessRow>
         <AccessRow
           title="View as this user"
-          description="See YES Hub exactly as they do. A banner lets you switch back."
+          description="See MASLink exactly as they do. A banner lets you switch back."
         >
           <Button
             variant="outline"
@@ -392,7 +392,7 @@ function AccessSection({ user, locked, onDeleted }: { user: AdminUser; locked: b
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {user.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              {user.email} and everything YES Hub holds for them is deleted. This can’t be undone.
+              {user.email} and everything MASLink holds for them is deleted. This can’t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

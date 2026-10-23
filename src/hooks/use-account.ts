@@ -5,7 +5,7 @@ import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 /**
- * Who the signed-in person is to YES Hub: staff access level, SME profile, enterprise organisation.
+ * Who the signed-in person is to MASLink: staff access level, SME profile, enterprise organisation.
  * undefined while loading (or before Convex auth is ready), null when signed out.
  */
 export function useAccount() {

@@ -271,8 +271,23 @@ export const removeMember = mutation({
   },
 });
 
+/** Renames the staff organisation if it still has the old name. Returns whether it changed. */
+export const renameStaffOrganization = mutation({
+  args: { from: v.string(), to: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const org = await ctx.db
+      .query("organization")
+      .withIndex("slug", (q) => q.eq("slug", STAFF_ORG_SLUG))
+      .unique();
+    if (!org || org.name !== args.from) return false;
+    await ctx.db.patch("organization", org._id, { name: args.to });
+    return true;
+  },
+});
+
 /**
- * Makes a user an owner of the YES Hub staff organisation, creating the organisation on first use.
+ * Makes a user an owner of the MASLink staff organisation, creating the organisation on first use.
  * Returns the staff organisation id.
  */
 export const ensureStaffOwner = mutation({
@@ -285,7 +300,7 @@ export const ensureStaffOwner = mutation({
       .unique();
     if (!org) {
       const id = await ctx.db.insert("organization", {
-        name: "YES Hub",
+        name: "MASLink",
         slug: STAFF_ORG_SLUG,
         createdAt: Date.now(),
         kind: "staff",

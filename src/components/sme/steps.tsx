@@ -535,7 +535,7 @@ export function ReviewStep({ form, errors, update, onEdit }: StepProps & { onEdi
           className="mt-0.5"
         />
         <span>
-          I confirm these details are accurate and consent to YES Hub processing them and sharing my business profile
+          I confirm these details are accurate and consent to MASLink processing them and sharing my business profile
           with corporates and funders for opportunity matching, in line with POPIA. I can view, export or withdraw this
           consent at any time.
           {errors.consent && <span className="mt-1 block text-destructive">{errors.consent}</span>}

@@ -27,6 +27,8 @@ import type * as lib_procurement from "../lib/procurement.js";
 import type * as lib_samplePdf from "../lib/samplePdf.js";
 import type * as lib_staff from "../lib/staff.js";
 import type * as platform from "../platform.js";
+import type * as public_ from "../public.js";
+import type * as rename from "../rename.js";
 import type * as review from "../review.js";
 import type * as reviewActions from "../reviewActions.js";
 import type * as seed from "../seed.js";
@@ -59,6 +61,8 @@ declare const fullApi: ApiFromModules<{
   "lib/samplePdf": typeof lib_samplePdf;
   "lib/staff": typeof lib_staff;
   platform: typeof platform;
+  public: typeof public_;
+  rename: typeof rename;
   review: typeof review;
   reviewActions: typeof reviewActions;
   seed: typeof seed;

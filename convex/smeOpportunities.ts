@@ -29,7 +29,7 @@ async function getOwnSme(ctx: QueryCtx) {
     .unique();
 }
 
-/** Enterprise organisations by id, with whether YES Hub has verified them. */
+/** Enterprise organisations by id, with whether MASLink has verified them. */
 async function organizations(ctx: QueryCtx) {
   const list = await ctx.runQuery(components.betterAuth.organizations.list, { limit: 500 });
   return new Map(
@@ -290,7 +290,7 @@ export const apply = mutation({
     const sme = await getOwnSme(ctx);
     if (!sme) throw new ConvexError("Register your business before applying.");
     if (sme.suspendedAt)
-      throw new ConvexError("Your profile is suspended, so you can’t apply right now. Contact YES Hub.");
+      throw new ConvexError("Your profile is suspended, so you can’t apply right now. Contact MASLink.");
 
     const opportunity = await ctx.db.get("opportunities", args.opportunityId);
     if (!opportunity || opportunity.status !== "open") throw new ConvexError("This opportunity isn’t open any more.");
@@ -320,7 +320,7 @@ export const apply = mutation({
       smeId: sme._id,
       status: "submitted",
       submittedAt: Date.now(),
-      // YES Hub's rules answer straight away; Jev replaces this once it has read the documents
+      // MASLink's rules answer straight away; Jev replaces this once it has read the documents
       evaluation: evaluateApplication(opportunity, sme),
       quote,
       proposal,

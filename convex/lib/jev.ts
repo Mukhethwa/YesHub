@@ -56,7 +56,7 @@ export async function askJev<T>({
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
       "HTTP-Referer": process.env.SITE_URL ?? "https://yeshub-app.vercel.app",
-      "X-Title": "YES Hub",
+      "X-Title": "MASLink",
     },
     body: JSON.stringify({
       model: process.env.JEV_MODEL || "typesafe/jev-router",
@@ -81,7 +81,7 @@ export async function askJev<T>({
 
   if (res.status === 402) {
     throw new JevError(
-      "The review service is out of credits (OpenRouter). YES Hub needs to add credits, then review again.",
+      "The review service is out of credits (OpenRouter). MASLink needs to add credits, then review again.",
     );
   }
   if (!res.ok || !body) {

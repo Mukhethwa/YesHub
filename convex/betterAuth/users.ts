@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 /**
- * Sets a user's platform role (e.g. "admin" for YES Hub staff).
+ * Sets a user's platform role (e.g. "admin" for MASLink staff).
  * Component functions are never exposed to the internet; the app wraps this in an internal mutation.
  */
 export const setRoleByEmail = mutation({

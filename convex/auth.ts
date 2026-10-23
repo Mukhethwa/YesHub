@@ -110,7 +110,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       where: [{ field: "id", value: memberId }],
     });
 
-  /** Audit entries for changes to the YES Hub staff organisation (enterprise membership isn't audited). */
+  /** Audit entries for changes to the MASLink staff organisation (enterprise membership isn't audited). */
   const recordStaffChange = async (hookCtx: HookContext) => {
     const session = hookCtx.context.session ?? (await getSessionFromCtx(hookCtx));
     if (!session) return;
@@ -184,7 +184,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
     databaseHooks: {
       user: {
         create: {
-          // SUPER_ADMIN_EMAILS sign-ups become owners of the YES Hub staff organisation
+          // SUPER_ADMIN_EMAILS sign-ups become owners of the MASLink staff organisation
           after: async (user) => {
             if (superAdminEmails().includes(user.email.toLowerCase())) {
               await run().runMutation(internal.platform.makeStaffOwner, { userId: user.id });
@@ -225,7 +225,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
           });
           if (org?.kind !== "staff") return;
           if (session?.user.role !== "superadmin") {
-            throw new APIError("FORBIDDEN", { message: "Only a super admin can manage YES Hub staff." });
+            throw new APIError("FORBIDDEN", { message: "Only a super admin can manage MASLink staff." });
           }
           if (hookCtx.path === "/organization/update-member-role") {
             const memberId = (hookCtx.body as { memberId?: string }).memberId;
@@ -253,7 +253,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
           // Access levels come from the staff organisation; this endpoint only toggles plain users
           const role = (hookCtx.body as { role?: unknown }).role;
           if (role !== "user") {
-            throw new APIError("BAD_REQUEST", { message: "Invite staff through the YES Hub team instead." });
+            throw new APIError("BAD_REQUEST", { message: "Invite staff through the MASLink team instead." });
           }
         }
       }),
@@ -287,7 +287,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       }),
     },
     plugins: [
-      // Enterprises (and the YES Hub staff organisation) are organisations with members, teams and invitations
+      // Enterprises (and the MASLink staff organisation) are organisations with members, teams and invitations
       organization({
         teams: { enabled: true },
         ac: orgAc,
@@ -295,9 +295,9 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         schema: {
           organization: {
             additionalFields: {
-              /** "enterprise" (Capitec, Boxer, …) or "staff" (YES Hub itself). Set by the server only. */
+              /** "enterprise" (Capitec, Boxer, …) or "staff" (MASLink itself). Set by the server only. */
               kind: { type: "string", required: false, defaultValue: "enterprise", input: false },
-              /** Enterprises can't post opportunities until YES Hub staff verify them. */
+              /** Enterprises can't post opportunities until MASLink staff verify them. */
               verificationStatus: { type: "string", required: false, defaultValue: "unverified", input: false },
               verifiedAt: { type: "number", required: false, input: false },
               verificationNote: { type: "string", required: false, input: false },
@@ -321,7 +321,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
           beforeCreateInvitation: async ({ invitation, inviter, organization }) => {
             if (organization.kind === "staff") {
               if (inviter.role !== "superadmin") {
-                throw new APIError("FORBIDDEN", { message: "Only a super admin can invite YES Hub staff." });
+                throw new APIError("FORBIDDEN", { message: "Only a super admin can invite MASLink staff." });
               }
               if (!(STAFF_ORG_ROLES as string[]).includes(invitation.role)) {
                 throw new APIError("BAD_REQUEST", { message: "Staff roles are owner, admin, moderator and viewer." });
@@ -353,7 +353,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
           },
           beforeDeleteOrganization: async ({ organization }) => {
             if (organization.kind === "staff") {
-              throw new APIError("FORBIDDEN", { message: "The YES Hub staff organisation can’t be deleted." });
+              throw new APIError("FORBIDDEN", { message: "The MASLink staff organisation can’t be deleted." });
             }
           },
         },
@@ -367,7 +367,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
           });
         },
       }),
-      // Platform access levels for YES Hub staff (see src/lib/permissions.ts)
+      // Platform access levels for MASLink staff (see src/lib/permissions.ts)
       admin({ ac, roles, adminRoles: STAFF_ROLES, defaultRole: "user" }),
       // The Convex plugin is required for Convex compatibility
       convex({ authConfig }),
