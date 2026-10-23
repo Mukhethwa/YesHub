@@ -32,19 +32,45 @@ import { FilterTabs } from "./shared";
 
 type Data = NonNullable<FunctionReturnType<typeof api.analytics.platform>>;
 
+/** Every kind of opportunity, procurement then ESD, in the colours their tiles use. */
 const KIND = {
   tender: { label: "Tenders", className: "bg-brand-blue" },
   rfq: { label: "RFQs", className: "bg-brand-green" },
   grant: { label: "Grants", className: "bg-brand-yellow" },
+  funding: { label: "Funding", className: "bg-brand-navy" },
+  accelerator: { label: "Accelerators", className: "bg-brand-red" },
+  support: { label: "Business support", className: "bg-primary" },
 } as const;
 
-const STATUS = {
-  submitted: { label: "Submitted", className: "bg-brand-blue" },
-  shortlisted: { label: "Shortlisted", className: "bg-brand-green" },
-  awarded: { label: "Awarded", className: "bg-brand-yellow" },
-  declined: { label: "Declined", className: "bg-brand-red" },
-  withdrawn: { label: "Withdrawn", className: "bg-muted-foreground/40" },
-} as const;
+type Application = Data["applications"][number];
+
+/**
+ * Application outcomes. An ESD programme's "awarded" is an SME accepted into it, so it's counted apart from
+ * tender and RFQ awards.
+ */
+const OUTCOMES: { key: string; label: string; className: string; match: (a: Application) => boolean }[] = [
+  { key: "submitted", label: "Submitted", className: "bg-brand-blue", match: (a) => a.status === "submitted" },
+  { key: "shortlisted", label: "Shortlisted", className: "bg-brand-green", match: (a) => a.status === "shortlisted" },
+  {
+    key: "awarded",
+    label: "Awarded",
+    className: "bg-brand-yellow",
+    match: (a) => a.status === "awarded" && !a.esd,
+  },
+  {
+    key: "accepted",
+    label: "Accepted into a programme",
+    className: "bg-primary",
+    match: (a) => a.status === "awarded" && a.esd,
+  },
+  { key: "declined", label: "Declined", className: "bg-brand-red", match: (a) => a.status === "declined" },
+  {
+    key: "withdrawn",
+    label: "Withdrawn by the SME",
+    className: "bg-muted-foreground/40",
+    match: (a) => a.status === "withdrawn",
+  },
+];
 
 const MAP_METRICS = {
   activity: { label: "Activity", unit: "actions", tone: "blue" },
@@ -261,29 +287,37 @@ function Report({
   const before = (t: number) => within(t, period.previous);
 
   const smes = data.smes.filter((s) => current(s.t));
-  const applications = data.applications.filter((a) => current(a.t));
+  // Every application in the period, including withdrawn ones, for the outcomes chart
+  const everything = data.applications.filter((a) => current(a.t));
+  // What buyers received: withdrawn applications are out of every other figure, as they are for buyers
+  const received = (a: Application) => a.status !== "withdrawn";
+  const applications = everything.filter(received);
+  // The award funnel and shortlist rate are procurement's; ESD programmes accept SMEs instead
+  const procurement = applications.filter((a) => !a.esd);
+  const programmes = applications.filter((a) => a.esd);
+  const accepted = programmes.filter((a) => a.status === "awarded").length;
   const opportunities = data.opportunities.filter((o) => current(o.t));
   const activity = data.activity.filter((a) => current(a.t));
-  const shortlisted = applications.filter((a) => a.status === "shortlisted" || a.status === "awarded");
+  const shortlisted = procurement.filter((a) => a.status === "shortlisted" || a.status === "awarded");
 
   const mapValues = provinceValues(metric, { smes, applications, activity });
 
   const funnel = [
-    { label: "Applied", value: applications.length, className: "bg-brand-blue" },
+    { label: "Applied", value: procurement.length, className: "bg-brand-blue" },
     {
       label: "Meet the requirements",
-      value: applications.filter((a) => a.qualifies).length,
+      value: procurement.filter((a) => a.qualifies).length,
       className: "bg-primary/70",
     },
     { label: "Shortlisted", value: shortlisted.length, className: "bg-brand-green" },
     {
       label: "Awarded",
-      value: applications.filter((a) => a.status === "awarded").length,
+      value: procurement.filter((a) => a.status === "awarded").length,
       className: "bg-brand-yellow",
     },
   ];
 
-  const reviewed = applications.filter((a) => a.review);
+  const reviewed = procurement.filter((a) => a.review);
   const reviewShortlisted = reviewed.filter((a) => a.review === "shortlisted").length;
   const overridden = reviewed.filter((a) => a.overridden).length;
   const decisionDays = median(applications.flatMap((a) => (a.decidedAfter === null ? [] : [a.decidedAfter])));
@@ -330,7 +364,7 @@ function Report({
             context: (
               <Delta
                 after={applications.length}
-                before={data.applications.filter((a) => before(a.t)).length}
+                before={data.applications.filter((a) => before(a.t) && received(a)).length}
                 previous={previous}
               />
             ),
@@ -338,8 +372,8 @@ function Report({
           {
             label: "Shortlist rate",
             icon: ListChecksIcon,
-            value: `${percent(shortlisted.length, applications.length)}%`,
-            context: `${shortlisted.length} of ${applications.length} applications`,
+            value: `${percent(shortlisted.length, procurement.length)}%`,
+            context: `${shortlisted.length} of ${procurement.length} tender and RFQ applications`,
           },
         ]}
       />
@@ -386,7 +420,7 @@ function Report({
       </Section>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        <Section title="From application to award" className="lg:col-span-2">
+        <Section title="From application to award" description="Tenders and RFQs." className="lg:col-span-2">
           <Card className="space-y-4">
             {funnel.map((step, i) => (
               <div key={step.label} className="space-y-1.5">
@@ -409,6 +443,13 @@ function Report({
                 </div>
               </div>
             ))}
+            <p className="border-t pt-3 text-sm text-muted-foreground">
+              Support programmes: <span className="font-medium text-foreground tabular-nums">{programmes.length}</span>{" "}
+              application
+              {programmes.length === 1 ? "" : "s"},{" "}
+              <span className="font-medium text-foreground tabular-nums">{accepted}</span> accepted (
+              {percent(accepted, programmes.length)}%).
+            </p>
           </Card>
         </Section>
 
@@ -457,13 +498,13 @@ function Report({
               compact
               legend={[]}
               empty="No applications in this period."
-              rows={(Object.keys(STATUS) as (keyof typeof STATUS)[]).map((status) => ({
-                key: status,
-                label: STATUS[status].label,
+              rows={OUTCOMES.map((outcome) => ({
+                key: outcome.key,
+                label: outcome.label,
                 segments: [
                   {
-                    value: applications.filter((a) => a.status === status).length,
-                    className: STATUS[status].className,
+                    value: everything.filter(outcome.match).length,
+                    className: outcome.className,
                     label: "applications",
                   },
                 ],

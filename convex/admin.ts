@@ -2,9 +2,11 @@ import { ConvexError, v } from "convex/values";
 
 import { isStaffRole } from "../src/lib/permissions";
 import { components } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { internalMutation, mutation, query } from "./functions";
 import { audit } from "./audit";
-import { deleteOpportunitiesForOrganization } from "./lib/opportunities";
+import { APPLICATION_LIMIT, deleteOpportunitiesForOrganization } from "./lib/opportunities";
 import { deleteOrganizationSettings } from "./lib/organizationSettings";
 import { getStaff, requireStaff } from "./lib/staff";
 import { deleteAppData } from "./platform";
@@ -248,6 +250,143 @@ export const organization = query({
   handler: async (ctx, args) => {
     if (!(await getStaff(ctx, { organization: ["read"] }))) return null;
     return ctx.runQuery(components.betterAuth.organizations.detail, args);
+  },
+});
+
+/* ------------------------------------------------------------------------------------------------------ */
+/* Listings                                                                                               */
+/* ------------------------------------------------------------------------------------------------------ */
+
+/** An opportunity's applications, counted the way its organisation sees them: withdrawn ones apart. */
+async function applicationCounts(ctx: QueryCtx, opportunityId: Id<"opportunities">) {
+  const [applications, unfinished] = await Promise.all([
+    ctx.db
+      .query("applications")
+      .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunityId))
+      .take(APPLICATION_LIMIT),
+    ctx.db
+      .query("applicationDrafts")
+      .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunityId))
+      .take(APPLICATION_LIMIT),
+  ]);
+  const active = applications.filter((a) => a.status !== "withdrawn");
+  return {
+    applications,
+    counts: {
+      applications: active.length,
+      qualified: active.filter((a) => a.evaluation.qualifies).length,
+      shortlisted: active.filter((a) => a.status === "shortlisted").length,
+      /** Awarded, or for an ESD programme, accepted into it. */
+      awarded: active.filter((a) => a.status === "awarded").length,
+      declined: active.filter((a) => a.status === "declined").length,
+      withdrawn: applications.length - active.length,
+      /** SMEs that started an application and haven't sent it. Only a count: what they wrote is theirs. */
+      inProgress: unfinished.length,
+    },
+  };
+}
+
+/**
+ * Every listing and ESD programme on MASLink, whichever organisation posted it, with its applicant figures,
+ * so staff can check what SMEs see against what each organisation posted. The browser works out whether
+ * SMEs can see it today (queries shouldn't read the clock).
+ */
+export const listings = query({
+  args: {},
+  handler: async (ctx) => {
+    if (!(await getStaff(ctx, { organization: ["read"] }))) return null;
+    const [opportunities, organizations] = await Promise.all([
+      ctx.db.query("opportunities").order("desc").take(LIST_LIMIT),
+      ctx.runQuery(components.betterAuth.organizations.list, { limit: LIST_LIMIT }),
+    ]);
+    const orgs = new Map(organizations.map((o) => [o.id, o]));
+
+    const rows = [];
+    for (const o of opportunities) {
+      const org = orgs.get(o.organizationId);
+      const { counts } = await applicationCounts(ctx, o._id);
+      rows.push({
+        id: o._id,
+        reference: o.reference,
+        title: o.title,
+        kind: o.kind,
+        status: o.status,
+        closesAt: o.closesAt,
+        value: o.value ?? null,
+        createdAt: o._creationTime,
+        publishedAt: o.listing?.publishedAt ?? null,
+        organization: org ? { id: org.id, name: org.name, verificationStatus: org.verificationStatus } : null,
+        ...counts,
+      });
+    }
+    return rows;
+  },
+});
+
+/** One listing for staff: its facts and every applicant with how they were assessed. */
+export const listing = query({
+  args: { opportunityId: v.string() },
+  handler: async (ctx, args) => {
+    if (!(await getStaff(ctx, { organization: ["read"] }))) return null;
+    const id = ctx.db.normalizeId("opportunities", args.opportunityId);
+    const o = id ? await ctx.db.get("opportunities", id) : null;
+    if (!o) return null;
+
+    const [detail, { applications, counts }] = await Promise.all([
+      ctx.runQuery(components.betterAuth.organizations.detail, { organizationId: o.organizationId }),
+      applicationCounts(ctx, o._id),
+    ]);
+    const applicants = [];
+    for (const a of applications) {
+      const sme = await ctx.db.get("smes", a.smeId);
+      applicants.push({
+        id: a._id,
+        smeId: a.smeId,
+        companyName: sme?.companyName ?? "Deleted SME",
+        hqProvince: sme?.hqProvince ?? "",
+        status: a.status,
+        submittedAt: a.submittedAt,
+        statusChangedAt: a.statusChangedAt ?? null,
+        statusChangedBy: a.statusChangedBy ?? null,
+        score: a.evaluation.score,
+        qualifies: a.evaluation.qualifies,
+        engine: a.evaluation.engine,
+      });
+    }
+    applicants.sort(
+      (a, b) =>
+        Number(a.status === "withdrawn") - Number(b.status === "withdrawn") ||
+        Number(b.qualifies) - Number(a.qualifies) ||
+        b.score - a.score ||
+        a.submittedAt - b.submittedAt,
+    );
+
+    return {
+      id: o._id,
+      reference: o.reference,
+      title: o.title,
+      description: o.description,
+      kind: o.kind,
+      status: o.status,
+      closesAt: o.closesAt,
+      value: o.value ?? null,
+      provinces: o.provinces,
+      industry: o.industry,
+      minBbbeeLevel: o.minBbbeeLevel ?? null,
+      requiredDocuments: o.requiredDocuments,
+      createdAt: o._creationTime,
+      publishedAt: o.listing?.publishedAt ?? null,
+      cancellation: o.cancellation ? { reason: o.cancellation.reason, at: o.cancellation.at } : null,
+      organization: detail
+        ? {
+            id: detail.organization.id,
+            name: detail.organization.name,
+            verificationStatus: detail.organization.verificationStatus,
+          }
+        : null,
+      counts,
+      applicants,
+    };
   },
 });
 
