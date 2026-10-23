@@ -25,7 +25,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useUploadFile } from "@/hooks/use-upload-file";
 import { errorMessage } from "@/lib/errors";
-import { getSettings } from "@/lib/sme/settings";
 import type { SmeProfile } from "@/lib/sme/types";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -66,26 +65,8 @@ export function reachLabel(reach: Reach, opportunity: { provinces: string[] }, s
 /* The SME's matching preferences (Settings)                                                              */
 /* ------------------------------------------------------------------------------------------------------ */
 
-const TYPE_FOR_SETTING: Record<string, OpportunityKind> = {
-  Tenders: "tender",
-  RFQs: "rfq",
-  "Grants & funding": "grant",
-};
-
-/** "R250 000 and above" → 250000; "Any value" → 0. */
-export function minimumValue(setting: string) {
-  const digits = Number(setting.replace(/[^\d]/g, ""));
-  if (!digits) return 0;
-  return /million/i.test(setting) ? digits * 1_000_000 : digits;
-}
-
-/** The kinds of opportunity the SME asked to see in Settings. All kinds when none of these are ticked. */
-export function preferredKinds(sme: SmeProfile): OpportunityKind[] {
-  const kinds = getSettings(sme)
-    .opportunityTypes.map((t) => TYPE_FOR_SETTING[t])
-    .filter((k): k is OpportunityKind => !!k);
-  return kinds.length > 0 ? kinds : ["tender", "rfq", "grant"];
-}
+// The rules live in convex/lib/matching.ts, shared with the WhatsApp match alerts
+export { fitsProfile, minimumValue, preferredKinds } from "../../../convex/lib/matching";
 
 /* ------------------------------------------------------------------------------------------------------ */
 /* Matches                                                                                                */
@@ -132,14 +113,6 @@ const STATUS: Record<SmeApplicationStatus, { label: string; tone: "neutral" | "i
 /** The only application status an SME sees: in progress, submitted, withdrawn, or accepted into an ESD programme. */
 export function ApplicationStatusPill({ status }: { status: SmeApplicationStatus }) {
   return <Pill tone={STATUS[status].tone}>{STATUS[status].label}</Pill>;
-}
-
-/**
- * Whether the SME's profile fits what the listing is for (where the work is, B-BBEE level, its field, good
- * standing). Documents aren't part of it: missing documents are something to fix, so they're recommendations.
- */
-export function fitsProfile(evaluation: Evaluation) {
-  return evaluation.checks.filter((c) => c.required && c.id !== "documents").every((c) => c.passed);
 }
 
 export type Recommendation = { id: string; text: string; action?: { label: string; href: string } };
@@ -262,6 +235,7 @@ export function ApplyButton({
   saved = null,
   size = "sm",
   esd = false,
+  openOnLoad = false,
 }: {
   opportunityId: Id<"opportunities">;
   title: string;
@@ -270,14 +244,16 @@ export function ApplyButton({
   size?: "sm" | "default";
   /** An ESD programme: no price, and the proposal is why the SME is applying. */
   esd?: boolean;
+  /** Open the form straight away, e.g. from a match alert's "apply" link. */
+  openOnLoad?: boolean;
 }) {
   const apply = useMutation(api.smeOpportunities.apply);
   const saveDraft = useMutation(api.smeOpportunities.saveDraft);
   const upload = useUploadFile();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openOnLoad);
   const [pending, setPending] = useState<"send" | "save" | null>(null);
-  const [quote, setQuote] = useState("");
-  const [proposal, setProposal] = useState("");
+  const [quote, setQuote] = useState(saved?.quote != null ? String(saved.quote) : "");
+  const [proposal, setProposal] = useState(saved?.proposal ?? "");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [removeSaved, setRemoveSaved] = useState<number[]>([]);
 

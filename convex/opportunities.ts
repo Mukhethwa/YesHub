@@ -2,6 +2,7 @@ import { ConvexError, type Infer, v } from "convex/values";
 
 import { DOCUMENTS } from "../src/lib/sme/documents";
 import { INDUSTRIES, PROVINCES } from "../src/lib/sme/constants";
+import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { getEnterprise, organizationDetail, ownOpportunity, teamIdsOf } from "./enterprise";
@@ -130,7 +131,7 @@ function readyToPublish(o: Pick<Doc<"opportunities">, "description" | "closesAt"
  * reused or changed, so documents, applications and the audit log can all point to it. Two creates at once
  * conflict and one retries, so numbers stay unique.
  */
-async function nextReference(
+export async function nextReference(
   ctx: MutationCtx,
   organizationId: string,
   organizationName: string,
@@ -219,6 +220,8 @@ export const create = mutation({
       reference,
       status: publish ? "open" : "draft",
     });
+    // Tell the SMEs it matches (WhatsApp, for those who turned it on)
+    if (publish) await ctx.scheduler.runAfter(0, internal.matchAlerts.onPublished, { opportunityId });
     return { id: opportunityId, reference };
   },
 });
@@ -282,6 +285,7 @@ export const publish = mutation({
       status: "open",
       listing: { ...opportunity.listing!, publishedAt: Date.now() },
     });
+    await ctx.scheduler.runAfter(0, internal.matchAlerts.onPublished, { opportunityId: opportunity._id });
     return null;
   },
 });

@@ -20,6 +20,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "next typegen && tsc --noEmit",
+    "docs:api": "node scripts/api-docs.mjs",
     "auth:generate": "cd convex/betterAuth && pnpm dlx auth@1.6.33 generate --output generatedSchema.ts -y"
   },
   "dependencies": {
@@ -72,6 +73,7 @@
     "prettier": "3.9.9",
     "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "yaml": "^2.9.1"
   }
 }
