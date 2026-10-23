@@ -123,7 +123,7 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
             value: closingThisWeek.length,
             context: closingThisWeek.length ? undefined : "Nothing closes in the next 7 days",
             action: closingThisWeek[0]
-              ? { label: `Next: ${closingThisWeek[0].title}`, href: opportunityHref(closingThisWeek[0]) }
+              ? { label: `Next: ${closingThisWeek[0].reference}`, href: opportunityHref(closingThisWeek[0]) }
               : undefined,
           },
         ]}
@@ -162,7 +162,8 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
                 <li key={r.id} className="flex items-start gap-3 px-4 py-3">
                   <KindTile kind={r.kind} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{r.title}</p>
+                    <p className="truncate text-sm font-medium">{r.reference}</p>
+                    <p className="truncate text-sm">{r.title}</p>
                     <p className="text-xs text-muted-foreground">
                       {r.applications === 0
                         ? `No applications yet. ${closingLabel(r.closesAt)}.`
@@ -213,11 +214,9 @@ export function OpportunityTable({ rows, esd = false }: { rows: OpportunityRow[]
               <Link href={opportunityHref(r)} className="flex items-center gap-3">
                 <KindTile kind={r.kind} />
                 <span className="min-w-0">
-                  <span className="block truncate font-medium hover:underline">{r.title}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {r.reference}
-                    {r.teamName ? `, ${r.teamName}` : ""}
-                  </span>
+                  <span className="block truncate font-medium hover:underline">{r.reference}</span>
+                  <span className="block truncate text-sm">{r.title}</span>
+                  {r.teamName && <span className="block truncate text-xs text-muted-foreground">{r.teamName}</span>}
                 </span>
               </Link>
             </TableCell>

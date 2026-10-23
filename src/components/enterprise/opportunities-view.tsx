@@ -248,11 +248,10 @@ export function OpportunityDetail({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <PhasePill phase={phase} />
-              <span className="text-sm text-muted-foreground">
-                {KIND_LABELS[detail.kind]}, {detail.reference}
-              </span>
+              <span className="text-sm text-muted-foreground">{KIND_LABELS[detail.kind]}</span>
             </div>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight">{detail.title}</h1>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight">{detail.reference}</h1>
+            <p className="mt-1 text-lg font-medium">{detail.title}</p>
             {detail.description && <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{detail.description}</p>}
           </div>
           <OpportunityActions

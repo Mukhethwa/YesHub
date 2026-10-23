@@ -363,10 +363,9 @@ function UnassignedCard({
           {opportunities.map((o) => (
             <li key={o.id} className="flex flex-col gap-2 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
               <Link href={`/dashboard/opportunities?id=${o.id}`} className="min-w-0 text-sm">
-                <span className="block truncate font-medium hover:underline">{o.title}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {o.reference}, {closingLabel(o.closesAt)}
-                </span>
+                <span className="block truncate font-medium hover:underline">{o.reference}</span>
+                <span className="block truncate">{o.title}</span>
+                <span className="block text-xs text-muted-foreground">{closingLabel(o.closesAt)}</span>
               </Link>
               <DepartmentSelect opportunityId={o.id} value={null} departments={departments} allowed={allowed} />
             </li>
