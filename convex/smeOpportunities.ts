@@ -6,11 +6,12 @@ import { type MutationCtx, type QueryCtx } from "./_generated/server";
 import { mutation, query } from "./functions";
 import { authComponent } from "./auth";
 import { evaluateApplication } from "./lib/evaluation";
+import { isEsd } from "./lib/kinds";
 import { outstandingAfterReview } from "./lib/outstanding";
 import { APPLICATION_LIMIT, deleteDraft } from "./lib/opportunities";
 import { classifyCriteria } from "./lib/procurement";
 import { addTrail, MAX_ATTACHMENTS, startReview } from "./review";
-import type { ApplicationAttachment } from "./schema";
+import type { ApplicationAttachment, OpportunityKind } from "./schema";
 
 /*
  * The SME side of opportunities: what's open to apply for (Matches), what the SME started or applied to
@@ -65,25 +66,28 @@ function publicOpportunity(o: Doc<"opportunities">, organizationName: string) {
 }
 
 /**
- * What an SME may see of its own application status. Everything the buyer does with an application stays
+ * What an SME may see of its own application status. What a buyer does with a tender or RFQ application stays
  * with the buyer (shortlisting, declining, awarding), so SMEs never have their expectations raised: to the
- * SME an application is submitted until it withdraws it.
+ * SME it's submitted until it withdraws it. The one outcome an SME is told is being accepted into an ESD
+ * programme (lib/kinds.ts).
  */
-export type SmeApplicationStatus = "in_progress" | "submitted" | "withdrawn";
+export type SmeApplicationStatus = "in_progress" | "submitted" | "accepted" | "withdrawn";
 
-const smeStatus = (status: Doc<"applications">["status"]): SmeApplicationStatus =>
-  status === "withdrawn" ? "withdrawn" : "submitted";
+const smeStatus = (status: Doc<"applications">["status"], kind: OpportunityKind): SmeApplicationStatus =>
+  status === "withdrawn" ? "withdrawn" : status === "awarded" && isEsd(kind) ? "accepted" : "submitted";
 
 /**
  * The SME's own application as it may see it: what it sent and its status. Never the evaluation, score,
  * ranking, buyer activity, review or decision, which only the buyer and MASLink staff see.
  */
-function applicationSummary(application: Doc<"applications">) {
+function applicationSummary(application: Doc<"applications">, kind: OpportunityKind) {
+  const status = smeStatus(application.status, kind);
   return {
     id: application._id,
-    status: smeStatus(application.status),
+    status,
     submittedAt: application.submittedAt,
-    withdrawnAt: application.status === "withdrawn" ? (application.statusChangedAt ?? null) : null,
+    withdrawnAt: status === "withdrawn" ? (application.statusChangedAt ?? null) : null,
+    acceptedAt: status === "accepted" ? (application.statusChangedAt ?? null) : null,
     quote: application.quote ?? null,
     proposal: application.proposal ?? null,
     attachments: (application.attachments ?? []).map((a) => ({ label: a.label, name: a.name })),
@@ -142,7 +146,7 @@ export const feed = query({
         const application = appliedTo.get(o._id);
         return {
           ...publicOpportunity(o, orgs.get(o.organizationId)!.name),
-          application: application ? { id: application._id, status: smeStatus(application.status) } : null,
+          application: application ? { id: application._id, status: smeStatus(application.status, o.kind) } : null,
           inProgress: started.has(o._id),
         };
       });
@@ -176,12 +180,12 @@ export const myApplications = query({
     for (const application of applications) {
       const opportunity = await ctx.db.get("opportunities", application.opportunityId);
       if (!opportunity) continue;
-      const a = applicationSummary(application);
+      const a = applicationSummary(application, opportunity.kind);
       rows.push({
         opportunity: publicOpportunity(opportunity, name(opportunity)),
         id: a.id as string,
         status: a.status,
-        at: a.withdrawnAt ?? a.submittedAt,
+        at: a.withdrawnAt ?? a.acceptedAt ?? a.submittedAt,
         submittedAt: a.submittedAt as number | null,
       });
     }
@@ -258,7 +262,7 @@ export const opportunity = query({
             }
           : null,
       documents,
-      application: application ? applicationSummary(application) : null,
+      application: application ? applicationSummary(application, opportunity.kind) : null,
       /**
        * Documents the tender still needs from this application, from the review: names and what to do, never
        * how it was scored. Null before the review has checked it against a confirmed tender.

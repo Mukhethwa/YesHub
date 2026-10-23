@@ -14,6 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { getSettings } from "@/lib/sme/settings";
 import type { SmeProfile } from "@/lib/sme/types";
+import { isEsd } from "../../../convex/lib/kinds";
 import type { OpportunityKind } from "../../../convex/schema";
 import {
   ApplyButton,
@@ -54,8 +55,10 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
   const minValue = minimumValue(settings.minContractValue);
   const kinds = preferredKinds(sme);
 
-  // Applied-to opportunities live in Opportunities; matches are what's still open to apply for
-  const open = (matches ?? []).filter((m) => !m.application);
+  // Matches are tenders and RFQs (ESD programmes are under Support programmes). Applied-to ones live in
+  // Opportunities, so these are what's still open to apply for.
+  const procurement = (matches ?? []).filter((m) => !isEsd(m.kind));
+  const open = procurement.filter((m) => !m.application);
   const kept = open.filter(
     (m) =>
       (kind === "all" ? true : kind === "preferred" ? kinds.includes(m.kind) : m.kind === kind) &&
@@ -68,13 +71,13 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
   if (matches === undefined) return <Spinner className="mx-auto mt-24" />;
 
   const count = (a: Area) => filtered.filter((m) => inArea(m, a)).length;
-  const applied = (matches ?? []).length - open.length;
+  const applied = procurement.length - open.length;
 
   return (
     <div className="space-y-5">
       <SectionHeader
         title="My matches"
-        description={`Open tenders, RFQs and grants that fit your business profile, best matches first.${
+        description={`Open tenders and RFQs that fit your business profile, best matches first.${
           applied > 0 ? ` ${applied} you’ve applied to ${applied === 1 ? "is" : "are"} in Opportunities.` : ""
         }`}
       />
@@ -106,7 +109,6 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
               <SelectItem value="all">All types</SelectItem>
               <SelectItem value="tender">Tenders</SelectItem>
               <SelectItem value="rfq">RFQs</SelectItem>
-              <SelectItem value="grant">Grants</SelectItem>
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
@@ -192,7 +194,12 @@ export function MatchCard({ match, sme }: { match: Match; sme: SmeProfile }) {
               <Link href={`/sme/opportunities?id=${match.id}`}>Continue application</Link>
             </Button>
           ) : (
-            <ApplyButton opportunityId={match.id} title={match.title} scoresPrice={match.scoresPrice} />
+            <ApplyButton
+              opportunityId={match.id}
+              title={match.title}
+              scoresPrice={match.scoresPrice}
+              esd={isEsd(match.kind)}
+            />
           )}
         </div>
       </div>

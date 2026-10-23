@@ -122,13 +122,14 @@ export function useMatches(sme: SmeProfile) {
 /* Shared display pieces                                                                                  */
 /* ------------------------------------------------------------------------------------------------------ */
 
-const STATUS: Record<SmeApplicationStatus, { label: string; tone: "neutral" | "info" }> = {
+const STATUS: Record<SmeApplicationStatus, { label: string; tone: "neutral" | "info" | "success" }> = {
   in_progress: { label: "In progress", tone: "info" },
   submitted: { label: "Submitted", tone: "neutral" },
+  accepted: { label: "Accepted", tone: "success" },
   withdrawn: { label: "Withdrawn", tone: "neutral" },
 };
 
-/** The only application status an SME sees: in progress, submitted or withdrawn. */
+/** The only application status an SME sees: in progress, submitted, withdrawn, or accepted into an ESD programme. */
 export function ApplicationStatusPill({ status }: { status: SmeApplicationStatus }) {
   return <Pill tone={STATUS[status].tone}>{STATUS[status].label}</Pill>;
 }
@@ -152,7 +153,7 @@ const PROFILE_ACTION = { label: "Edit profile", href: "/sme/profile" };
  */
 export function recommendationsFor(
   evaluation: Evaluation,
-  opportunity: { provinces: string[]; industry: string },
+  opportunity: { provinces: string[]; industry: string; services: string[] },
 ): Recommendation[] {
   const gaps = evaluation.checks.filter((c) => !c.passed);
   const ordered = [...gaps.filter((c) => c.required), ...gaps.filter((c) => !c.required)];
@@ -185,6 +186,8 @@ export function recommendationsFor(
           },
         ];
       case "services":
+        // Nothing to add when the listing doesn't name services, as most ESD programmes don't
+        if (opportunity.services.length === 0) return [];
         return [
           {
             id: check.id,
@@ -258,12 +261,15 @@ export function ApplyButton({
   scoresPrice,
   saved = null,
   size = "sm",
+  esd = false,
 }: {
   opportunityId: Id<"opportunities">;
   title: string;
   scoresPrice: boolean;
   saved?: SavedApplication | null;
   size?: "sm" | "default";
+  /** An ESD programme: no price, and the proposal is why the SME is applying. */
+  esd?: boolean;
 }) {
   const apply = useMutation(api.smeOpportunities.apply);
   const saveDraft = useMutation(api.smeOpportunities.saveDraft);
@@ -345,38 +351,48 @@ export function ApplyButton({
           <DialogHeader>
             <DialogTitle>Apply to {title}</DialogTitle>
             <DialogDescription>
-              Your compliance documents come from your profile. Not ready yet? Save it and finish later: the buyer only
-              sees your application once you send it.
+              Your compliance documents come from your profile. Not ready yet? Save it and finish later:{" "}
+              {esd ? "the programme team" : "the buyer"} only sees your application once you send it.
             </DialogDescription>
           </DialogHeader>
 
           <FieldGroup>
+            {!esd && (
+              <Field>
+                <FieldLabel htmlFor="apply-quote">Your price (rand){scoresPrice ? "" : ", optional"}</FieldLabel>
+                <Input
+                  id="apply-quote"
+                  inputMode="decimal"
+                  placeholder="e.g. 1 250 000"
+                  value={quote}
+                  onChange={(e) => setQuote(e.target.value)}
+                />
+                <FieldDescription>
+                  {scoresPrice
+                    ? "Needed before you send. This buyer evaluates price."
+                    : "Leave empty if the opportunity doesn’t ask for a price."}
+                </FieldDescription>
+              </Field>
+            )}
             <Field>
-              <FieldLabel htmlFor="apply-quote">Your price (rand){scoresPrice ? "" : ", optional"}</FieldLabel>
-              <Input
-                id="apply-quote"
-                inputMode="decimal"
-                placeholder="e.g. 1 250 000"
-                value={quote}
-                onChange={(e) => setQuote(e.target.value)}
-              />
-              <FieldDescription>
-                {scoresPrice
-                  ? "Needed before you send. This buyer evaluates price."
-                  : "Leave empty if the opportunity doesn’t ask for a price."}
-              </FieldDescription>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="apply-proposal">Your proposal</FieldLabel>
+              <FieldLabel htmlFor="apply-proposal">{esd ? "Why you’re applying" : "Your proposal"}</FieldLabel>
               <Textarea
                 id="apply-proposal"
                 rows={5}
                 maxLength={4000}
-                placeholder="How you’d do the work: your team and capacity, similar work and references, how you’d supervise it."
+                placeholder={
+                  esd
+                    ? "Where your business is now, what you’d use this for, and what difference it would make."
+                    : "How you’d do the work: your team and capacity, similar work and references, how you’d supervise it."
+                }
                 value={proposal}
                 onChange={(e) => setProposal(e.target.value)}
               />
-              <FieldDescription>The buyer reads this to understand how you’d deliver.</FieldDescription>
+              <FieldDescription>
+                {esd
+                  ? "The programme team reads this when choosing who to accept."
+                  : "The buyer reads this to understand how you’d deliver."}
+              </FieldDescription>
             </Field>
 
             <div className="space-y-3">
@@ -412,7 +428,10 @@ export function ApplyButton({
               )}
               {attachments.length === 0 && savedFiles.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  E.g. a pricing schedule, method statement or returnable forms. PDF, JPG or PNG, up to 10 MB each.
+                  {esd
+                    ? "E.g. a business plan, financial statements or quotes."
+                    : "E.g. a pricing schedule, method statement or returnable forms."}{" "}
+                  PDF, JPG or PNG, up to 10 MB each.
                 </p>
               )}
               {attachments.map((a) => (

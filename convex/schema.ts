@@ -92,7 +92,15 @@ export const smeDetailsValidator = v.object(smeDetails);
 export type SmeDetails = Infer<typeof smeDetailsValidator>;
 export type SmeSettings = Infer<typeof smeSettings>;
 
-export const opportunityKind = v.union(v.literal("tender"), v.literal("rfq"), v.literal("grant"));
+/** Tenders and RFQs are procurement; grants, funding, accelerators and business support are ESD (lib/kinds.ts). */
+export const opportunityKind = v.union(
+  v.literal("tender"),
+  v.literal("rfq"),
+  v.literal("grant"),
+  v.literal("funding"),
+  v.literal("accelerator"),
+  v.literal("support"),
+);
 export const opportunityStatus = v.union(
   v.literal("draft"),
   v.literal("open"),

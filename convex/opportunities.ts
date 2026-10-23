@@ -19,7 +19,14 @@ import { opportunityKind, type OpportunityKind } from "./schema";
  */
 
 /** The reference's middle part says what kind of opportunity it is: UMH-RFQ-2026-017. */
-const KIND_CODES: Record<OpportunityKind, string> = { tender: "TND", rfq: "RFQ", grant: "GRT" };
+const KIND_CODES: Record<OpportunityKind, string> = {
+  tender: "TND",
+  rfq: "RFQ",
+  grant: "GRT",
+  funding: "FND",
+  accelerator: "ACC",
+  support: "SUP",
+};
 const VALID_DOC_KEYS = new Set<string>(DOCUMENTS.map((d) => d.key));
 /** Most opportunities read when numbering a new one. */
 const NUMBERING_LIMIT = 2000;

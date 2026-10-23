@@ -28,6 +28,7 @@ import { DOCUMENTS, docStatus, documentProgress } from "@/lib/sme/documents";
 import { getReadiness } from "@/lib/sme/readiness";
 import type { SmeProfile } from "@/lib/sme/types";
 import { api } from "../../../convex/_generated/api";
+import { isEsd } from "../../../convex/lib/kinds";
 import { MatchCard } from "./matches-view";
 import { useMatches } from "./opportunities-shared";
 
@@ -150,7 +151,7 @@ function SmeSummary({
 }) {
   const matches = useMatches(sme);
   const applications = useQuery(api.smeOpportunities.myApplications);
-  const newMatches = (matches ?? []).filter((m) => !m.application && m.reach !== "outside").length;
+  const newMatches = (matches ?? []).filter((m) => !isEsd(m.kind) && !m.application && m.reach !== "outside").length;
   const submitted = (applications ?? []).filter((r) => r.status === "submitted").length;
   const unfinished = (applications ?? []).filter(
     (r) => r.status === "in_progress" && !isFinished(phaseOf(r.opportunity)),
@@ -198,7 +199,7 @@ function SmeSummary({
 /** The best open matches the SME hasn't applied to yet. */
 function LatestMatches({ sme }: { sme: SmeProfile }) {
   const matches = useMatches(sme);
-  const top = (matches ?? []).filter((m) => !m.application && m.reach !== "outside").slice(0, 3);
+  const top = (matches ?? []).filter((m) => !isEsd(m.kind) && !m.application && m.reach !== "outside").slice(0, 3);
 
   return (
     <Section title="Latest matches" href="/sme/matches" linkLabel="All matches">

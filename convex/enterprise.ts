@@ -8,6 +8,7 @@ import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
 import { components } from "./_generated/api";
 import { evaluateApplication } from "./lib/evaluation";
+import { isEsd } from "./lib/kinds";
 import { registerView } from "./lib/tender";
 import { addTrail } from "./review";
 import {
@@ -28,6 +29,7 @@ import {
   APPLICATION_LIMIT,
   deleteOpportunitiesForOrganization,
   insertSampleOpportunities,
+  insertSamplePrograms,
   TENDER_DOC_MAX_MB,
   TENDER_DOC_MIME_TYPES,
 } from "./lib/opportunities";
@@ -87,6 +89,8 @@ function summarize(
     applications: applications.filter((a) => a.status !== "withdrawn").length,
     qualified: applications.filter((a) => a.status !== "withdrawn" && a.evaluation.qualifies).length,
     shortlisted: applications.filter((a) => a.status === "shortlisted").length,
+    /** Awarded, or for an ESD programme, accepted into it. */
+    accepted: applications.filter((a) => a.status === "awarded").length,
     /** Applications nobody has shortlisted or declined yet. */
     awaitingReview: applications.filter((a) => a.status === "submitted").length,
   };
@@ -290,7 +294,12 @@ export const setApplicationStatus = mutation({
     if (!application || application.organizationId !== enterprise.organization.id) {
       throw new ConvexError("That application isn’t available.");
     }
-    if (application.status === "awarded") throw new ConvexError("This application has already been awarded.");
+    const opportunity = await ctx.db.get("opportunities", application.opportunityId);
+    // ESD programmes accept SMEs, as many as they take, straight from their application
+    const esd = !!opportunity && isEsd(opportunity.kind);
+    if (application.status === "awarded") {
+      throw new ConvexError(esd ? "This SME has already been accepted." : "This application has already been awarded.");
+    }
     if (application.status === "withdrawn") throw new ConvexError("The supplier withdrew this application.");
     const manager = canManage(enterprise.organization.role);
     const settings = await getOrganizationSettings(ctx, enterprise.organization.id);
@@ -298,8 +307,11 @@ export const setApplicationStatus = mutation({
       throw new ConvexError("Only owners and admins in your organisation can change an applicant’s status.");
     }
     if (args.status === "awarded") {
-      if (!manager) throw new ConvexError("Only owners and admins can award.");
-      if (application.status !== "shortlisted") throw new ConvexError("Only shortlisted applicants can be awarded.");
+      if (!manager)
+        throw new ConvexError(esd ? "Only owners and admins can accept SMEs." : "Only owners and admins can award.");
+      if (!esd && application.status !== "shortlisted") {
+        throw new ConvexError("Only shortlisted applicants can be awarded.");
+      }
     }
     const reason = args.reason.trim();
     if (reason.length < 10) throw new ConvexError("Enter a reason of at least 10 characters.");
@@ -335,7 +347,7 @@ export const setApplicationStatus = mutation({
       runId: decision?.runId,
       kind: againstShortlisting ? "override" : "action",
       actor: enterprise.user.name,
-      summary: `${enterprise.user.name} ${STATUS_VERBS[args.status]} ${sme?.companyName ?? "this applicant"}${
+      summary: `${enterprise.user.name} ${esd && args.status === "awarded" ? "accepted" : STATUS_VERBS[args.status]} ${sme?.companyName ?? "this applicant"}${esd && args.status === "awarded" ? " into the programme" : ""}${
         againstShortlisting ? ", against the shortlisting outcome" : ""
       }.`,
       details: [reason],
@@ -956,4 +968,9 @@ export const reevaluate = internalMutation({
 export const seedSampleOpportunities = internalMutation({
   args: { organizationId: v.string(), organizationName: v.string(), createdBy: v.string() },
   handler: async (ctx, args) => insertSampleOpportunities(ctx, args),
+});
+
+export const seedSamplePrograms = internalMutation({
+  args: { organizationId: v.string(), organizationName: v.string(), createdBy: v.string() },
+  handler: async (ctx, args) => insertSamplePrograms(ctx, args),
 });

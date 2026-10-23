@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Part } from "@/components/scene-parts";
 import { errorMessage } from "@/lib/errors";
 import { api } from "../../../convex/_generated/api";
+import { isEsd } from "../../../convex/lib/kinds";
 import { CreateOrganisation } from "./create-organisation";
 import { closingLabel, KindTile, percent, PhasePill, isFinished, phaseOf, QualifiedShare } from "./tenders";
 
@@ -40,7 +41,8 @@ function byUrgency(a: OpportunityRow, b: OpportunityRow) {
   return aClosed ? b.closesAt.localeCompare(a.closesAt) : a.closesAt.localeCompare(b.closesAt);
 }
 
-const opportunityHref = (r: OpportunityRow) => `/dashboard/opportunities?id=${r.id}`;
+const opportunityHref = (r: OpportunityRow) =>
+  isEsd(r.kind) ? `/dashboard/esd?id=${r.id}` : `/dashboard/opportunities?id=${r.id}`;
 
 export function EnterpriseOverview() {
   const data = useQuery(api.enterprise.overview);
@@ -48,7 +50,9 @@ export function EnterpriseOverview() {
   if (data === undefined) return <Spinner className="mx-auto mt-24" />;
   if (data === null) return <CreateOrganisation />;
 
-  const { organization, opportunities } = data;
+  const { organization } = data;
+  // The overview is about procurement; ESD programmes have their own page
+  const opportunities = data.opportunities.filter((o) => !isEsd(o.kind));
   const verification = VERIFICATION[organization.verificationStatus] ?? VERIFICATION.unverified;
 
   return (
@@ -187,17 +191,19 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
 }
 
 /** Listings with their applicant counts. Shared by the overview and the Listings page. */
-export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
+export function OpportunityTable({ rows, esd = false }: { rows: OpportunityRow[]; esd?: boolean }) {
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="pl-4">Listing</TableHead>
+          <TableHead className="pl-4">{esd ? "Programme" : "Listing"}</TableHead>
           <TableHead>Status</TableHead>
           {/* The number columns share one width so they sit evenly at the right */}
           <TableHead className="w-32 text-right">Applications</TableHead>
           <TableHead className="hidden w-32 text-right lg:table-cell">Qualify</TableHead>
-          <TableHead className="hidden w-32 pr-4 text-right xl:table-cell">Shortlisted</TableHead>
+          <TableHead className="hidden w-32 pr-4 text-right xl:table-cell">
+            {esd ? "Accepted" : "Shortlisted"}
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -223,7 +229,9 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
             <TableCell className="hidden text-right lg:table-cell">
               <QualifiedShare qualified={r.qualified} applications={r.applications} />
             </TableCell>
-            <TableCell className="hidden pr-4 text-right tabular-nums xl:table-cell">{r.shortlisted}</TableCell>
+            <TableCell className="hidden pr-4 text-right tabular-nums xl:table-cell">
+              {esd ? r.accepted : r.shortlisted}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
