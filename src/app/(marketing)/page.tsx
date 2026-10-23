@@ -1,71 +1,108 @@
-import { ArrowRightIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  BadgeCheckIcon,
+  Building2Icon,
+  CalculatorIcon,
+  CircleCheckIcon,
+  FileCheck2Icon,
+  LandmarkIcon,
+  LockKeyholeIcon,
+  type LucideIcon,
+  MapPinnedIcon,
+  ScaleIcon,
+  ScrollTextIcon,
+  StoreIcon,
+} from "lucide-react";
 import Link from "next/link";
 
-import { HeroPreview } from "@/components/landing/hero-preview";
+import { KindTile } from "@/components/enterprise/tenders";
+import { CoverageMap } from "@/components/landing/coverage-map";
+import { OpportunityPreview, RecordPreview, ShortlistPreview, SmePreview } from "@/components/landing/previews";
 import { CtaDither } from "@/components/landing/shader-backdrops";
+import { LogoMark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { DOCUMENTS } from "@/lib/sme/documents";
+import { cn } from "@/lib/utils";
 
-const AUDIENCES = [
+const KINDS = [
   {
-    title: "SMEs",
-    description: "Build your profile once and get matched to tenders, RFQs and funding in your area.",
-    points: ["Register your business", "Keep compliance documents current", "See matched opportunities"],
-    available: true,
+    kind: "tender",
+    title: "Tenders",
+    body: "Formal, scored procurement with functionality gates, price and B-BBEE points.",
   },
   {
-    title: "Corporates & funders",
-    description: "Post opportunities, review ranked shortlists and source verified local suppliers.",
-    points: ["Post tenders, RFQs & grants", "Review AI shortlists", "Rate supplier delivery"],
-    available: false,
+    kind: "rfq",
+    title: "Requests for quotation",
+    body: "Quicker buys judged mainly on price, from suppliers who already meet the requirements.",
   },
   {
-    title: "YES Programme Team",
-    description: "Moderate the platform, resolve disputes and track regional insights.",
-    points: ["Moderate profiles", "Oversee matching", "Insights dashboards"],
-    available: false,
+    kind: "grant",
+    title: "Grants and funding",
+    body: "Enterprise and supplier development funds, assessed against the funder’s own criteria.",
   },
+] as const;
+
+const SME_POINTS = [
+  "One profile for every opportunity: services, provinces, capabilities and compliance",
+  "A readiness score that names what’s holding you back and how to fix it",
+  "Matches by what you do and where you deliver, before the closing date",
+  "The outcome of every application, with the buyer’s reason",
+];
+
+const BUYER_POINTS = [
+  "Post tenders, RFQs and grants with your own criteria and required documents",
+  "Applicants checked against your requirements and ranked by points",
+  "A shortlist of the strongest, with a reason for everyone left off",
+  "Your team decides, and every decision is recorded with who made it and why",
 ];
 
 const STEPS = [
   {
-    title: "Register once",
-    body: "Company details, the services you offer, the provinces and areas you deliver in, and your compliance documents. One profile covers every opportunity on the platform.",
+    title: "Post",
+    body: "A buyer publishes an opportunity: scope, provinces, required documents, minimum B-BBEE level and how it will be scored.",
+    tone: "bg-brand-blue text-white",
   },
   {
-    title: "Get match-ready",
-    body: "Your readiness score shows exactly what’s holding you back, like an expired B-BBEE certificate, a missing CSD number or a thin capability statement, and how to fix it.",
+    title: "Match",
+    body: "Registered SMEs whose services and coverage fit are told about it. They apply with their profile, a quote and a short proposal.",
+    tone: "bg-brand-green text-brand-navy",
   },
   {
-    title: "Get matched",
-    body: "When a tender, RFQ or grant fits your business and your area, it lands on your dashboard and you’re alerted before the deadline.",
+    title: "Evaluate",
+    body: "Every application is read and scored the same way: requirements first, then functionality, price and preference points.",
+    tone: "bg-brand-yellow text-brand-navy",
+  },
+  {
+    title: "Decide",
+    body: "The buyer gets a shortlist with reasons, makes the decision, and gives a reason for it. The SME sees the outcome.",
+    tone: "bg-brand-red text-white",
   },
 ];
 
-const FEATURES = [
+const LAWS: { icon: LucideIcon; title: string; act: string; body: string }[] = [
   {
-    title: "Profile readiness score",
-    body: "See which gaps are costing you matches, ranked, with a clear fix for each one.",
+    icon: LandmarkIcon,
+    title: "Fair, equitable and transparent",
+    act: "Constitution, section 217",
+    body: "Every applicant to an opportunity is held to the same published criteria, and the ranking can be traced back to them.",
   },
   {
-    title: "Compliance in one place",
-    body: "B-BBEE, tax, CIPC, CSD and more, with expiry dates tracked so nothing lapses before a closing date.",
+    icon: CalculatorIcon,
+    title: "Preference points by the formula",
+    act: "PPPFA and the 2022 regulations",
+    body: "Price points use the 80/20 or 90/10 formula and B-BBEE points come from the tables. They are calculated, never judged.",
   },
   {
-    title: "Local matching",
-    body: "Matched by province and municipality, so you only see work you can actually deliver.",
+    icon: ScaleIcon,
+    title: "Reasons for every decision",
+    act: "PAJA, section 5",
+    body: "Shortlisted, declined or awarded, each decision carries a written reason, and the SME can see it.",
   },
   {
-    title: "Alerts your way",
-    body: "New matches, deadline reminders and status updates by email, SMS or WhatsApp, in your language.",
-  },
-  {
-    title: "Low-data mode",
-    body: "A lighter experience that keeps data costs down on slower connections.",
-  },
-  {
-    title: "Your data, your call",
-    body: "POPIA consent up front. You choose who sees your profile and when your contact details are shared.",
+    icon: LockKeyholeIcon,
+    title: "Personal information protected",
+    act: "POPIA",
+    body: "Contact and registration details are encrypted at rest, and an SME’s contact details reach a buyer only after shortlisting.",
   },
 ];
 
@@ -73,9 +110,11 @@ export default function LandingPage() {
   return (
     <>
       <Hero />
+      <Kinds />
       <Audiences />
       <HowItWorks />
-      <Features />
+      <Fairness />
+      <Coverage />
       <TenderPack />
       <FinalCta />
     </>
@@ -84,82 +123,185 @@ export default function LandingPage() {
 
 function Hero() {
   return (
-    <section>
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 pt-16 pb-20 md:px-6 md:pt-24 md:pb-28 lg:grid-cols-[1.1fr_1fr]">
+    <section className="relative isolate overflow-hidden bg-brand-navy text-white">
+      <LogoMark
+        title=""
+        className="pointer-events-none absolute -right-24 -bottom-16 -z-10 h-auto w-[36rem] -rotate-12 opacity-[0.07]"
+      />
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pt-16 pb-20 md:px-6 md:pt-24 md:pb-24 lg:grid-cols-[1.05fr_1fr]">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-            Connecting enterprise tenders with the right SME providers
+          <p className="inline-flex items-center gap-2 rounded-md bg-white/10 px-2.5 py-1 text-xs font-medium">
+            <span className="flex gap-0.5" aria-hidden>
+              <span className="h-3 w-1 rounded-sm bg-brand-yellow" />
+              <span className="h-3 w-1 rounded-sm bg-brand-green" />
+              <span className="h-3 w-1 rounded-sm bg-brand-red" />
+              <span className="h-3 w-1 rounded-sm bg-brand-blue" />
+            </span>
+            Procurement between enterprises and South African SMEs
+          </p>
+          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.5rem] lg:leading-[1.05]">
+            Tenders matched to the SMEs that can deliver them
           </h1>
-
-          <p className="mt-5 max-w-xl text-lg text-pretty text-muted-foreground">
-            YES Hub matches small and medium businesses to tenders, RFQs and funding they can actually win, based on
-            what they do, where they deliver and whether their paperwork is in order.
+          <p className="mt-5 max-w-xl text-lg text-pretty text-white/75">
+            Enterprises and funders post opportunities. MASLink matches them to registered SMEs, scores every
+            application against the buyer’s criteria, and keeps a reasoned record of each decision.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" asChild>
+            <Button size="lg" className="bg-brand-green text-brand-navy hover:bg-brand-green/90" asChild>
               <Link href="/auth/sign-up">
                 Register your business
                 <ArrowRightIcon />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
-              <a href="#how-it-works">See how it works</a>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              asChild
+            >
+              <Link href="/auth/sign-up">Post an opportunity</Link>
             </Button>
           </div>
+
+          <ul className="mt-10 grid max-w-lg grid-cols-3 gap-4 border-t border-white/15 pt-6 text-sm">
+            {[
+              { value: "9", label: "provinces matched" },
+              { value: "80/20", label: "and 90/10 price points" },
+              { value: "100%", label: "of decisions with a reason" },
+            ].map((item) => (
+              <li key={item.label}>
+                <p className="text-2xl font-semibold tracking-tight">{item.value}</p>
+                <p className="mt-0.5 text-white/65">{item.label}</p>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <HeroPreview />
+        <ShortlistPreview className="shadow-2xl shadow-black/30 lg:translate-y-4" />
+      </div>
+      <div aria-hidden className="grid h-1.5 grid-cols-4">
+        <span className="bg-brand-yellow" />
+        <span className="bg-brand-green" />
+        <span className="bg-brand-red" />
+        <span className="bg-brand-blue" />
       </div>
     </section>
   );
 }
 
-function SectionHeading({ title, body }: { title: string; body?: string }) {
+function SectionHeading({
+  eyebrow,
+  title,
+  body,
+  className,
+}: {
+  eyebrow?: string;
+  title: string;
+  body?: string;
+  className?: string;
+}) {
   return (
-    <div className="max-w-2xl">
-      <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{title}</h2>
+    <div className={cn("max-w-2xl", className)}>
+      {eyebrow && <p className="text-sm font-medium text-primary">{eyebrow}</p>}
+      <h2 className="mt-2 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{title}</h2>
       {body && <p className="mt-4 text-pretty text-muted-foreground">{body}</p>}
+    </div>
+  );
+}
+
+function Kinds() {
+  return (
+    <section className="border-b py-12">
+      <ul className="mx-auto grid max-w-6xl gap-6 px-4 sm:grid-cols-3 md:px-6">
+        {KINDS.map((k) => (
+          <li key={k.kind} className="flex items-start gap-3">
+            <KindTile kind={k.kind} className="size-10 [&_svg]:size-5" />
+            <div>
+              <h3 className="font-semibold">{k.title}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{k.body}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function Audience({
+  id,
+  icon: Icon,
+  tone,
+  eyebrow,
+  title,
+  points,
+  cta,
+  preview,
+  reverse = false,
+}: {
+  id: string;
+  icon: LucideIcon;
+  tone: string;
+  eyebrow: string;
+  title: string;
+  points: string[];
+  cta: string;
+  preview: React.ReactNode;
+  reverse?: boolean;
+}) {
+  return (
+    <div id={id} className="grid scroll-mt-20 items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      <div className={cn(reverse && "lg:order-2")}>
+        <span className={cn("grid size-10 place-items-center rounded-md", tone)}>
+          <Icon className="size-5" />
+        </span>
+        <p className="mt-5 text-sm font-medium text-muted-foreground">{eyebrow}</p>
+        <h3 className="mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">{title}</h3>
+        <ul className="mt-6 space-y-3">
+          {points.map((point) => (
+            <li key={point} className="flex gap-3 text-sm">
+              <CircleCheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
+              {point}
+            </li>
+          ))}
+        </ul>
+        <Button className="mt-8" asChild>
+          <Link href="/auth/sign-up">
+            {cta}
+            <ArrowRightIcon />
+          </Link>
+        </Button>
+      </div>
+      <div className={cn("rounded-xl bg-muted/60 p-4 sm:p-8", reverse && "lg:order-1")}>{preview}</div>
     </div>
   );
 }
 
 function Audiences() {
   return (
-    <section id="who-its-for" className="scroll-mt-16 border-t py-20 md:py-24">
-      <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <SectionHeading
-          title="Built for both sides of the deal"
-          body="Suppliers get found, buyers get shortlists they can trust, and the programme team keeps it fair."
+    <section id="who-its-for" className="scroll-mt-16 py-20 md:py-28">
+      <div className="mx-auto max-w-6xl space-y-24 px-4 md:px-6">
+        <Audience
+          id="for-smes"
+          icon={StoreIcon}
+          tone="bg-brand-green text-brand-navy"
+          eyebrow="For SMEs"
+          title="Be ready before the tender closes"
+          points={SME_POINTS}
+          cta="Register your business"
+          preview={<SmePreview />}
         />
-
-        <div className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
-          {AUDIENCES.map((audience) => (
-            <div key={audience.title} className="flex flex-col border-t pt-6">
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-lg font-semibold">{audience.title}</h3>
-                {!audience.available && <span className="text-xs text-muted-foreground">Coming soon</span>}
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{audience.description}</p>
-
-              <ul className="mt-5 space-y-1.5 text-sm">
-                {audience.points.map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-
-              {audience.available && (
-                <Link
-                  href="/auth/sign-up"
-                  className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline"
-                >
-                  Register your business
-                  <ArrowRightIcon className="size-4" />
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
+        <Audience
+          id="for-buyers"
+          icon={Building2Icon}
+          tone="bg-brand-blue text-white"
+          eyebrow="For enterprises and funders"
+          title="A shortlist you can defend"
+          points={BUYER_POINTS}
+          cta="Set up your organisation"
+          preview={<OpportunityPreview />}
+          reverse
+        />
       </div>
     </section>
   );
@@ -167,17 +309,22 @@ function Audiences() {
 
 function HowItWorks() {
   return (
-    <section id="how-it-works" className="scroll-mt-16 border-t py-20 md:py-24">
+    <section id="how-it-works" className="scroll-mt-16 border-t bg-muted/40 py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <SectionHeading title="From registration to your first match" />
-
-        <ol className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
+        <SectionHeading eyebrow="How it works" title="From posting to award, in four steps" />
+        <ol className="relative mt-14 grid gap-10 md:grid-cols-4 md:gap-6">
+          <span aria-hidden className="absolute top-5 right-[12%] left-[12%] hidden h-px bg-border md:block" />
           {STEPS.map((step, i) => (
-            <li key={step.title}>
-              <span className="text-sm font-medium text-muted-foreground tabular-nums">
-                {String(i + 1).padStart(2, "0")}
+            <li key={step.title} className="relative">
+              <span
+                className={cn(
+                  "relative grid size-10 place-items-center rounded-full text-sm font-semibold tabular-nums ring-8 ring-muted/40",
+                  step.tone,
+                )}
+              >
+                {i + 1}
               </span>
-              <h3 className="mt-2 text-lg font-semibold">{step.title}</h3>
+              <h3 className="mt-5 text-lg font-semibold">{step.title}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{step.body}</p>
             </li>
           ))}
@@ -187,20 +334,43 @@ function HowItWorks() {
   );
 }
 
-function Features() {
+function Fairness() {
   return (
-    <section id="features" className="scroll-mt-16 border-t py-20 md:py-24">
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 md:px-6 lg:grid-cols-[1fr_2fr]">
-        <SectionHeading
-          title="Everything an SME needs to compete"
-          body="Winning public and corporate work is as much about paperwork and timing as price. YES Hub keeps both in check."
-        />
-
-        <dl className="grid gap-x-8 sm:grid-cols-2">
-          {FEATURES.map(({ title, body }) => (
-            <div key={title} className="border-t py-5">
-              <dt className="font-medium">{title}</dt>
-              <dd className="mt-1 text-sm text-muted-foreground">{body}</dd>
+    <section
+      id="fairness"
+      className="relative isolate scroll-mt-16 overflow-hidden bg-brand-navy py-20 text-white md:py-28"
+    >
+      <ScrollTextIcon
+        aria-hidden
+        strokeWidth={1}
+        className="pointer-events-none absolute -top-10 -left-16 -z-10 size-96 rotate-12 text-white/[0.04]"
+      />
+      <div className="mx-auto max-w-6xl space-y-16 px-4 md:px-6">
+        <div className="grid gap-12 lg:grid-cols-[1fr_1.1fr] lg:items-center">
+          <div>
+            <p className="text-sm font-medium text-brand-green">The fairness layer</p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+              Built around South Africa’s procurement law
+            </h2>
+            <p className="mt-4 max-w-xl text-pretty text-white/70">
+              Every application is evaluated the same way and every decision is written down, so a buyer can explain an
+              award and an SME can understand a decline.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <p className="text-sm text-white/70">The record behind one award</p>
+            <RecordPreview />
+          </div>
+        </div>
+        <dl className="grid gap-px overflow-hidden rounded-lg bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
+          {LAWS.map((law) => (
+            <div key={law.title} className="bg-brand-navy p-6">
+              <dt>
+                <law.icon className="size-5 text-brand-yellow" />
+                <p className="mt-4 font-semibold">{law.title}</p>
+                <p className="mt-0.5 text-xs text-white/55">{law.act}</p>
+              </dt>
+              <dd className="mt-3 text-sm text-white/75">{law.body}</dd>
             </div>
           ))}
         </dl>
@@ -209,20 +379,62 @@ function Features() {
   );
 }
 
+function Coverage() {
+  return (
+    <section id="coverage" className="scroll-mt-16 py-20 md:py-28">
+      <div className="mx-auto max-w-6xl space-y-10 px-4 md:px-6">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <SectionHeading
+            eyebrow="Across South Africa"
+            title="Local suppliers, in every province"
+            body="Opportunities name the provinces where the work is, and SMEs say where they deliver. Matching starts there."
+          />
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <MapPinnedIcon className="size-4" />
+            Live from MASLink
+          </p>
+        </div>
+        <CoverageMap />
+      </div>
+    </section>
+  );
+}
+
 function TenderPack() {
   return (
-    <section className="border-t py-20 md:py-24">
+    <section className="border-t py-20 md:py-28">
       <div className="mx-auto grid max-w-6xl items-start gap-12 px-4 md:px-6 lg:grid-cols-2">
-        <SectionHeading
-          title="The documents buyers ask for, always ready"
-          body="Upload each document once. YES Hub tracks what’s missing and what’s about to expire, so you’re never caught out a day before a tender closes."
-        />
+        <div>
+          <SectionHeading
+            eyebrow="Compliance"
+            title="The documents buyers ask for, always ready"
+            body="Upload each document once. MASLink tracks what’s missing and what’s about to expire, and every application uses the current version."
+          />
+          <div className="mt-8 flex flex-wrap gap-6 text-sm">
+            <span className="inline-flex items-center gap-2">
+              <FileCheck2Icon className="size-4 text-primary" />
+              Expiry dates tracked
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <BadgeCheckIcon className="size-4 text-primary" />
+              Profiles verified by MASLink
+            </span>
+          </div>
+        </div>
 
-        <ul className="divide-y rounded-xl border bg-card">
+        <ul className="divide-y rounded-lg border bg-card">
           {DOCUMENTS.map((doc) => (
             <li key={doc.key} className="flex items-center justify-between gap-4 px-5 py-3.5 text-sm">
-              <span className="font-medium">{doc.label}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">
+              <span className="flex items-center gap-3 font-medium">
+                <FileCheck2Icon className="size-4 text-muted-foreground" />
+                {doc.label}
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 text-xs",
+                  doc.required ? "font-medium text-foreground" : "text-muted-foreground",
+                )}
+              >
                 {doc.required ? "Required" : "Recommended"}
               </span>
             </li>
@@ -235,25 +447,40 @@ function TenderPack() {
 
 function FinalCta() {
   return (
-    <section className="px-4 pb-20 md:px-6 md:pb-24">
+    <section className="px-4 pb-20 md:px-6 md:pb-28">
       {/* Solid primary underneath, so the panel reads the same if the shader can't run */}
-      <div className="relative mx-auto max-w-6xl overflow-hidden rounded-2xl bg-primary text-primary-foreground">
+      <div className="relative isolate mx-auto max-w-6xl overflow-hidden rounded-xl bg-primary text-primary-foreground">
         <CtaDither />
-        <div className="relative flex flex-col gap-6 px-6 py-12 md:flex-row md:items-end md:justify-between md:px-12 md:py-16">
+        <LogoMark
+          title=""
+          className="pointer-events-none absolute -right-10 -bottom-10 h-auto w-80 -rotate-12 opacity-15"
+        />
+        <div className="relative grid gap-8 px-6 py-12 md:grid-cols-[1fr_auto] md:items-end md:px-12 md:py-16">
           <div className="max-w-2xl">
             <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
               Get your business in front of the right buyers
             </h2>
             <p className="mt-4 text-pretty text-primary-foreground/85">
-              Register your SME, close the gaps in your profile and start getting matched to opportunities in your area.
+              Register your SME, close the gaps in your profile and start getting matched. Buyers can set up an
+              organisation and post their first opportunity the same day.
             </p>
           </div>
-          <Button size="lg" className="shrink-0 bg-white text-primary hover:bg-white/90" asChild>
-            <Link href="/auth/sign-up">
-              Register your business
-              <ArrowRightIcon />
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button size="lg" className="bg-white text-primary hover:bg-white/90" asChild>
+              <Link href="/auth/sign-up">
+                Register your business
+                <ArrowRightIcon />
+              </Link>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              asChild
+            >
+              <Link href="/auth/sign-up">Post an opportunity</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </section>

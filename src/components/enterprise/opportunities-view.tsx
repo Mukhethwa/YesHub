@@ -736,7 +736,7 @@ function ApplicantChecks({
       </div>
       <p className="text-xs text-muted-foreground">
         Applied {formatDateTime(applicant.submittedAt)}, checked {formatDateTime(evaluation.evaluatedAt)} by{" "}
-        {evaluation.engine === "jev" ? "document review" : "YES Hub’s eligibility rules"}
+        {evaluation.engine === "jev" ? "document review" : "MASLink’s eligibility rules"}
       </p>
       <ApplicantReview
         applicationId={applicant.id}

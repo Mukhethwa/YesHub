@@ -1,13 +1,13 @@
-# YES Hub design rules
+# MASLink design rules
 
-YES Hub is a procurement tool for South African enterprises, funders and SMEs. People use it to make
+MASLink is a procurement tool for South African enterprises, funders and SMEs. People use it to make
 decisions about money and suppliers, so it should feel like a well-made business product: confident,
 colourful in the way the brand is, dense with real information, and obvious about what to do next.
 
 ## Principles
 
 1. **Information over decoration.** Every element shows data, explains it, or lets someone act on it.
-2. **The brand is the logo's colours.** Navy, YES Hub blue, and the logo's green, yellow and red are part of
+2. **The brand is the logo's colours.** Navy, MASLink blue, and the logo's green, yellow and red are part of
    the interface, not just the logo. A screen with no colour is wrong.
 3. **Attention means an action.** When something needs doing, show the thing to do (a button, a link with
    the count) rather than a coloured marker that hopes to be noticed.
@@ -21,7 +21,7 @@ All colours are tokens in `src/app/globals.css`; never write raw Tailwind colour
 | Token | Where |
 | --- | --- |
 | `brand-navy` | The sidebar, in both themes. It's the frame of the app. |
-| `primary` (YES Hub blue) | The summary band at the top of each dashboard, the current page in the sidebar, the main button on a screen, links, focus. |
+| `primary` (MASLink blue) | The summary band at the top of each dashboard, the current page in the sidebar, the main button on a screen, links, focus. |
 | `brand-blue`, `brand-green`, `brand-yellow` | Kinds of opportunity (tender, RFQ, grant) as solid tiles; chart series. |
 | `brand-green` | In charts, "meets the requirements". |
 | `brand-yellow` | The underline under actions in the blue band (yellow text on blue isn't readable). |
@@ -51,8 +51,8 @@ All colours are tokens in `src/app/globals.css`; never write raw Tailwind colour
 
 ## Never name internal systems
 
-The interface talks about what YES Hub does, not what it's built with. Buyers and SMEs see "review",
-"evaluation" and "YES Hub's eligibility rules", never the model, vendor or service behind them (Jev,
+The interface talks about what MASLink does, not what it's built with. Buyers and SMEs see "review",
+"evaluation" and "MASLink's eligibility rules", never the model, vendor or service behind them (Jev,
 OpenRouter, Resend, Convex), the same way an email doesn't say which provider sent it. Model names and costs
 appear only in staff-only technical detail (the admin area's evaluation trail, with `technical`).
 
@@ -85,7 +85,7 @@ These live in `src/components/app/`. Use them instead of styling the same thing 
 
 ### Type
 
-- Google Sans Flex. Page title `text-2xl font-semibold tracking-tight`, section heading `text-base font-semibold`,
+- Geist (sans) and Geist Mono. Page title `text-2xl font-semibold tracking-tight`, section heading `text-base font-semibold`,
   body `text-sm`, secondary `text-xs text-muted-foreground`.
 - Numbers in tables and stats use `tabular-nums`. Right-align numbers in tables; left-align text.
 - Sentence case everywhere, including buttons.

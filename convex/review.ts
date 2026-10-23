@@ -137,7 +137,7 @@ export const reviewFinished = internalMutation({
       applicationId: application._id,
       kind: "error",
       actor: JEV,
-      summary: "The review couldn’t finish. The application keeps YES Hub’s eligibility check until it’s retried.",
+      summary: "The review couldn’t finish. The application keeps MASLink’s eligibility check until it’s retried.",
       details: [error.slice(0, 1000)],
     });
   },
@@ -313,7 +313,7 @@ export const assessmentInput = internalQuery({
         accreditations: sme.accreditations,
         bbbeeLevel: sme.bbbeeLevel,
         csdNumber: sme.csdNumber,
-        verifiedByYesHub: !!sme.verifiedAt,
+        verifiedByMasLink: !!sme.verifiedAt,
       },
       application: {
         quote: application.quote ?? null,
@@ -628,7 +628,7 @@ export const calculatePoints = internalMutation({
         applicationId: c.applicationId,
         runId: run._id,
         kind: "points",
-        actor: "YES Hub",
+        actor: "MASLink",
         summary: c.eligible
           ? `${c.companyName} is eligible: ${c.totalPoints} points, ranked ${c.rank} of ${ranked.length}.`
           : `${c.companyName} isn’t eligible: ${c.ineligibleReasons.join("; ")}`,
@@ -691,7 +691,7 @@ export const applyDecision = internalMutation({
         await trail({
           applicationId: c.applicationId,
           kind: "guardrail",
-          actor: "YES Hub",
+          actor: "MASLink",
           summary: `No recommendation for ${c.companyName}. Not shortlisted.`,
         });
       }
@@ -701,7 +701,7 @@ export const applyDecision = internalMutation({
         await trail({
           applicationId: c.applicationId,
           kind: "guardrail",
-          actor: "YES Hub",
+          actor: "MASLink",
           summary: `${c.companyName} was recommended but is not eligible. Not shortlisted.`,
           details: c.ineligibleReasons,
         });
@@ -712,7 +712,7 @@ export const applyDecision = internalMutation({
         await trail({
           applicationId: c.applicationId,
           kind: "guardrail",
-          actor: "YES Hub",
+          actor: "MASLink",
           summary: `Shortlist limit of ${run.slots} reached. ${c.companyName} (ranked ${c.rank}) not shortlisted.`,
         });
       }
@@ -782,7 +782,7 @@ async function getEnterprise(ctx: QueryCtx) {
   return organization ? { user, organization } : null;
 }
 
-/** Who may read an opportunity's trail: its own organisation, or YES Hub staff. */
+/** Who may read an opportunity's trail: its own organisation, or MASLink staff. */
 async function canReadOpportunity(ctx: QueryCtx, organizationId: string) {
   const enterprise = await getEnterprise(ctx);
   if (enterprise?.organization.id === organizationId) return { enterprise, staff: null };
@@ -800,7 +800,7 @@ export const requestDecision = mutation({
     }
     if (!canManage(enterprise.organization.role)) throw new ConvexError("Only owners and admins can run shortlisting.");
     if (enterprise.organization.verificationStatus !== "verified") {
-      throw new ConvexError("YES Hub needs to verify your organisation first.");
+      throw new ConvexError("MASLink needs to verify your organisation first.");
     }
     const slots = Math.floor(args.slots);
     if (slots < 1 || slots > 50) throw new ConvexError("The shortlist must be between 1 and 50 applicants.");
@@ -968,7 +968,7 @@ export const opportunityDecisions = query({
   },
 });
 
-/** Every decision Jev made across YES Hub, newest first, for staff. */
+/** Every decision Jev made across MASLink, newest first, for staff. */
 export const recentDecisions = query({
   args: {},
   handler: async (ctx) => {

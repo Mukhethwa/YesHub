@@ -46,7 +46,7 @@ export const makeStaffOwner = internalMutation({
   },
 });
 
-/** Removes everything YES Hub keeps for an account outside Better Auth: its SME profile, files and applications. */
+/** Removes everything MASLink keeps for an account outside Better Auth: its SME profile, files and applications. */
 export async function deleteAppData(ctx: MutationCtx, userId: string) {
   await deleteMemberPreferences(ctx, userId);
   const sme = await ctx.db
@@ -70,7 +70,7 @@ export const deleteAppDataForUser = internalMutation({
 });
 
 /**
- * Makes an existing account an owner (super admin) of the YES Hub staff organisation. CLI only:
+ * Makes an existing account an owner (super admin) of the MASLink staff organisation. CLI only:
  *
  *   pnpm exec convex run platform:makeSuperAdmin '{"email":"you@example.com"}'   (add --prod for production)
  *

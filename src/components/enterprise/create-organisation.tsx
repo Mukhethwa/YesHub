@@ -38,7 +38,7 @@ export function CreateOrganisation() {
       return;
     }
     await authClient.organization.setActive({ organizationId: data.id });
-    toast.success(`${trimmed} is set up. YES Hub will verify it shortly.`);
+    toast.success(`${trimmed} is set up. MASLink will verify it shortly.`);
     // The account query picks up the new membership and shows the dashboard
   };
 
@@ -47,8 +47,8 @@ export function CreateOrganisation() {
       <CardHeader>
         <CardTitle>Set up your organisation</CardTitle>
         <CardDescription>
-          Enterprises and funders use YES Hub as an organisation, so your team can list tenders, RFQs and grants and
-          review applicants together. YES Hub verifies new organisations before they can publish.
+          Enterprises and funders use MASLink as an organisation, so your team can list tenders, RFQs and grants and
+          review applicants together. MASLink verifies new organisations before they can publish.
         </CardDescription>
       </CardHeader>
       <CardContent>

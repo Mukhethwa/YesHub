@@ -24,7 +24,7 @@ const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const today = () => new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 const JEV_ROLE =
-  "You are Jev, the reviewer on YES Hub, a South African platform that matches SMEs with enterprise tenders, " +
+  "You are Jev, the reviewer on MASLink, a South African platform that matches SMEs with enterprise tenders, " +
   "RFQs and grants. You are careful, fair and factual: you only rely on what the documents and profile say, " +
   "you never invent values, and you explain your reasoning so a procurement officer could audit it. You " +
   "apply South African procurement law fairly (Constitution s217, PPPFA, PAJA), use only information " +
@@ -169,7 +169,7 @@ export const assessApplication = internalAction({
       JSON.stringify({ ...opportunity, criteria: undefined }, null, 2),
       "",
       "Evaluation criteria, numbered. Kinds: gate = must be met (true/false); functionality = score 0-100,",
-      "the number is the minimum to proceed; assessed = score 0-100; price and bbbee = YES Hub calculates the",
+      "the number is the minimum to proceed; assessed = score 0-100; price and bbbee = MASLink calculates the",
       "points with the preferential procurement formulas, so don't score them: for price, check a quote was",
       "submitted; for bbbee, set met to whether the B-BBEE certificate supports the level on the profile.",
       ...criteria.map((c, i) => `${i + 1}. [${c.kind}${c.points !== undefined ? `, ${c.points}` : ""}] ${c.criterion}`),
@@ -183,7 +183,7 @@ export const assessApplication = internalAction({
       "What Jev read from the documents:",
       JSON.stringify(input.documents, null, 2),
       "",
-      "YES Hub's eligibility rules (location, B-BBEE minimum, required documents, good standing):",
+      "MASLink's eligibility rules (location, B-BBEE minimum, required documents, good standing):",
       JSON.stringify(
         rules.checks.filter((c) => c.required),
         null,
@@ -241,7 +241,7 @@ export const assessApplication = internalAction({
     });
     const answer = result.answer;
 
-    // Requirements combine YES Hub's rules (facts from the profile) with Jev's reading of each gate
+    // Requirements combine MASLink's rules (facts from the profile) with Jev's reading of each gate
     const checks: Evaluation["checks"] = [...rules.checks];
     answer.criteria.forEach((c, i) => {
       if (c.kind === "gate") {
@@ -365,7 +365,7 @@ export const decide = internalAction({
       "Opportunity:",
       JSON.stringify(input.opportunity, null, 2),
       "",
-      "Applicants. Points were calculated by YES Hub with the preferential procurement formulas, and rank",
+      "Applicants. Points were calculated by MASLink with the preferential procurement formulas, and rank",
       "orders the eligible applicants by points:",
       JSON.stringify(applicants, null, 2),
       "",

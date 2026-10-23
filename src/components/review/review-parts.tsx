@@ -254,7 +254,7 @@ export const cleanError = (detail: string) =>
 
 /**
  * The paper trail as a timeline. `technical` adds which model answered, what it cost and the raw error, for
- * YES Hub staff; buyers and SMEs don't need the implementation details.
+ * MASLink staff; buyers and SMEs don't need the implementation details.
  */
 export function TrailList({ entries, technical = false }: { entries: TrailRow[]; technical?: boolean }) {
   return (

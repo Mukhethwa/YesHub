@@ -15,14 +15,14 @@ export function toCsv<T>(rows: T[], columns: CsvColumn<T>[]) {
   return lines.join("\r\n");
 }
 
-/** Downloads rows as a CSV file named like "yes-hub-users-2026-10-23.csv". */
+/** Downloads rows as a CSV file named like "maslink-users-2026-10-23.csv". */
 export function downloadCsv<T>(name: string, rows: T[], columns: CsvColumn<T>[]) {
   // A byte order mark so Excel opens UTF-8 (names with accents, the rand sign) correctly
   const blob = new Blob(["﻿", toCsv(rows, columns)], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `yes-hub-${name}-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `maslink-${name}-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }

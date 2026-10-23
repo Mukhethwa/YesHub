@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Google_Sans_Flex } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { Providers } from "@/components/providers";
 
-// The theme in globals.css names Google Sans Flex; next/font self-hosts it and exposes it as --font-sans
-const googleSansFlex = Google_Sans_Flex({
-  variable: "--font-sans",
+// next/font self-hosts Geist; globals.css points the theme fonts at these variables
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "YES Hub",
+  title: "MASLink",
   description: "AI SME opportunity matching: connecting enterprise tenders with the right SME providers.",
 };
 
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${googleSansFlex.variable} ${geistMono.variable} h-full font-sans antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full font-sans antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <Providers>{children}</Providers>

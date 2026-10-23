@@ -26,7 +26,7 @@ type Overview = NonNullable<FunctionReturnType<typeof api.enterprise.overview>>;
 type OpportunityRow = Overview["opportunities"][number];
 
 const VERIFICATION: Record<string, { label: string; tone: "success" | "warning" | "danger" }> = {
-  verified: { label: "Verified by YES Hub", tone: "success" },
+  verified: { label: "Verified by MASLink", tone: "success" },
   unverified: { label: "Awaiting verification", tone: "warning" },
   rejected: { label: "Verification declined", tone: "danger" },
 };
@@ -63,8 +63,8 @@ export function EnterpriseOverview() {
           <ShieldAlertIcon className="mt-0.5 size-4 shrink-0 text-warning" />
           <p>
             {organization.verificationStatus === "rejected"
-              ? "YES Hub couldn’t verify this organisation, so it can’t publish opportunities. Contact YES Hub to resolve it."
-              : "YES Hub is verifying your organisation. You can publish opportunities once it’s approved."}
+              ? "MASLink couldn’t verify this organisation, so it can’t publish opportunities. Contact MASLink to resolve it."
+              : "MASLink is verifying your organisation. You can publish opportunities once it’s approved."}
           </p>
         </div>
       )}

@@ -35,7 +35,7 @@ import { rand } from "../../../convex/lib/procurement";
 import type { ApplicationStatus, Evaluation } from "../../../convex/schema";
 
 /*
- * Shortlisting on the buyer's side. YES Hub recommends a shortlist with written reasons for every applicant;
+ * Shortlisting on the buyer's side. MASLink recommends a shortlist with written reasons for every applicant;
  * the buyer then awards or declines from it, and gives a reason for each action. Everything is on the record.
  */
 

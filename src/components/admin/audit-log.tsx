@@ -23,7 +23,7 @@ const ACTIONS: Record<string, string> = {
   "user.set-role": "changed the role of",
   "user.ban": "banned",
   "user.unban": "unbanned",
-  "user.impersonate": "viewed YES Hub as",
+  "user.impersonate": "viewed MASLink as",
   "user.revoke-sessions": "signed out every session of",
   "user.revoke-session": "ended a session of",
   "user.delete": "deleted the account",

@@ -148,7 +148,7 @@ export const criterionAssessment = v.object({
 });
 
 export const evaluation = v.object({
-  /** "rules" is YES Hub's built-in eligibility check (convex/lib/evaluation.ts); "jev" once Jev ranks it. */
+  /** "rules" is MASLink's built-in eligibility check (convex/lib/evaluation.ts); "jev" once Jev ranks it. */
   engine: v.union(v.literal("rules"), v.literal("jev")),
   qualifies: v.boolean(),
   /** 0 to 100. Applicants are ranked by qualifying first, then score. */
@@ -301,7 +301,7 @@ export default defineSchema({
     settings: v.optional(smeSettings),
     isDemo: v.optional(v.boolean()),
 
-    // Moderation by YES Hub staff (set from the admin area)
+    // Moderation by MASLink staff (set from the admin area)
     /** When staff checked the profile and documents. */
     verifiedAt: v.optional(v.number()),
     verifiedBy: v.optional(v.string()),
@@ -463,7 +463,7 @@ export default defineSchema({
     applicationId: v.optional(v.id("applications")),
     runId: v.optional(v.id("decisionRuns")),
     kind: trailKind,
-    /** "Jev", "YES Hub" or the person who acted. */
+    /** "Jev", "MASLink" or the person who acted. */
     actor: v.string(),
     summary: v.string(),
     /** Supporting detail: Jev's reasoning, the numbers behind points, the text of an override reason. */
@@ -506,7 +506,7 @@ export default defineSchema({
     .index("by_command", ["commandId"])
     .index("by_document", ["table", "documentId"]),
 
-  /** Every action YES Hub staff take in the admin area, newest first by _creationTime. */
+  /** Every action MASLink staff take in the admin area, newest first by _creationTime. */
   auditLog: defineTable({
     actorId: v.string(),
     actorName: v.string(),

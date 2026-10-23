@@ -47,7 +47,7 @@ const SORTS: SortStrategy<Run>[] = [
   { id: "org", label: "Organisation, A to Z", group: "Name", compare: by.text((r) => r.organizationName) },
 ];
 
-/** Every shortlisting run on YES Hub, as cards, each opening its full record. */
+/** Every shortlisting run on MASLink, as cards, each opening its full record. */
 export function Evaluations() {
   return (
     <RefreshScope>
@@ -286,7 +286,7 @@ function RecordBody({ run }: { run: Run }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `yes-hub-shortlisting-${run.opportunity.reference || run.id}.json`;
+    a.download = `maslink-shortlisting-${run.opportunity.reference || run.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

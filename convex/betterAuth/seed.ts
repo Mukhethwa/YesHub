@@ -73,7 +73,7 @@ export const organizations = mutation({
   handler: async (ctx, args) => {
     for (const org of args.enterprises) await insertOrganization(ctx, org, "enterprise");
 
-    // Staff join the existing YES Hub organisation with their access level
+    // Staff join the existing MASLink organisation with their access level
     const staffOrg = await ctx.db
       .query("organization")
       .withIndex("slug", (q) => q.eq("slug", STAFF_ORG_SLUG))

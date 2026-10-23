@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: PageProps<"/auth/[path]">): P
 
   const title = view && titles[view];
 
-  return { title: title ? `${title} | YES Hub` : "YES Hub" };
+  return { title: title ? `${title} | MASLink` : "MASLink" };
 }
 
 export default function AuthPage({ params }: PageProps<"/auth/[path]">) {

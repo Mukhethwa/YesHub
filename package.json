@@ -1,8 +1,8 @@
 {
-  "name": "yes-hub",
+  "name": "maslink",
   "version": "0.1.0",
   "private": true,
-  "description": "YES Hub: AI SME opportunity matching, connecting enterprise tenders with the right SME providers.",
+  "description": "MASLink: AI SME opportunity matching, connecting enterprise tenders with the right SME providers.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Mukhethwa/YesHub.git"

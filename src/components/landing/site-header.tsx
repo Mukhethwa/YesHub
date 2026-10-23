@@ -5,16 +5,17 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthButtons } from "./auth-buttons";
 
 const LINKS = [
-  { href: "#who-its-for", label: "Who it’s for" },
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#features", label: "Features" },
+  { href: "/#for-smes", label: "For SMEs" },
+  { href: "/#for-buyers", label: "For buyers" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#fairness", label: "Fairness" },
 ];
 
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-20 border-b bg-background">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 md:px-6">
-        <Link href="/" aria-label="YES Hub home">
+        <Link href="/" aria-label="MASLink home">
           <Logo />
         </Link>
 

@@ -10,7 +10,7 @@ export const DEFAULT_ORGANIZATION_SETTINGS: OrganizationSettings = {
   defaultRequiredDocuments: ["bbbeeCertificate", "taxCertificate", "cipcCertificate"],
   defaultMinBbbeeLevel: 0,
   defaultEvaluationCriteria: ["Price: 80 points", "B-BBEE status: 20 points"],
-  defaultSubmission: "Submit your response through YES Hub before the closing date.",
+  defaultSubmission: "Submit your response through MASLink before the closing date.",
 
   defaultApplicantFilter: "all",
   shortlistAdminsOnly: false,

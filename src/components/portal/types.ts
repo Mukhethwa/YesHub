@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
-/** Which of YES Hub's three signed-in areas a page belongs to. */
+/** Which of MASLink's three signed-in areas a page belongs to. */
 export type PortalArea = "sme" | "enterprise" | "admin";
 
 export interface PortalNavItem {

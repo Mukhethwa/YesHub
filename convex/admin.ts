@@ -10,7 +10,7 @@ import { getStaff, requireStaff } from "./lib/staff";
 import { deleteAppData } from "./platform";
 
 /*
- * The YES Hub admin area. Queries return null for anyone without the permission (pages stay mounted while
+ * The MASLink admin area. Queries return null for anyone without the permission (pages stay mounted while
  * the portal guard decides, so they mustn't throw); mutations refuse. Account changes (ban, sessions,
  * impersonation, passwords) go through Better Auth's admin API, which checks the same roles.
  */
@@ -106,7 +106,7 @@ export const users = query({
   },
 });
 
-/** What an account is on YES Hub, for the user inspector. */
+/** What an account is on MASLink, for the user inspector. */
 export const userContext = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
@@ -317,7 +317,7 @@ export const removeOrganizationMember = mutation({
 /* Staff                                                                                                  */
 /* ------------------------------------------------------------------------------------------------------ */
 
-/** The YES Hub staff organisation: members with their access levels, and pending invitations. */
+/** The MASLink staff organisation: members with their access levels, and pending invitations. */
 export const staff = query({
   args: {},
   handler: async (ctx) => {

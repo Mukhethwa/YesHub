@@ -187,7 +187,7 @@ const SAMPLE_LISTINGS: Record<
     contractPeriod: "36 months, with a 3-month performance review",
     briefing: "Optional virtual briefing session on Microsoft Teams, 10:00 on the Tuesday after publication",
     submission:
-      "Submit one PDF containing the completed RFQ, pricing schedule and SBD forms through YES Hub before 11:00 on the closing date. Late submissions are not considered.",
+      "Submit one PDF containing the completed RFQ, pricing schedule and SBD forms through MASLink before 11:00 on the closing date. Late submissions are not considered.",
     evaluationCriteria: [
       "Functionality: 60 points minimum to proceed (capacity, references, supervision plan)",
       "Price: 80 points",
@@ -200,7 +200,7 @@ const SAMPLE_LISTINGS: Record<
       "Breakfast and lunch service for about 600 staff at the Stellenbosch head office, five days a week, from the on-site kitchen. Menus must include halaal and vegetarian options and rotate every four weeks.",
     contractPeriod: "12 months, renewable for a further 12 months",
     briefing: "Compulsory site visit at the Stellenbosch head office kitchen, 09:00 on the Thursday after publication",
-    submission: "Quote through YES Hub with a sample four-week menu and your price per meal.",
+    submission: "Quote through MASLink with a sample four-week menu and your price per meal.",
     evaluationCriteria: ["Price per meal: 80 points", "B-BBEE status: 20 points", "Food safety certificate required"],
     documents: ["Request for quotation", "Kitchen equipment list"],
   },
@@ -210,7 +210,7 @@ const SAMPLE_LISTINGS: Record<
     contractPeriod: "9 months from site handover",
     briefing: "Compulsory briefing at the Rustenburg branch, 10:00 on the Monday after publication",
     submission:
-      "Submit the bill of quantities, programme of works and CIDB certificate through YES Hub before 12:00 on the closing date.",
+      "Submit the bill of quantities, programme of works and CIDB certificate through MASLink before 12:00 on the closing date.",
     evaluationCriteria: [
       "CIDB grading 4GB or higher required",
       "Functionality: 70 points minimum to proceed",
@@ -224,7 +224,7 @@ const SAMPLE_LISTINGS: Record<
       "24-hour guarding, access control and incident reporting at 14 branches in Durban, with armed response backup and monthly reporting.",
     contractPeriod: "24 months",
     briefing: "",
-    submission: "Submit your proposal, PSIRA certificates for the company and guards, and pricing through YES Hub.",
+    submission: "Submit your proposal, PSIRA certificates for the company and guards, and pricing through MASLink.",
     evaluationCriteria: ["PSIRA registration required", "Price: 80 points", "B-BBEE status: 20 points"],
     documents: ["Request for proposal", "Branch list and guarding schedule"],
   },
@@ -233,7 +233,7 @@ const SAMPLE_LISTINGS: Record<
       "Grants of up to R250 000 for equipment and working capital for township businesses, with 12 months of mentoring from the enterprise development team.",
     contractPeriod: "Grant paid over 12 months against milestones",
     briefing: "Information session online, 14:00 on the Wednesday after publication",
-    submission: "Apply through YES Hub with a one-page business plan and a quote for the equipment you need.",
+    submission: "Apply through MASLink with a one-page business plan and a quote for the equipment you need.",
     evaluationCriteria: [
       "Business based in or serving a township",
       "At least one year of trading",
@@ -246,7 +246,7 @@ const SAMPLE_LISTINGS: Record<
       "Twice-weekly collection and delivery of documents and parcels between branches in Kimberley, Upington and De Aar, with proof of delivery.",
     contractPeriod: "12 months",
     briefing: "",
-    submission: "Quote through YES Hub with a price per trip and your vehicle details.",
+    submission: "Quote through MASLink with a price per trip and your vehicle details.",
     evaluationCriteria: ["Price: 80 points", "B-BBEE status: 20 points"],
     documents: ["Request for quotation"],
   },
@@ -331,7 +331,7 @@ export function referencePrefix(name: string) {
 }
 
 /**
- * Dev only: gives an organisation sample tenders, each with applications from the SMEs already on YES Hub
+ * Dev only: gives an organisation sample tenders, each with applications from the SMEs already on MASLink
  * (suspended ones excluded). SMEs apply where they work in the field, plus a few that don't fit, so every
  * dashboard shows both qualifying and non-qualifying applicants. Returns how many opportunities it added.
  */
