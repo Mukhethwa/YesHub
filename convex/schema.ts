@@ -67,6 +67,8 @@ export const smeDetails = {
   services: v.array(v.string()),
   capabilities: v.string(),
   accreditations: v.array(v.string()),
+  /** Optional narrative introduction for buyers, which the SME can polish with AI. Missing on older profiles. */
+  companySummary: v.optional(v.string()),
 
   // Coverage
   nationwide: v.boolean(),

@@ -245,7 +245,11 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
               <CardTitle>About the business</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
-              <p className="whitespace-pre-line">{profile.capabilities || "No capability statement yet."}</p>
+              {profile.companySummary && <p className="whitespace-pre-line">{profile.companySummary}</p>}
+              <div className="space-y-1">
+                {profile.companySummary && <p className="text-xs font-medium text-muted-foreground">Capabilities</p>}
+                <p className="whitespace-pre-line">{profile.capabilities || "No capability statement yet."}</p>
+              </div>
               <TagList label="Services" items={profile.services} />
               <TagList label="Accreditations" items={profile.accreditations} />
             </CardContent>

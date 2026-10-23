@@ -19,6 +19,7 @@ import { formatBytes } from "@/lib/sme/format";
 import type { SmeForm, UpdateForm } from "@/lib/sme/form";
 import type { Errors, StepId } from "@/lib/sme/validation";
 import { cn } from "@/lib/utils";
+import { CompanySummaryField } from "./company-summary";
 import { Chips, ChipGroup, FileDrop, FormField, Row, SectionLabel, SelectInput, SwitchRow, TagInput } from "./controls";
 
 export interface StepProps {
@@ -207,6 +208,8 @@ export function OfferingStep({ form, errors, update }: StepProps) {
           placeholder="e.g. CIDB 3GB"
         />
       </FormField>
+
+      <CompanySummaryField form={form} errors={errors} update={update} />
     </div>
   );
 }
@@ -488,6 +491,7 @@ export function ReviewStep({ form, errors, update, onEdit }: StepProps & { onEdi
         <Row label="Services" value={<Chips items={form.services} />} />
         <Row label="Capabilities" value={<span className="line-clamp-3">{form.capabilities}</span>} />
         <Row label="Accreditations" value={form.accreditations.length ? <Chips items={form.accreditations} /> : ""} />
+        <Row label="Company summary" value={<span className="line-clamp-3">{form.companySummary}</span>} />
       </ReviewCard>
 
       <ReviewCard title="Coverage" onEdit={() => onEdit("coverage")}>

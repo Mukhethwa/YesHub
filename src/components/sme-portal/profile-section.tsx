@@ -39,7 +39,10 @@ const PARTS: Record<Part, { title: string; fields: (keyof SmeDetails)[] }> = {
       "hqProvince",
     ],
   },
-  offering: { title: "Services & capabilities", fields: ["services", "capabilities", "accreditations"] },
+  offering: {
+    title: "Services & capabilities",
+    fields: ["services", "capabilities", "accreditations", "companySummary"],
+  },
   coverage: { title: "Provinces & service areas", fields: ["nationwide", "provinces", "serviceAreas"] },
   compliance: { title: "Compliance", fields: ["bbbeeLevel", "bbbeeExpiry", "taxExpiry", "website"] },
   contact: { title: "Primary contact", fields: ["contactName", "contactRole", "phone"] },
@@ -168,6 +171,10 @@ export function ProfileSection({ sme }: { sme: SmeProfile }) {
           <Row label="Services" value={sme.services.length ? <Chips items={sme.services} /> : ""} />
           <Row label="Capabilities" value={<span className="whitespace-pre-line">{sme.capabilities}</span>} />
           <Row label="Accreditations" value={sme.accreditations.length ? <Chips items={sme.accreditations} /> : ""} />
+          <Row
+            label="Company summary"
+            value={sme.companySummary && <span className="whitespace-pre-line">{sme.companySummary}</span>}
+          />
         </dl>,
         <OfferingStep {...stepProps} />,
       )}
