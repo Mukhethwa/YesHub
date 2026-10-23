@@ -213,7 +213,7 @@ function LatestMatches({ sme }: { sme: SmeProfile }) {
           </EmptyState>
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-4 lg:grid-cols-2">
           {top.map((m) => (
             <MatchCard key={m.id} match={m} sme={sme} />
           ))}

@@ -173,100 +173,103 @@ export function ProfileSection({ sme }: { sme: SmeProfile }) {
         <CompanySummaryField {...stepProps} heading={false} />,
       )}
 
-      {section(
-        "company",
-        <dl className="divide-y">
-          <Row label="Company name" value={sme.companyName} />
-          <Row label="Registration no." value={sme.registrationNumber} />
-          <Row label="CSD number" value={sme.csdNumber} />
-          <Row label="Industry" value={sme.industry} />
-          <Row label="Years trading" value={sme.yearsTrading} />
-          <Row label="Employees" value={sme.employees} />
-          <Row label="Address" value={sme.address} />
-          <Row label="City or town" value={sme.city} />
-          <Row label="Head office" value={sme.hqProvince} />
-        </dl>,
-        <CompanyStep {...stepProps} />,
-      )}
-
-      {section(
-        "offering",
-        <dl className="divide-y">
-          <Row label="Services" value={sme.services.length ? <Chips items={sme.services} /> : ""} />
-          <Row label="Capabilities" value={<span className="whitespace-pre-line">{sme.capabilities}</span>} />
-          <Row label="Accreditations" value={sme.accreditations.length ? <Chips items={sme.accreditations} /> : ""} />
-        </dl>,
-        <OfferingStep {...stepProps} />,
-      )}
-
-      {section(
-        "coverage",
-        <dl className="divide-y">
-          <Row label="Provinces" value={sme.nationwide ? "Nationwide" : <Chips items={sme.provinces} />} />
-          <Row label="Service areas" value={sme.serviceAreas.join(", ")} />
-        </dl>,
-        <CoverageStep {...stepProps} />,
-      )}
-
-      {section(
-        "compliance",
-        <>
+      {/* Two cards a row on wide screens; the one being edited takes the whole row */}
+      <div className="grid items-start gap-5 xl:grid-cols-2">
+        {section(
+          "company",
           <dl className="divide-y">
-            <Row label="B-BBEE level" value={sme.bbbeeLevel} />
-            <Row label="B-BBEE expiry" value={sme.bbbeeExpiry && <Expiry date={sme.bbbeeExpiry} />} />
-            <Row label="Tax clearance expiry" value={sme.taxExpiry && <Expiry date={sme.taxExpiry} />} />
-            <Row
-              label="Website"
-              value={
-                sme.website && (
-                  <a
-                    href={websiteHref(sme.website)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline underline-offset-2"
-                  >
-                    {sme.website}
-                  </a>
-                )
-              }
-            />
-            {DOCS.map(({ key, label }) => (
-              <Row key={key} label={label} value={<DocLine sme={sme} docKey={key} url={urls[key]} />} />
-            ))}
-          </dl>
-          <Link href="/sme/documents" className="mt-3 inline-block text-sm font-medium underline underline-offset-2">
-            See all documents
-          </Link>
-        </>,
-        <div className="space-y-5">
-          <ComplianceDateFields {...stepProps} />
-          {DOCS.map(({ key, label }) => {
-            const current = sme.documents[key];
-            return (
-              <FormField
-                key={key}
-                label={current ? `${label}: upload a replacement` : `${label}: upload`}
-                htmlFor={key}
-                optional
-                hint={current ? `On file: ${current.name}. Leave empty to keep it.` : undefined}
-              >
-                <FileDrop id={key} file={draft[key]} onChange={(file) => update({ [key]: file })} />
-              </FormField>
-            );
-          })}
-        </div>,
-      )}
+            <Row label="Company name" value={sme.companyName} />
+            <Row label="Registration no." value={sme.registrationNumber} />
+            <Row label="CSD number" value={sme.csdNumber} />
+            <Row label="Industry" value={sme.industry} />
+            <Row label="Years trading" value={sme.yearsTrading} />
+            <Row label="Employees" value={sme.employees} />
+            <Row label="Address" value={sme.address} />
+            <Row label="City or town" value={sme.city} />
+            <Row label="Head office" value={sme.hqProvince} />
+          </dl>,
+          <CompanyStep {...stepProps} />,
+        )}
 
-      {section(
-        "contact",
-        <dl className="divide-y">
-          <Row label="Full name" value={sme.contactName} />
-          <Row label="Role" value={sme.contactRole} />
-          <Row label="Email (sign-in)" value={sme.email} />
-          <Row label="Mobile" value={sme.phone} />
-        </dl>,
-        <ContactStep {...stepProps} />,
-      )}
+        {section(
+          "offering",
+          <dl className="divide-y">
+            <Row label="Services" value={sme.services.length ? <Chips items={sme.services} /> : ""} />
+            <Row label="Capabilities" value={<span className="whitespace-pre-line">{sme.capabilities}</span>} />
+            <Row label="Accreditations" value={sme.accreditations.length ? <Chips items={sme.accreditations} /> : ""} />
+          </dl>,
+          <OfferingStep {...stepProps} />,
+        )}
+
+        {section(
+          "coverage",
+          <dl className="divide-y">
+            <Row label="Provinces" value={sme.nationwide ? "Nationwide" : <Chips items={sme.provinces} />} />
+            <Row label="Service areas" value={sme.serviceAreas.join(", ")} />
+          </dl>,
+          <CoverageStep {...stepProps} />,
+        )}
+
+        {section(
+          "compliance",
+          <>
+            <dl className="divide-y">
+              <Row label="B-BBEE level" value={sme.bbbeeLevel} />
+              <Row label="B-BBEE expiry" value={sme.bbbeeExpiry && <Expiry date={sme.bbbeeExpiry} />} />
+              <Row label="Tax clearance expiry" value={sme.taxExpiry && <Expiry date={sme.taxExpiry} />} />
+              <Row
+                label="Website"
+                value={
+                  sme.website && (
+                    <a
+                      href={websiteHref(sme.website)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline underline-offset-2"
+                    >
+                      {sme.website}
+                    </a>
+                  )
+                }
+              />
+              {DOCS.map(({ key, label }) => (
+                <Row key={key} label={label} value={<DocLine sme={sme} docKey={key} url={urls[key]} />} />
+              ))}
+            </dl>
+            <Link href="/sme/documents" className="mt-3 inline-block text-sm font-medium underline underline-offset-2">
+              See all documents
+            </Link>
+          </>,
+          <div className="space-y-5">
+            <ComplianceDateFields {...stepProps} />
+            {DOCS.map(({ key, label }) => {
+              const current = sme.documents[key];
+              return (
+                <FormField
+                  key={key}
+                  label={current ? `${label}: upload a replacement` : `${label}: upload`}
+                  htmlFor={key}
+                  optional
+                  hint={current ? `On file: ${current.name}. Leave empty to keep it.` : undefined}
+                >
+                  <FileDrop id={key} file={draft[key]} onChange={(file) => update({ [key]: file })} />
+                </FormField>
+              );
+            })}
+          </div>,
+        )}
+
+        {section(
+          "contact",
+          <dl className="divide-y">
+            <Row label="Full name" value={sme.contactName} />
+            <Row label="Role" value={sme.contactRole} />
+            <Row label="Email (sign-in)" value={sme.email} />
+            <Row label="Mobile" value={sme.phone} />
+          </dl>,
+          <ContactStep {...stepProps} />,
+        )}
+      </div>
     </div>
   );
 }
@@ -293,7 +296,7 @@ function ProfileCard({
   children: ReactNode;
 }) {
   return (
-    <Card className={cn(editing && "ring-2 ring-primary/40")}>
+    <Card className={cn(editing && "ring-2 ring-primary/40 xl:col-span-2")}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {!editing && (
