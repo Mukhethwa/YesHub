@@ -235,6 +235,7 @@ export function ApplyButton({
   saved = null,
   size = "sm",
   esd = false,
+  openOnLoad = false,
 }: {
   opportunityId: Id<"opportunities">;
   title: string;
@@ -243,14 +244,16 @@ export function ApplyButton({
   size?: "sm" | "default";
   /** An ESD programme: no price, and the proposal is why the SME is applying. */
   esd?: boolean;
+  /** Open the form straight away, e.g. from a match alert's "apply" link. */
+  openOnLoad?: boolean;
 }) {
   const apply = useMutation(api.smeOpportunities.apply);
   const saveDraft = useMutation(api.smeOpportunities.saveDraft);
   const upload = useUploadFile();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openOnLoad);
   const [pending, setPending] = useState<"send" | "save" | null>(null);
-  const [quote, setQuote] = useState("");
-  const [proposal, setProposal] = useState("");
+  const [quote, setQuote] = useState(saved?.quote != null ? String(saved.quote) : "");
+  const [proposal, setProposal] = useState(saved?.proposal ?? "");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [removeSaved, setRemoveSaved] = useState<number[]>([]);
 

@@ -13,6 +13,7 @@ import {
   sampleProposal,
   sampleTeamIdFor,
 } from "./lib/opportunities";
+import { nextReference } from "./opportunities";
 import { samplePdf } from "./lib/samplePdf";
 
 /*
@@ -486,6 +487,59 @@ export const samplePrograms = internalMutation({
       });
     }
     return added;
+  },
+});
+
+/**
+ * Publishes a sample cleaning RFQ in KwaZulu-Natal for the first organisation with sample listings, and alerts
+ * the SMEs it matches, exactly as publishing does: on the demo data that's Ubuntu Facilities (Thandi) when she
+ * has WhatsApp alerts on. Each run adds a new listing. Needs ALLOW_SEED on a shared deployment.
+ *
+ *   pnpm exec convex run seed:matchAlertDemo
+ */
+export const matchAlertDemo = internalMutation({
+  args: {},
+  handler: async (ctx): Promise<{ opportunityId: string; reference: string }> => {
+    assertDevSite();
+    const sample = (await ctx.db.query("opportunities").take(500)).find((o) => o.isDemo);
+    if (!sample) throw new ConvexError("There are no sample listings to add this beside. Run seed:devData first.");
+    const detail = await ctx.runQuery(components.betterAuth.organizations.detail, {
+      organizationId: sample.organizationId,
+    });
+    if (!detail) throw new ConvexError("The sample listings' organisation no longer exists.");
+    const { name } = detail.organization;
+
+    const reference = await nextReference(ctx, sample.organizationId, name, "rfq");
+    const opportunityId = await ctx.db.insert("opportunities", {
+      organizationId: sample.organizationId,
+      createdBy: sample.createdBy,
+      kind: "rfq",
+      title: "Deep cleaning of 6 Durban branches, 3 months",
+      reference,
+      description: "Weekly deep cleans and washroom hygiene for six Durban branches while they stay open to customers.",
+      industry: "Cleaning & Facilities Management",
+      services: ["Office cleaning", "Hygiene services"],
+      provinces: ["KwaZulu-Natal"],
+      minBbbeeLevel: 4,
+      requiredDocuments: ["bbbeeCertificate", "taxCertificate"],
+      value: 420_000,
+      closesAt: isoDate(14),
+      status: "open",
+      listing: {
+        scope:
+          "Weekly deep cleaning of floors, kitchens and staff areas, and daily washroom hygiene services (consumables included) at six branches in Durban, Umhlanga and Pinetown. Work happens before opening and after closing.",
+        contractPeriod: "3 months, with an option to extend",
+        briefing: "",
+        submission: "Quote through MASLink with your price per branch per month and your cleaning schedule.",
+        evaluationCriteria: ["Price: 80 points", "B-BBEE status: 20 points"],
+        enquiriesName: `${name} procurement office`,
+        enquiriesEmail: `tenders@${name.toLowerCase().replace(/[^a-z0-9]+/g, "")}.test`,
+        publishedAt: Date.now(),
+      },
+      isDemo: true,
+    });
+    await ctx.scheduler.runAfter(0, internal.matchAlerts.onPublished, { opportunityId });
+    return { opportunityId, reference };
   },
 });
 

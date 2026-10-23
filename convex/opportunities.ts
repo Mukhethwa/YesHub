@@ -131,7 +131,7 @@ function readyToPublish(o: Pick<Doc<"opportunities">, "description" | "closesAt"
  * reused or changed, so documents, applications and the audit log can all point to it. Two creates at once
  * conflict and one retries, so numbers stay unique.
  */
-async function nextReference(
+export async function nextReference(
   ctx: MutationCtx,
   organizationId: string,
   organizationName: string,

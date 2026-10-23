@@ -42,8 +42,14 @@ import { AddDocumentsButton, OutstandingDocuments } from "./tender-feedback";
 
 /** The Opportunities tab: the SME's applications, or one opportunity when the URL has ?id=. */
 export function ApplicationsView({ sme }: { sme: SmeProfile }) {
-  const id = useSearchParams().get("id");
-  return id ? <OpportunityForSme opportunityId={id} sme={sme} /> : <ApplicationsList sme={sme} />;
+  const params = useSearchParams();
+  const id = params.get("id");
+  // ?apply=1 (the link in a WhatsApp match alert) opens the application form straight away
+  return id ? (
+    <OpportunityForSme opportunityId={id} sme={sme} applyNow={params.get("apply") === "1"} />
+  ) : (
+    <ApplicationsList sme={sme} />
+  );
 }
 
 /* ------------------------------------------------------------------------------------------------------ */
@@ -180,7 +186,15 @@ const docLabel = (key: string) => DOCUMENTS.find((d) => d.key === key)?.label ??
 
 type ForSme = NonNullable<FunctionReturnType<typeof api.smeOpportunities.opportunity>>;
 
-function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme: SmeProfile }) {
+function OpportunityForSme({
+  opportunityId,
+  sme,
+  applyNow = false,
+}: {
+  opportunityId: string;
+  sme: SmeProfile;
+  applyNow?: boolean;
+}) {
   const o = useQuery(api.smeOpportunities.opportunity, { opportunityId });
   useBreadcrumb(o?.reference);
   // Checked in the browser against the SME's own profile, only to suggest what would strengthen it
@@ -257,7 +271,7 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
       {a ? (
         <YourApplication opportunity={o} application={a} />
       ) : (
-        <BeforeYouApply opportunity={o} recommendations={recommendations} />
+        <BeforeYouApply opportunity={o} recommendations={recommendations} applyNow={applyNow} />
       )}
 
       {o.tender && a?.status !== "withdrawn" && (
@@ -358,9 +372,11 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
 function BeforeYouApply({
   opportunity: o,
   recommendations,
+  applyNow,
 }: {
   opportunity: ForSme;
   recommendations: ReturnType<typeof recommendationsFor>;
+  applyNow: boolean;
 }) {
   const discard = useMutation(api.smeOpportunities.discardDraft);
   const [confirming, setConfirming] = useState(false);
@@ -405,6 +421,7 @@ function BeforeYouApply({
                 saved={o.draft}
                 size="default"
                 esd={isEsd(o.kind)}
+                openOnLoad={applyNow}
               />
             )}
           </div>

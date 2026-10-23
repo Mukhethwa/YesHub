@@ -144,7 +144,8 @@ export const record = internalMutation({
 });
 
 function listingLink(listing: Listing) {
-  return `${process.env.SITE_URL ?? "https://yeshub-app.vercel.app"}/sme/opportunities?id=${listing.id}`;
+  // apply=1 opens the application form, so the SME can apply straight from the alert
+  return `${process.env.SITE_URL ?? "https://yeshub-app.vercel.app"}/sme/opportunities?id=${listing.id}&apply=1`;
 }
 
 /** The plain-text alert, for when there's no approved template. */
