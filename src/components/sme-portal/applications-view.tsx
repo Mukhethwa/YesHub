@@ -20,6 +20,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { evaluateApplication, type EvaluableOpportunity } from "../../../convex/lib/evaluation";
 import { rand } from "../../../convex/lib/procurement";
+import { isEsd } from "../../../convex/lib/kinds";
 import type { SmeApplicationStatus } from "../../../convex/smeOpportunities";
 import {
   ApplicationStatusPill,
@@ -94,9 +95,10 @@ function ApplicationsList({ sme }: { sme: SmeProfile }) {
         </Card>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Stat label="Submitted" value={count("submitted")} note={`${stillOpen} still open`} />
             <Stat label="In progress" value={count("in_progress")} note="Saved, not sent yet" />
+            <Stat label="Accepted" value={count("accepted")} note="Into support programmes" />
             <Stat label="Withdrawn" value={count("withdrawn")} />
           </div>
 
@@ -108,6 +110,7 @@ function ApplicationsList({ sme }: { sme: SmeProfile }) {
               { id: "all", label: "All", count: rows.length },
               { id: "in_progress", label: "In progress", count: count("in_progress") },
               { id: "submitted", label: "Submitted", count: count("submitted") },
+              { id: "accepted", label: "Accepted", count: count("accepted") },
               { id: "withdrawn", label: "Withdrawn", count: count("withdrawn") },
             ]}
           />
@@ -143,7 +146,9 @@ function ApplicationCard({ row }: { row: Row }) {
       }
       facts={[
         {
-          label: row.status === "in_progress" ? "Last saved" : row.status === "withdrawn" ? "Withdrawn" : "Submitted",
+          label: { in_progress: "Last saved", submitted: "Submitted", accepted: "Accepted", withdrawn: "Withdrawn" }[
+            row.status
+          ],
           value: formatDate(row.at),
         },
         { label: finished ? "Closed" : "Closes", value: formatDate(o.closesAt), note: closingLabel(o.closesAt) },
@@ -200,12 +205,13 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
   const phase = phaseOf(o);
   const a = o.application;
   const status: SmeApplicationStatus | null = a ? a.status : o.draft ? "in_progress" : null;
+  const esd = isEsd(o.kind);
 
   return (
     <div className="space-y-6">
       <Button variant="link" size="sm" className="-ml-3 text-muted-foreground" asChild>
-        <Link href={status ? "/sme/opportunities" : "/sme/matches"}>
-          {status ? "All my applications" : "Back to my matches"}
+        <Link href={status ? "/sme/opportunities" : esd ? "/sme/programmes" : "/sme/matches"}>
+          {status ? "All my applications" : esd ? "Back to support programmes" : "Back to my matches"}
         </Link>
       </Button>
 
@@ -237,7 +243,7 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
           <span className="text-muted-foreground">({closingLabel(o.closesAt).toLowerCase()})</span>
         </Fact>
         <Fact label="Value">{formatRand(o.value)}</Fact>
-        <Fact label="Contract period">{o.contractPeriod || "Not stated"}</Fact>
+        <Fact label={esd ? "Programme length" : "Contract period"}>{o.contractPeriod || "Not stated"}</Fact>
         <Fact label="Minimum B-BBEE">{o.minBbbeeLevel ? `Level ${o.minBbbeeLevel}` : "None"}</Fact>
         <Fact label="Industry">{o.industry || "Any industry"}</Fact>
         <Fact label="Where">{o.provinces.length ? o.provinces.join(", ") : "Nationwide"}</Fact>
@@ -292,10 +298,10 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
           </CardHeader>
           <CardContent>
             <dl className="space-y-4 text-sm">
-              <ListingItem label="Scope of work">{o.listing.scope}</ListingItem>
+              <ListingItem label={esd ? "What it offers" : "Scope of work"}>{o.listing.scope}</ListingItem>
               <ListingItem label="Briefing session">{o.listing.briefing || "No briefing session"}</ListingItem>
               <ListingItem label="How to submit">{o.listing.submission}</ListingItem>
-              <ListingItem label="How you’ll be evaluated">
+              <ListingItem label={esd ? "Who it’s for" : "How you’ll be evaluated"}>
                 <ul className="list-disc space-y-1 pl-5">
                   {o.listing.evaluationCriteria.map((c) => (
                     <li key={c}>{c}</li>
@@ -398,6 +404,7 @@ function BeforeYouApply({
                 scoresPrice={o.scoresPrice}
                 saved={o.draft}
                 size="default"
+                esd={isEsd(o.kind)}
               />
             )}
           </div>
@@ -436,12 +443,19 @@ function YourApplication({
         <CardDescription>
           {a.status === "withdrawn"
             ? "You withdrew this application, so the buyer no longer considers it."
-            : `Sent to ${o.organizationName}. The buyer contacts you directly if they want to take it further.`}
+            : a.status === "accepted"
+              ? `${o.organizationName} accepted you into this programme. They’ll contact you about the next steps.`
+              : `Sent to ${o.organizationName}. ${
+                  isEsd(o.kind)
+                    ? "You’ll see here when you’re accepted into the programme."
+                    : "The buyer contacts you directly if they want to take it further."
+                }`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <ol className="space-y-2 text-sm">
           <TimelineItem at={a.submittedAt}>You sent your application</TimelineItem>
+          {a.acceptedAt && <TimelineItem at={a.acceptedAt}>Accepted into the programme</TimelineItem>}
           {a.withdrawnAt && <TimelineItem at={a.withdrawnAt}>You withdrew it</TimelineItem>}
         </ol>
 

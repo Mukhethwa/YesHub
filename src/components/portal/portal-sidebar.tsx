@@ -18,6 +18,9 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -58,7 +61,7 @@ export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHre
           <SidebarGroupLabel className="text-sidebar-foreground/60">{label}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {nav.map(({ href, label: itemLabel, icon: Icon, badge, badgeLabel }) => (
+              {nav.map(({ href, label: itemLabel, icon: Icon, badge, badgeLabel, items }) => (
                 <SidebarMenuItem key={href}>
                   <SidebarMenuButton
                     asChild
@@ -72,6 +75,23 @@ export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHre
                     </Link>
                   </SidebarMenuButton>
                   {badge && <SidebarMenuBadge aria-label={badgeLabel}>{badge}</SidebarMenuBadge>}
+                  {items && items.length > 0 && (
+                    <SidebarMenuSub>
+                      {items.map((item) => (
+                        <SidebarMenuSubItem key={item.href}>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === item.href}
+                            className="text-sidebar-foreground/80 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground"
+                          >
+                            <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

@@ -24,6 +24,7 @@ import type * as lib_encryption from "../lib/encryption.js";
 import type * as lib_evaluation from "../lib/evaluation.js";
 import type * as lib_insights from "../lib/insights.js";
 import type * as lib_jev from "../lib/jev.js";
+import type * as lib_kinds from "../lib/kinds.js";
 import type * as lib_opportunities from "../lib/opportunities.js";
 import type * as lib_organizationSettings from "../lib/organizationSettings.js";
 import type * as lib_outstanding from "../lib/outstanding.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   "lib/evaluation": typeof lib_evaluation;
   "lib/insights": typeof lib_insights;
   "lib/jev": typeof lib_jev;
+  "lib/kinds": typeof lib_kinds;
   "lib/opportunities": typeof lib_opportunities;
   "lib/organizationSettings": typeof lib_organizationSettings;
   "lib/outstanding": typeof lib_outstanding;

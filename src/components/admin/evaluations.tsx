@@ -232,10 +232,9 @@ function RunCard({ run, onOpen }: { run: Run; onOpen: () => void }) {
       <header className="flex items-start gap-3">
         <KindTile kind={run.opportunity.kind} className="size-9 [&_svg]:size-4" />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium">{run.opportunity.title}</h3>
-          <p className="truncate text-xs text-muted-foreground">
-            {run.organizationName}, {run.opportunity.reference}
-          </p>
+          <h3 className="truncate font-medium">{run.opportunity.reference}</h3>
+          <p className="truncate text-sm">{run.opportunity.title}</p>
+          <p className="truncate text-xs text-muted-foreground">{run.organizationName}</p>
         </div>
         <RunStatus run={run} />
       </header>
@@ -297,10 +296,9 @@ function RecordBody({ run }: { run: Run }) {
         <div className="flex items-start gap-3 pr-8">
           <KindTile kind={run.opportunity.kind} className="size-9 [&_svg]:size-4" />
           <div className="min-w-0">
-            <SheetTitle className="text-base">{run.opportunity.title}</SheetTitle>
-            <SheetDescription>
-              {run.organizationName}, {run.opportunity.reference}
-            </SheetDescription>
+            <SheetTitle className="text-base">{run.opportunity.reference}</SheetTitle>
+            <p className="text-sm font-medium">{run.opportunity.title}</p>
+            <SheetDescription>{run.organizationName}</SheetDescription>
           </div>
         </div>
         <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border bg-border text-sm">

@@ -6,7 +6,13 @@ import { components, internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
 import { internalMutation, internalQuery } from "./functions";
 import { createAuth } from "./auth";
-import { sampleDocumentLabelsFor, sampleListingFor, sampleProposal, sampleTeamIdFor } from "./lib/opportunities";
+import {
+  insertSamplePrograms,
+  sampleDocumentLabelsFor,
+  sampleListingFor,
+  sampleProposal,
+  sampleTeamIdFor,
+} from "./lib/opportunities";
 import { samplePdf } from "./lib/samplePdf";
 
 /*
@@ -442,10 +448,44 @@ export const devData = internalAction({
           createdBy: id("umhlabaOwner"),
         })
       : 0;
+    // ...and sample ESD programmes: grants, funding, accelerators and business support
+    if (umhlaba) {
+      await ctx.runMutation(internal.enterprise.seedSamplePrograms, {
+        organizationId: umhlaba.id,
+        organizationName: umhlaba.name,
+        createdBy: id("umhlabaOwner"),
+      });
+    }
 
     const files: number = await ctx.runAction(internal.seed.sampleDocuments, {});
 
     return { accounts: Object.keys(ids).length, opportunities, files, password: "see SEED_PASSWORD in convex/seed.ts" };
+  },
+});
+
+/**
+ * Adds the sample ESD programmes to every organisation that already has sample listings, for deployments
+ * seeded before ESD existed. Safe to re-run; follow with seed:sampleDocuments for their documents.
+ *
+ *   pnpm exec convex run seed:samplePrograms
+ */
+export const samplePrograms = internalMutation({
+  args: {},
+  handler: async (ctx): Promise<number> => {
+    assertDevSite();
+    const demo = (await ctx.db.query("opportunities").take(500)).filter((o) => o.isDemo);
+    const byOrganization = new Map(demo.map((o) => [o.organizationId, o.createdBy]));
+    let added = 0;
+    for (const [organizationId, createdBy] of byOrganization) {
+      const detail = await ctx.runQuery(components.betterAuth.organizations.detail, { organizationId });
+      if (!detail) continue;
+      added += await insertSamplePrograms(ctx, {
+        organizationId,
+        organizationName: detail.organization.name,
+        createdBy,
+      });
+    }
+    return added;
   },
 });
 

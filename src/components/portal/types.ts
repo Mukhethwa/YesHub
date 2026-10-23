@@ -11,4 +11,6 @@ export interface PortalNavItem {
   badge?: string;
   /** Screen-reader text for the badge. */
   badgeLabel?: string;
+  /** Pages listed under this one in the sidebar, e.g. ESD's Grants and Funding. */
+  items?: { href: string; label: string }[];
 }

@@ -208,9 +208,16 @@ const ACTIONS: Record<ActionStatus, { label: string; title: string; done: string
   awarded: { label: "Award", title: "Award", done: "Awarded" },
 };
 
+/** An ESD programme accepts SMEs instead of awarding, straight from their application. */
+const ESD_ACTIONS: Record<ActionStatus, { label: string; title: string; done: string }> = {
+  ...ACTIONS,
+  submitted: { label: "Reset to awaiting decision", title: "Reset", done: "Reset" },
+  awarded: { label: "Accept", title: "Accept into the programme", done: "Accepted" },
+};
+
 /**
- * The buyer's actions on one applicant. Each asks for a reason, which goes on the record and to the SME.
- * Awarding is only offered from the shortlist, to owners and admins.
+ * The buyer's actions on one applicant. Each asks for a reason, which goes on the record. Awarding is only
+ * offered from the shortlist, to owners and admins; an ESD programme's owners and admins accept SMEs directly.
  */
 export function ApplicantActions({
   applicationId,
@@ -218,12 +225,14 @@ export function ApplicantActions({
   status,
   canAct,
   canAward,
+  esd = false,
 }: {
   applicationId: Id<"applications">;
   companyName: string;
   status: ApplicationStatus;
   canAct: boolean;
   canAward: boolean;
+  esd?: boolean;
 }) {
   const setStatus = useMutation(api.enterprise.setApplicationStatus);
   const [target, setTarget] = useState<ActionStatus | null>(null);
@@ -231,9 +240,16 @@ export function ApplicantActions({
   const [pending, setPending] = useState(false);
 
   if (status === "awarded" || status === "withdrawn") return null;
-  const options: ActionStatus[] =
-    status === "shortlisted"
-      ? [...(canAward ? (["awarded"] as const) : []), "submitted", "declined"]
+  const accept = canAward ? (["awarded"] as const) : [];
+  const actions = esd ? ESD_ACTIONS : ACTIONS;
+  const options: ActionStatus[] = esd
+    ? status === "declined"
+      ? [...accept, "submitted"]
+      : status === "shortlisted"
+        ? [...accept, "submitted", "declined"]
+        : [...accept, "shortlisted", "declined"]
+    : status === "shortlisted"
+      ? [...accept, "submitted", "declined"]
       : status === "declined"
         ? ["shortlisted"]
         : ["shortlisted", "declined"];
@@ -242,7 +258,7 @@ export function ApplicantActions({
     e.preventDefault();
     if (!target) return;
     setPending(true);
-    const ok = await runMutation(`${ACTIONS[target].done}: ${companyName}`, () =>
+    const ok = await runMutation(`${actions[target].done}: ${companyName}`, () =>
       setStatus({ applicationId, status: target, reason }),
     );
     setPending(false);
@@ -263,7 +279,7 @@ export function ApplicantActions({
           title={canAct ? undefined : "Only owners and admins in your organisation can change an applicant’s status"}
           onClick={() => setTarget(option)}
         >
-          {ACTIONS[option].label}
+          {actions[option].label}
         </Button>
       ))}
 
@@ -272,9 +288,9 @@ export function ApplicantActions({
           <form onSubmit={submit} className="space-y-4">
             <DialogHeader>
               <DialogTitle>
-                {target ? ACTIONS[target].title : ""}: {companyName}
+                {target ? actions[target].title : ""}: {companyName}
               </DialogTitle>
-              <DialogDescription>The reason is recorded and shared with the applicant.</DialogDescription>
+              <DialogDescription>The reason is recorded on the audit log.</DialogDescription>
             </DialogHeader>
             <Field>
               <FieldLabel htmlFor="action-reason">Reason</FieldLabel>
@@ -294,7 +310,7 @@ export function ApplicantActions({
               </Button>
               <Button type="submit" disabled={pending || reason.trim().length < 10}>
                 {pending && <Spinner />}
-                {target ? ACTIONS[target].label : "Save"}
+                {target ? actions[target].label : "Save"}
               </Button>
             </DialogFooter>
           </form>

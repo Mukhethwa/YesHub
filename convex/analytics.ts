@@ -2,11 +2,13 @@ import { components } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getEnterprise } from "./enterprise";
 import { query } from "./functions";
+import { isEsd } from "./lib/kinds";
 import { getStaff } from "./lib/staff";
 
 /*
- * Platform analytics for MASLink staff, and the same for one enterprise organisation. Returns compact rows rather than totals: queries shouldn't read the
- * clock, so the browser buckets them into the chosen date range. Capped at hackathon scale.
+ * Platform analytics for MASLink staff, and the same for one enterprise organisation. Returns compact rows
+ * rather than totals: queries shouldn't read the clock, so the browser buckets them into the chosen date
+ * range. Capped at hackathon scale.
  */
 
 const LIMIT = 5000;
@@ -24,6 +26,8 @@ export const platform = query({
       ctx.db.query("commands").order("desc").take(LIMIT),
     ]);
     const smeById = new Map(smes.map((s) => [s._id, s]));
+    // Drafts were never published, so they aren't opportunities yet
+    const published = opportunities.filter((o) => o.status !== "draft");
     const provinceByUser = new Map(smes.map((s) => [s.userId, s.hqProvince]));
     const kindById = new Map(opportunities.map((o) => [o._id, o.kind]));
 
@@ -36,7 +40,7 @@ export const platform = query({
         bbbee: s.bbbeeLevel,
         verified: !!s.verifiedAt,
       })),
-      opportunities: opportunities.map((o) => ({
+      opportunities: published.map((o) => ({
         t: o.listing?.publishedAt ?? o._creationTime,
         kind: o.kind,
         status: o.status,
@@ -49,12 +53,15 @@ export const platform = query({
         status: a.status,
         province: smeById.get(a.smeId)?.hqProvince ?? null,
         kind: kindById.get(a.opportunityId) ?? null,
+        /** An ESD programme (grant, funding, accelerator, support): "awarded" means accepted into it. */
+        esd: isEsd(kindById.get(a.opportunityId) ?? "tender"),
         score: a.evaluation.score,
         qualifies: a.evaluation.qualifies,
         review: a.decision?.outcome ?? null,
         overridden: !!a.decision?.overriddenBy,
-        /** Days from applying to the buyer's latest decision. */
-        decidedAfter: a.statusChangedAt ? (a.statusChangedAt - a.submittedAt) / 86_400_000 : null,
+        /** Days from applying to the buyer's latest decision. A withdrawal is the SME's doing, not a decision. */
+        decidedAfter:
+          a.statusChangedAt && a.status !== "withdrawn" ? (a.statusChangedAt - a.submittedAt) / 86_400_000 : null,
       })),
       // Changes people made (not the system), placed by the SME's head office where the actor is an SME
       activity: commands
@@ -100,6 +107,8 @@ export const organisation = query({
     const smeById = new Map(smes.map((s) => [s._id as string, s]));
     const kindById = new Map(opportunities.map((o) => [o._id as string, o.kind]));
     const provinceByUser = new Map(smes.map((s) => [s.userId, s.hqProvince]));
+    // Drafts were never published, so they aren't listings yet
+    const published = opportunities.filter((o) => o.status !== "draft");
 
     return {
       users: [] as number[],
@@ -110,7 +119,7 @@ export const organisation = query({
         bbbee: s.bbbeeLevel,
         verified: !!s.verifiedAt,
       })),
-      opportunities: opportunities.map((o) => ({
+      opportunities: published.map((o) => ({
         t: o.listing?.publishedAt ?? o._creationTime,
         kind: o.kind,
         status: o.status,
@@ -122,11 +131,13 @@ export const organisation = query({
         status: a.status,
         province: smeById.get(a.smeId)?.hqProvince ?? null,
         kind: kindById.get(a.opportunityId) ?? null,
+        esd: isEsd(kindById.get(a.opportunityId) ?? "tender"),
         score: a.evaluation.score,
         qualifies: a.evaluation.qualifies,
         review: a.decision?.outcome ?? null,
         overridden: !!a.decision?.overriddenBy,
-        decidedAfter: a.statusChangedAt ? (a.statusChangedAt - a.submittedAt) / 86_400_000 : null,
+        decidedAfter:
+          a.statusChangedAt && a.status !== "withdrawn" ? (a.statusChangedAt - a.submittedAt) / 86_400_000 : null,
       })),
       // What the organisation's people and its applicants did to its records, placed by the applicant's province
       activity: commands
