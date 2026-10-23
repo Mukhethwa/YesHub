@@ -129,12 +129,14 @@ function ApplicationCard({ row }: { row: Row }) {
   return (
     <li className="rounded-xl border bg-card p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <Link href={href} className="block font-medium hover:underline">
-            {o.title}
+        {/* The reference is how SMEs and buyers refer to a listing, so it's the title */}
+        <div className="min-w-0 space-y-0.5">
+          <Link href={href} className="block font-semibold hover:underline">
+            {o.reference}
           </Link>
+          <p className="text-sm font-medium">{o.title}</p>
           <p className="text-sm text-muted-foreground">
-            {o.organizationName}, {KIND_LABELS[o.kind]}, {o.reference}
+            {o.organizationName}, {KIND_LABELS[o.kind]}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -184,7 +186,7 @@ type ForSme = NonNullable<FunctionReturnType<typeof api.smeOpportunities.opportu
 
 function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme: SmeProfile }) {
   const o = useQuery(api.smeOpportunities.opportunity, { opportunityId });
-  useBreadcrumb(o?.title);
+  useBreadcrumb(o?.reference);
   // Checked in the browser against the SME's own profile, only to suggest what would strengthen it
   const recommendations = useMemo(
     () => (o && !o.application ? recommendationsFor(evaluateApplication(o as EvaluableOpportunity, sme), o) : []),
@@ -220,12 +222,11 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
         <div className="flex flex-wrap items-center gap-2">
           <PhasePill phase={phase} />
           {status && <ApplicationStatusPill status={status} />}
-          <span className="text-sm text-muted-foreground">
-            {KIND_LABELS[o.kind]}, {o.reference}
-          </span>
+          <span className="text-sm text-muted-foreground">{KIND_LABELS[o.kind]}</span>
         </div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{o.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{o.reference}</h1>
+        <p className="mt-1 text-lg font-medium">{o.title}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">
           {o.organizationName}, {reachLabel(reachOf(o, sme), o, sme)}
         </p>
       </div>
