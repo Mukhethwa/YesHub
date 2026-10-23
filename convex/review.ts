@@ -12,7 +12,6 @@ import { APPLICATION_LIMIT } from "./lib/opportunities";
 import { canManage } from "./lib/organizationSettings";
 import { evaluateApplication } from "./lib/evaluation";
 import { bbbeePoints, classifyCriteria, pricePoints, rand } from "./lib/procurement";
-import { recordAudit } from "./lib/audit";
 import { getStaff } from "./lib/staff";
 import { PROFILE_RETURNABLES, returnableKey } from "./lib/tender";
 import { criterionAssessment, type DocKey, requirementResult, type TrailKind } from "./schema";
@@ -823,22 +822,6 @@ export const applyDecision = internalMutation({
       details: shortlist.map((c) => `Shortlisted: ${c.companyName}, ranked ${c.rank}, ${c.totalPoints} points`),
       ...args.call,
     });
-    const opportunity = await ctx.db.get("opportunities", run.opportunityId);
-    await recordAudit(ctx, {
-      organizationId: run.organizationId,
-      actorName: JEV,
-      action: "shortlisting.recommended",
-      opportunityId: run.opportunityId,
-      targetLabel: opportunity ? `${opportunity.reference}: ${opportunity.title}` : "An opportunity",
-      summary: `The automated review recommended ${shortlist.length} of ${args.candidates.length} applicant${
-        args.candidates.length === 1 ? "" : "s"
-      } for the shortlist (limit ${run.slots}), in points order. People decide from here.`,
-      changes: shortlist.map((c) => ({
-        field: c.companyName,
-        before: "Applied",
-        after: `Recommended, ranked ${c.rank}${c.totalPoints !== undefined ? `, ${c.totalPoints} points` : ""}`,
-      })),
-    });
     return null;
   },
 });
@@ -912,15 +895,6 @@ export const requestDecision = mutation({
       kind: "decision_started",
       actor: enterprise.user.name,
       summary: `${enterprise.user.name} started shortlisting, limit ${slots} applicant${slots === 1 ? "" : "s"}.`,
-    });
-    await recordAudit(ctx, {
-      organizationId: opportunity.organizationId,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action: "shortlisting.requested",
-      opportunityId: opportunity._id,
-      targetLabel: `${opportunity.reference}: ${opportunity.title}`,
-      summary: `${enterprise.user.name} asked for a recommended shortlist of up to ${slots} applicant${slots === 1 ? "" : "s"} on ${opportunity.reference}.`,
     });
     return runId;
   },

@@ -3,7 +3,7 @@
 import { usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { ChevronDownIcon, LockIcon, SearchIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,11 +25,62 @@ import { FilterTabs, formatDateTime } from "./shared";
 
 /*
  * The command log as diffs: every mutation that changed data, who ran it, and for each document it touched,
- * each field before and after. Encrypted fields are shown decrypted to staff with audit access and marked.
+ * each field before and after. Encrypted fields are shown decrypted to readers with access and marked.
+ * Staff see every command (admin area); an enterprise sees the commands that changed its own data
+ * (convex/enterpriseAudit.ts), through the same component with a different source.
  */
 
-type Command = FunctionReturnType<typeof api.audit.commands>["page"][number];
+export type Command = FunctionReturnType<typeof api.audit.commands>["page"][number];
 type ChangeRow = NonNullable<FunctionReturnType<typeof api.audit.commandChanges>>[number];
+
+/** The queries the log reads. Both sources return the same shapes. */
+export type ChangeLogSource = {
+  commands: typeof api.audit.commands;
+  commandChanges: typeof api.audit.commandChanges;
+  documentHistory: typeof api.audit.documentHistory;
+};
+
+const STAFF_SOURCE: ChangeLogSource = {
+  commands: api.audit.commands,
+  commandChanges: api.audit.commandChanges,
+  documentHistory: api.audit.documentHistory,
+};
+
+const SourceContext = createContext<ChangeLogSource>(STAFF_SOURCE);
+
+/** Plain words for the actions people take, so the log reads without knowing function names. */
+const ACTION_LABELS: Record<string, string> = {
+  "opportunities.create": "Created an opportunity",
+  "opportunities.update": "Edited an opportunity",
+  "opportunities.publish": "Published an opportunity",
+  "opportunities.close": "Closed an opportunity early",
+  "opportunities.cancel": "Cancelled an opportunity",
+  "opportunities.removeDraft": "Deleted a draft",
+  "enterprise.setApplicationStatus": "Changed an applicant’s status",
+  "enterprise.setOpportunityDepartment": "Moved an opportunity to a department",
+  "enterprise.addOpportunityDocument": "Released a document",
+  "enterprise.removeOpportunityDocument": "Removed a released document",
+  "enterprise.updateOrganizationSettings": "Changed organisation settings",
+  "tenders.readTender": "Had the tender read",
+  "tenders.saveReading": "Tender requirements read",
+  "tenders.readingFailed": "Tender reading failed",
+  "tenders.saveRequirements": "Edited tender requirements",
+  "tenders.confirmRequirements": "Confirmed tender requirements",
+  "tenders.removeRequirements": "Removed tender requirements",
+  "review.requestDecision": "Asked for a shortlist",
+  "review.applyDecision": "Shortlist recommended",
+  "review.calculatePoints": "Points calculated",
+  "review.saveExtraction": "Document read",
+  "review.saveAssessment": "Application scored",
+  "review.retryReview": "Restarted a review",
+  "smeOpportunities.apply": "Applied",
+  "smeOpportunities.addDocuments": "Added documents to an application",
+};
+
+function actionLabel(name: string) {
+  const { module, fn } = splitName(name);
+  return ACTION_LABELS[`${module}.${fn}`];
+}
 
 const TABLE_LABELS: Record<string, string> = {
   smes: "SME profile",
@@ -50,8 +101,17 @@ const OPERATION: Record<ChangeRow["operation"], { label: string; tone: "success"
 
 type Filter = "all" | "people" | "system";
 
-export function ChangeLog() {
-  const { results, status, loadMore } = usePaginatedQuery(api.audit.commands, {}, { initialNumItems: 50 });
+export function ChangeLog({
+  source = STAFF_SOURCE,
+  intro = "Every action that changed data is recorded as a command, with each document’s state before and after. Records are only ever added.",
+  tables = TABLE_LABELS,
+}: {
+  source?: ChangeLogSource;
+  intro?: string;
+  /** The kinds of record to filter by. */
+  tables?: Record<string, string>;
+}) {
+  const { results, status, loadMore } = usePaginatedQuery(source.commands, {}, { initialNumItems: 50 });
   const [filter, setFilter] = useState<Filter>("all");
   const [table, setTable] = useState("all");
   const [search, setSearch] = useState("");
@@ -62,7 +122,10 @@ export function ChangeLog() {
       (c) =>
         (filter === "all" || (filter === "people" ? !!c.actorId : !c.actorId)) &&
         (table === "all" || c.tables.includes(table)) &&
-        (!term || c.name.toLowerCase().includes(term) || c.actor.toLowerCase().includes(term)),
+        (!term ||
+          [c.name, c.actor, actionLabel(c.name) ?? "", c.reason ?? ""].some((text) =>
+            text.toLowerCase().includes(term),
+          )),
     );
   }, [results, filter, table, search]);
 
@@ -78,10 +141,7 @@ export function ChangeLog() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Every action that changed data is recorded as a command, with each document’s state before and after. Records
-        are only ever added.
-      </p>
+      <p className="text-sm text-muted-foreground">{intro}</p>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-3">
           <FilterTabs
@@ -100,7 +160,7 @@ export function ChangeLog() {
             onChange={setTable}
             options={[
               { id: "all", label: "All data" },
-              ...Object.entries(TABLE_LABELS).map(([id, label]) => ({ id, label })),
+              ...Object.entries(tables).map(([id, label]) => ({ id, label })),
             ]}
           />
         </div>
@@ -110,7 +170,7 @@ export function ChangeLog() {
           </InputGroupAddon>
           <InputGroupInput
             type="search"
-            placeholder="Search action or person"
+            placeholder="Search action, person or reason"
             aria-label="Search changes"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -123,11 +183,7 @@ export function ChangeLog() {
           {results.length ? "No changes match." : "Nothing has changed yet."}
         </p>
       ) : (
-        <ul className="divide-y overflow-hidden rounded-xl border bg-card">
-          {visible.map((command) => (
-            <CommandItem key={command.id} command={command} />
-          ))}
-        </ul>
+        <CommandList commands={visible} source={source} />
       )}
 
       {status !== "Exhausted" && (
@@ -139,6 +195,19 @@ export function ChangeLog() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Commands as an expandable list, for the whole log and for one opportunity's history. */
+export function CommandList({ commands, source = STAFF_SOURCE }: { commands: Command[]; source?: ChangeLogSource }) {
+  return (
+    <SourceContext.Provider value={source}>
+      <ul className="divide-y overflow-hidden rounded-xl border bg-card">
+        {commands.map((command) => (
+          <CommandItem key={command.id} command={command} />
+        ))}
+      </ul>
+    </SourceContext.Provider>
   );
 }
 
@@ -163,12 +232,22 @@ function CommandItem({ command }: { command: Command }) {
         <span className="min-w-0 space-y-1">
           <span className="flex flex-wrap items-center gap-2 text-sm">
             <span className="font-medium">{command.actor}</span>
-            <span className="text-muted-foreground">ran</span>
+            {actionLabel(command.name) ? (
+              <span>{actionLabel(command.name)}</span>
+            ) : (
+              <span className="text-muted-foreground">ran</span>
+            )}
             <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
               {module}.<span className="font-semibold">{fn}</span>
             </code>
             {command.visibility === "internal" && <Pill>Internal</Pill>}
           </span>
+          {command.reason && (
+            <span className="block border-l-2 pl-2 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Reason: </span>
+              {command.reason}
+            </span>
+          )}
           <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <span className="tabular-nums">{formatDateTime(command.at)}</span>
             <span>
@@ -191,7 +270,8 @@ function CommandItem({ command }: { command: Command }) {
 }
 
 function CommandChanges({ commandId }: { commandId: Id<"commands"> }) {
-  const changes = useQuery(api.audit.commandChanges, { commandId });
+  const source = useContext(SourceContext);
+  const changes = useQuery(source.commandChanges, { commandId });
   if (changes === undefined) return <Spinner className="mx-auto" />;
   if (!changes?.length) return <p className="text-sm text-muted-foreground">No changes recorded.</p>;
   return (
@@ -326,7 +406,8 @@ function DocumentHistory({ table, documentId, title }: { table: string; document
 }
 
 function HistoryBody({ table, documentId }: { table: string; documentId: string }) {
-  const history = useQuery(api.audit.documentHistory, { table, documentId });
+  const source = useContext(SourceContext);
+  const history = useQuery(source.documentHistory, { table, documentId });
   if (history === undefined) return <Spinner className="mx-auto" />;
   if (!history?.length) return <p className="text-sm text-muted-foreground">No history.</p>;
   return history.map((change) => (
@@ -335,6 +416,7 @@ function HistoryBody({ table, documentId }: { table: string; documentId: string 
         <span className="tabular-nums">{formatDateTime(change.at)}</span>
         {change.command && <code className="ml-2">{change.command.replace(/\.js:/, ".")}</code>}
       </p>
+      {change.reason && <p className="text-xs text-muted-foreground">Reason: {change.reason}</p>}
       <ChangeDiff change={change} showHistory={false} />
     </div>
   ));

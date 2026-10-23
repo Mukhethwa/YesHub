@@ -38,7 +38,15 @@ const LOGGED_TABLES = [
   "decisionRuns",
 ] as const;
 
-type CommandState = { id: Id<"commands"> | null; tables: Set<string>; changes: number };
+type CommandState = {
+  id: Id<"commands"> | null;
+  tables: Set<string>;
+  changes: number;
+  /** The enterprise organisation whose data the command changed, for its audit log. */
+  organizationId?: string;
+  /** Why the person did it, when the mutation asks for a reason (noteReason). */
+  reason?: string;
+};
 const COMMAND = Symbol("command");
 type CommandCtx = MutationCtx & { [COMMAND]: CommandState };
 
@@ -64,6 +72,12 @@ async function recordChange(
   const fields = changedFields(before, after);
   if (change.operation === "update" && fields.length === 0) return;
 
+  // Whose data this is: opportunities, applications, documents and settings carry their organisation
+  const doc = after ?? before;
+  const organizationId = typeof doc?.organizationId === "string" ? doc.organizationId : undefined;
+  const opportunityId =
+    table === "opportunities" ? change.id : typeof doc?.opportunityId === "string" ? doc.opportunityId : undefined;
+
   if (!state.id) {
     const [meta, identity] = await Promise.all([ctx.meta.getFunctionMetadata(), ctx.auth.getUserIdentity()]);
     state.id = await ctx.innerDb.insert("commands", {
@@ -73,7 +87,13 @@ async function recordChange(
       actorName: identity?.name ?? identity?.email ?? undefined,
       changeCount: 0,
       tables: [],
+      organizationId,
+      reason: state.reason,
     });
+    state.organizationId = organizationId;
+  } else if (organizationId && !state.organizationId) {
+    state.organizationId = organizationId;
+    await ctx.innerDb.patch("commands", state.id, { organizationId });
   }
   state.changes++;
   state.tables.add(table);
@@ -83,11 +103,25 @@ async function recordChange(
     table,
     documentId: change.id,
     operation: change.operation,
+    organizationId,
+    opportunityId,
     fields,
     before,
     after,
   });
   await ctx.innerDb.patch("commands", state.id, { changeCount: state.changes, tables: [...state.tables].sort() });
+}
+
+/**
+ * Records why the person running this mutation did it, on the command, so the audit log shows the reason next
+ * to the changes. Call it with the reason the person gave, before or after the writes.
+ */
+export async function noteReason(ctx: MutationCtx, reason: string) {
+  const state = (ctx as CommandCtx)[COMMAND];
+  if (!state) return;
+  state.reason = reason;
+  // commands isn't a logged table, so this write records nothing further
+  if (state.id) await ctx.db.patch("commands", state.id, { reason });
 }
 
 const triggers = new Triggers<DataModel, CommandCtx>();

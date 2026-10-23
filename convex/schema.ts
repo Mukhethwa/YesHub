@@ -565,7 +565,11 @@ export default defineSchema({
     actorName: v.optional(v.string()),
     changeCount: v.number(),
     tables: v.array(v.string()),
-  }),
+    /** The enterprise organisation whose data it changed, so its audit log can show it. */
+    organizationId: v.optional(v.string()),
+    /** Why the person did it, when the action asks for a reason (convex/functions.ts noteReason). */
+    reason: v.optional(v.string()),
+  }).index("by_organization", ["organizationId"]),
 
   /** What a command did to one document: the state before and after, and which fields changed. */
   changes: defineTable({
@@ -573,13 +577,17 @@ export default defineSchema({
     table: v.string(),
     documentId: v.string(),
     operation: v.union(v.literal("insert"), v.literal("update"), v.literal("delete")),
+    /** Copied from the document, so an organisation's audit log and an opportunity's history can find it. */
+    organizationId: v.optional(v.string()),
+    opportunityId: v.optional(v.string()),
     fields: v.array(v.string()),
     /** The document without system fields. Encrypted fields stay encrypted. */
     before: v.optional(v.any()),
     after: v.optional(v.any()),
   })
     .index("by_command", ["commandId"])
-    .index("by_document", ["table", "documentId"]),
+    .index("by_document", ["table", "documentId"])
+    .index("by_opportunity", ["opportunityId"]),
 
   /** The last reference number an organisation used each year, so numbers are never reused. */
   referenceCounters: defineTable({
@@ -587,34 +595,6 @@ export default defineSchema({
     year: v.number(),
     last: v.number(),
   }).index("by_organization_and_year", ["organizationId", "year"]),
-
-  /**
-   * The evidence trail of an enterprise organisation: every decision that changes the state of an opportunity
-   * or an application, who made it, why, and what changed. Append-only, and each entry carries a hash of the
-   * one before it, so a removed or altered entry shows (convex/lib/audit.ts).
-   */
-  organizationAudit: defineTable({
-    organizationId: v.string(),
-    /** 1, 2, 3… within the organisation. */
-    sequence: v.number(),
-    actorId: v.optional(v.string()),
-    actorName: v.string(),
-    /** e.g. "opportunity.cancelled", "application.awarded", "tender.confirmed". */
-    action: v.string(),
-    opportunityId: v.optional(v.id("opportunities")),
-    applicationId: v.optional(v.id("applications")),
-    /** The opportunity's reference and title, or the applicant's name, at the time. */
-    targetLabel: v.string(),
-    summary: v.string(),
-    reason: v.optional(v.string()),
-    /** Field by field, what it was and what it became. */
-    changes: v.array(v.object({ field: v.string(), before: v.string(), after: v.string() })),
-    /** SHA-256 of this entry's contents and the previous entry's hash. */
-    hash: v.string(),
-    previousHash: v.string(),
-  })
-    .index("by_organization_and_sequence", ["organizationId", "sequence"])
-    .index("by_opportunity", ["opportunityId"]),
 
   /** Every action MASLink staff take in the admin area, newest first by _creationTime. */
   auditLog: defineTable({

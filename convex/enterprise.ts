@@ -3,12 +3,11 @@ import { ConvexError, v } from "convex/values";
 import { getSettings } from "../src/lib/sme/settings";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, type QueryCtx } from "./_generated/server";
-import { internalMutation, mutation, query } from "./functions";
+import { internalMutation, mutation, noteReason, query } from "./functions";
 import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
 import { components } from "./_generated/api";
 import { evaluateApplication } from "./lib/evaluation";
-import { auditValue, recordAudit } from "./lib/audit";
 import { registerView } from "./lib/tender";
 import { addTrail } from "./review";
 import {
@@ -253,17 +252,6 @@ export const setOpportunityDepartment = mutation({
 
     if ((opportunity.teamId ?? null) === args.teamId) return null;
     await ctx.db.patch("opportunities", opportunity._id, { teamId: args.teamId ?? undefined });
-    const teamName = (id?: string | null) => detail.teams.find((t) => t.id === id)?.name ?? "Unassigned";
-    await recordAudit(ctx, {
-      organizationId: opportunity.organizationId,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action: "opportunity.department_changed",
-      opportunityId: opportunity._id,
-      targetLabel: `${opportunity.reference}: ${opportunity.title}`,
-      summary: `${enterprise.user.name} moved ${opportunity.reference} to ${teamName(args.teamId)}.`,
-      changes: [{ field: "Department", before: teamName(opportunity.teamId), after: teamName(args.teamId) }],
-    });
     return null;
   },
 });
@@ -348,37 +336,10 @@ export const setApplicationStatus = mutation({
       }.`,
       details: [reason],
     });
-    const opportunity = await ctx.db.get("opportunities", application.opportunityId);
-    await recordAudit(ctx, {
-      organizationId: application.organizationId,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action: `application.${action}`,
-      opportunityId: application.opportunityId,
-      applicationId: application._id,
-      targetLabel: `${sme?.companyName ?? "Applicant"} on ${opportunity?.reference ?? "an opportunity"}`,
-      summary: `${enterprise.user.name} ${STATUS_VERBS[args.status]} ${sme?.companyName ?? "this applicant"}${
-        againstShortlisting ? ", against the shortlisting outcome" : ""
-      }.`,
-      reason,
-      changes: [
-        {
-          field: "Status",
-          before: APPLICATION_STATUS_WORDS[application.status],
-          after: APPLICATION_STATUS_WORDS[args.status],
-        },
-      ],
-    });
+    await noteReason(ctx, reason);
     return null;
   },
 });
-
-const APPLICATION_STATUS_WORDS = {
-  submitted: "Submitted",
-  shortlisted: "Shortlisted",
-  declined: "Declined",
-  awarded: "Awarded",
-} as const;
 
 /** Every SME the organisation has shortlisted, across all its opportunities, most recent first. */
 export const shortlist = query({
@@ -603,23 +564,6 @@ export const addOpportunityDocument = mutation({
       type: meta.contentType!,
       uploadedBy: enterprise.user.name,
     });
-    await recordAudit(ctx, {
-      organizationId: opportunity.organizationId,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action: "document.released",
-      opportunityId: opportunity._id,
-      targetLabel: opportunity.reference + ": " + opportunity.title,
-      summary:
-        enterprise.user.name +
-        " released " +
-        args.file.name +
-        " (" +
-        (args.label.trim() || "Document") +
-        ") with " +
-        opportunity.reference +
-        ".",
-    });
     return documentId;
   },
 });
@@ -629,19 +573,9 @@ export const removeOpportunityDocument = mutation({
   handler: async (ctx, args) => {
     const doc = await ctx.db.get("opportunityDocuments", args.documentId);
     if (!doc) return null;
-    const { enterprise, opportunity } = await ownOpportunity(ctx, doc.opportunityId);
+    await ownOpportunity(ctx, doc.opportunityId);
     await ctx.storage.delete(doc.storageId);
     await ctx.db.delete("opportunityDocuments", doc._id);
-    await recordAudit(ctx, {
-      organizationId: opportunity.organizationId,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action: "document.removed",
-      opportunityId: opportunity._id,
-      targetLabel: opportunity.reference + ": " + opportunity.title,
-      summary:
-        enterprise.user.name + " removed " + doc.name + " (" + doc.label + ") from " + opportunity.reference + ".",
-    });
     return null;
   },
 });
@@ -910,7 +844,6 @@ export const updateOrganizationSettings = mutation({
       throw new ConvexError("Enter a valid procurement email address.");
     }
 
-    const before = await getOrganizationSettings(ctx, enterprise.organization.id);
     const next = {
       ...s,
       about: s.about.trim().slice(0, 1000),
@@ -925,41 +858,9 @@ export const updateOrganizationSettings = mutation({
       defaultSubmission: s.defaultSubmission.trim().slice(0, 1000),
     };
     await saveOrganizationSettings(ctx, enterprise.organization.id, next, enterprise.user.name);
-    // Settings decide who may shortlist and what applicants must hold, so each change is on the record
-    const changes = (Object.keys(next) as (keyof typeof next)[]).map((key) => ({
-      field: SETTING_NAMES[key] ?? key,
-      before: auditValue(before[key]),
-      after: auditValue(next[key]),
-    }));
-    if (changes.some((c) => c.before !== c.after)) {
-      await recordAudit(ctx, {
-        organizationId: enterprise.organization.id,
-        actorId: enterprise.user._id,
-        actorName: enterprise.user.name,
-        action: "settings.updated",
-        targetLabel: enterprise.organization.name,
-        summary: enterprise.user.name + " changed the organisation’s settings.",
-        changes,
-      });
-    }
     return null;
   },
 });
-
-/** Settings as the audit log names them. Keys without a name show as they are. */
-const SETTING_NAMES: Partial<Record<string, string>> = {
-  about: "About",
-  industry: "Industry",
-  website: "Website",
-  procurementEmail: "Procurement email",
-  defaultRequiredDocuments: "Default required documents",
-  defaultEvaluationCriteria: "Default evaluation criteria",
-  defaultSubmission: "Default submission instructions",
-  defaultMinBbbeeLevel: "Default minimum B-BBEE level",
-  retentionMonths: "Keep data for (months)",
-  shortlistAdminsOnly: "Only owners and admins shortlist",
-  defaultApplicantFilter: "Default applicant filter",
-};
 
 /** Saves the signed-in member's own notification preferences. */
 export const updatePreferences = mutation({
