@@ -13,7 +13,7 @@ import { canManage } from "./lib/organizationSettings";
 import { evaluateApplication } from "./lib/evaluation";
 import { bbbeePoints, classifyCriteria, pricePoints, rand } from "./lib/procurement";
 import { getStaff } from "./lib/staff";
-import { PROFILE_RETURNABLES, returnableKey } from "./lib/tender";
+import { profileDocumentFor } from "./lib/tender";
 import { criterionAssessment, type DocKey, requirementResult, type TrailKind } from "./schema";
 
 /*
@@ -149,6 +149,32 @@ export const reviewFinished = internalMutation({
   },
 });
 
+/**
+ * After an SME uploads or replaces a document on its profile, reviews again every open application whose
+ * opportunity asks for that document (as a required document or one of the tender's returnables), so the
+ * buyer and the SME see it counted. Returns how many were sent for review.
+ */
+export async function reviewApplicationsUsing(ctx: MutationCtx, sme: Doc<"smes">, key: DocKey) {
+  const applications = await ctx.db
+    .query("applications")
+    .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", sme._id))
+    .take(100);
+  const today = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  let started = 0;
+  for (const application of applications) {
+    if (application.status !== "submitted" || application.decision) continue;
+    const opportunity = await ctx.db.get("opportunities", application.opportunityId);
+    if (!opportunity || opportunity.status !== "open" || opportunity.closesAt < today) continue;
+    const asked =
+      opportunity.requiredDocuments.includes(key) ||
+      returnablesOf(opportunity).some((r) => profileDocumentFor(r.name) === key);
+    if (!asked) continue;
+    await startReview(ctx, application._id);
+    started++;
+  }
+  return started;
+}
+
 /** The tender register applications are checked against: only once the buyer has confirmed it. */
 export function confirmedTender(opportunity: Doc<"opportunities">) {
   return opportunity.tender?.status === "confirmed" ? opportunity.tender : null;
@@ -171,7 +197,7 @@ function documentsOf(sme: Doc<"smes">, opportunity: Doc<"opportunities">, applic
   ) as DocKey[];
   // Profile documents that answer one of the tender's returnables are read as well
   const fromTender = returnablesOf(opportunity).flatMap((r) => {
-    const key = PROFILE_RETURNABLES[returnableKey(r.name)] as DocKey | undefined;
+    const key = profileDocumentFor(r.name) as DocKey | undefined;
     return key ? [key] : [];
   });
   const wanted = [...new Set([...listed, ...fromTender])];
@@ -328,12 +354,6 @@ export const assessmentInput = internalQuery({
         criteria: classifyCriteria(opportunity.listing?.evaluationCriteria ?? []),
       },
       tender: confirmedTender(opportunity),
-      /** Profile documents on file, for returnables the profile already answers. */
-      profileDocuments: Object.fromEntries(
-        Object.entries(sme.documents).flatMap(([key, doc]) =>
-          doc?.storageId ? [[key, { name: doc.name, label: DOCUMENTS.find((d) => d.key === key)?.label ?? key }]] : [],
-        ),
-      ) as Record<string, { name: string; label: string }>,
       sme: {
         companyName: sme.companyName,
         industry: sme.industry,
@@ -390,6 +410,7 @@ export const saveAssessment = internalMutation({
     concerns: v.array(v.string()),
     requirements: v.optional(v.array(requirementResult)),
     technical: v.optional(v.object({ points: v.number(), available: v.number(), threshold: v.optional(v.number()) })),
+    returnables: v.optional(v.object({ met: v.number(), partial: v.number(), total: v.number() })),
     call: v.object(vJevCall),
   },
   handler: async (ctx, { applicationId, call, ...result }) => {

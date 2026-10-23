@@ -6,6 +6,7 @@ import { type MutationCtx, type QueryCtx } from "./_generated/server";
 import { mutation, query } from "./functions";
 import { authComponent } from "./auth";
 import { evaluateApplication } from "./lib/evaluation";
+import { outstandingAfterReview } from "./lib/outstanding";
 import { APPLICATION_LIMIT, deleteDraft } from "./lib/opportunities";
 import { classifyCriteria } from "./lib/procurement";
 import { addTrail, MAX_ATTACHMENTS, startReview } from "./review";
@@ -258,6 +259,17 @@ export const opportunity = query({
           : null,
       documents,
       application: application ? applicationSummary(application) : null,
+      /**
+       * Documents the tender still needs from this application, from the review: names and what to do, never
+       * how it was scored. Null before the review has checked it against a confirmed tender.
+       */
+      outstanding:
+        application && opportunity.tender?.status === "confirmed" && application.evaluation.requirements
+          ? outstandingAfterReview(
+              { requirements: opportunity.tender.requirements, threshold: null, documentName: null },
+              application.evaluation,
+            )
+          : null,
       draft: !application && draft ? draftSummary(draft) : null,
     };
   },

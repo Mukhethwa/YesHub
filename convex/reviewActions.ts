@@ -18,7 +18,7 @@ import {
   type Question,
   type ScoreAnswer,
 } from "./lib/jev";
-import { PROFILE_RETURNABLES, returnableKey, rulePoints } from "./lib/tender";
+import { profileDocumentFor, rulePoints } from "./lib/tender";
 import type { Candidate } from "./review";
 import type { CriterionAssessment, Evaluation, RequirementResult } from "./schema";
 
@@ -401,9 +401,12 @@ function requirementResults(register: Register, input: AssessmentInput, a: Recor
 
     if (r.kind === "returnable") {
       if (r.action === "review") return [];
-      const profileKey = PROFILE_RETURNABLES[returnableKey(r.text)];
+      const profileKey = profileDocumentFor(r.text);
       const profileReading = profileKey ? input.documents.find((d) => d.key === profileKey) : undefined;
+      // A profile document only answers its own kind of returnable: a CSD number printed on the CIPC
+      // certificate isn't the CSD report. Files attached to the application can answer anything.
       const found = input.documents
+        .filter((d) => d.source === "application" || d.key === profileKey)
         .flatMap((d) =>
           d.returnables.filter((x) => x.id === r.id && yes(x.contains)).map((x) => ({ document: d, ...x })),
         )
@@ -435,7 +438,18 @@ function requirementResults(register: Register, input: AssessmentInput, a: Recor
           },
         ];
       }
-      const label = profileKey ? input.profileDocuments[profileKey]?.label : undefined;
+      const label = profileKey ? (DOCUMENTS.find((d) => d.key === profileKey)?.label ?? r.text) : r.text;
+      if (profileReading) {
+        return [
+          {
+            id: r.id,
+            status: "partial",
+            has: [`${label} on your profile`],
+            needs: [`Your ${label} couldn’t be read. Upload it again as a PDF on your Documents tab.`],
+            confidence: 1,
+          },
+        ];
+      }
       return [
         {
           id: r.id,
@@ -443,7 +457,7 @@ function requirementResults(register: Register, input: AssessmentInput, a: Recor
           has: [],
           needs: [
             profileKey
-              ? `Upload your ${DOCUMENTS.find((d) => d.key === profileKey)?.label ?? label ?? r.text} to your profile, or attach ${r.text}.`
+              ? `Upload your ${label} on your Documents tab. It then counts for this tender and every other one.`
               : r.action === "complete_and_sign"
                 ? `Complete and sign ${r.text}, then attach it.`
                 : `Attach ${r.text}.`,
@@ -637,31 +651,61 @@ export const assessApplication = internalAction({
     // Jev can only disqualify through a concern it can name: the documents contradicting the profile
     const qualifies = checks.filter((c) => c.required).every((c) => c.passed) && concerns.length === 0;
     const failed = checks.filter((c) => c.required && !c.passed).map((c) => c.label);
-    // The score is the average of the scored criteria, the same number shortlisting ranks a grant by, so the
-    // applicant list and the shortlist always agree; with no scored criteria it's the overall fit
+    // Returnable documents in order: the standard ones on the SME's profile and the tender's own forms
+    const returnables =
+      register && results
+        ? (() => {
+            const ids = new Set(register.requirements.filter((r) => r.kind === "returnable").map((r) => r.id));
+            const ours = results.filter((r) => ids.has(r.id));
+            return {
+              met: ours.filter((r) => r.status === "met").length,
+              partial: ours.filter((r) => r.status === "partial").length,
+              total: ours.length,
+            };
+          })()
+        : undefined;
+
+    // With a confirmed tender the score is the tender's own: technical points on its scoring rules, or, when
+    // it only scores price and preference (calculated at shortlisting), how many returnables are in order.
+    // Without one, it's the average of the buyer's scored criteria, or the overall fit.
     const scored = assessed.flatMap((c) => (c.score !== undefined ? [c.score] : []));
     const score =
       technical && technical.available > 0
         ? Math.round((technical.points / technical.available) * 100)
-        : scored.length
-          ? Math.round(scored.reduce((sum, n) => sum + n, 0) / scored.length)
-          : fit.score;
+        : returnables && returnables.total > 0
+          ? Math.round((returnables.met / returnables.total) * 100)
+          : scored.length
+            ? Math.round(scored.reduce((sum, n) => sum + n, 0) / scored.length)
+            : fit.score;
     const gates = assessed.filter((c) => c.kind === "gate");
-    const summary = `Overall “${fit.level}” (${fit.confidence}).${
-      gates.length ? ` ${gates.filter((g) => g.met).length} of ${gates.length} requirements shown by the evidence.` : ""
-    }${
-      results?.length
-        ? ` ${results.filter((r) => r.status === "met").length} of ${results.length} tender requirements met${
-            technical ? `, ${technical.points} of ${technical.available} technical points` : ""
-          }.`
-        : ""
-    }`;
+    const mandatory = register
+      ? register.requirements.filter((r) => r.kind === "mandatory").map((r) => results!.find((x) => x.id === r.id))
+      : [];
+    const summary = register
+      ? [
+          technical &&
+            `${technical.points} of ${technical.available} technical points${
+              technical.threshold !== undefined ? ` (minimum ${technical.threshold})` : ""
+            }.`,
+          mandatory.length &&
+            `${mandatory.filter((m) => m?.status === "met").length} of ${mandatory.length} mandatory requirements shown.`,
+          returnables?.total && `${returnables.met} of ${returnables.total} returnable documents in order.`,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : `Overall “${fit.level}” (${fit.confidence}).${
+          gates.length
+            ? ` ${gates.filter((g) => g.met).length} of ${gates.length} requirements shown by the evidence.`
+            : ""
+        }`;
 
     await ctx.runMutation(internal.review.saveAssessment, {
       ...args,
       qualifies,
-      // Same convention as the rules: an applicant who doesn't qualify never outranks one who does
-      score: qualifies ? score : Math.min(score, 59),
+      // A tender's points are reported as they are; ranking already puts applicants who qualify first. Without
+      // one, the rules' convention holds: an applicant who doesn't qualify never outranks one who does.
+      score: qualifies || register ? score : Math.min(score, 59),
+      returnables,
       summary: qualifies || !failed.length ? summary : `Doesn’t qualify: ${failed.join(", ")}. ${summary}`,
       checks,
       criteria: assessed,

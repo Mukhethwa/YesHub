@@ -1,17 +1,12 @@
 "use client";
 
-import { PlusIcon } from "lucide-react";
+import { CircleCheckIcon, PlusIcon } from "lucide-react";
 import { useMutation } from "convex/react";
+import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 
-import { Status, Tag } from "@/components/app/status";
-import {
-  ACTION_LABELS,
-  REQUIREMENT_GROUPS,
-  requirementCodes,
-  TIER_LABELS,
-} from "@/components/review/requirements-checklist";
+import { Tag } from "@/components/app/status";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -27,103 +22,102 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useUploadFile } from "@/hooks/use-upload-file";
 import { errorMessage } from "@/lib/errors";
-import { DOCUMENTS, docStatus } from "@/lib/sme/documents";
-import type { SmeProfile } from "@/lib/sme/types";
+import { cn } from "@/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { PROFILE_RETURNABLES, returnableKey } from "../../../convex/lib/tender";
-import type { DocKey, TenderRequirement } from "../../../convex/schema";
+import { type Outstanding, WEIGHTS } from "../../../convex/lib/outstanding";
 
 /*
- * The SME's side of a tender's requirements: what the tender asks for and which documents the profile
- * already covers, and adding documents to an application while the tender is open. SMEs never see how their
- * application was assessed against these.
+ * The SME's side of a tender's requirements: which documents are still outstanding, and what to do about
+ * each. Standard company documents are uploaded once on the Documents tab and count for every tender; the
+ * tender's own forms are completed, signed and attached to the application. Scores and points stay with the
+ * buyer: the SME sees recommendations, not the evaluation.
  */
-
-type Tender = { requirements: TenderRequirement[]; threshold: number | null; documentName: string | null };
 
 const MAX_ATTACHMENTS = 5;
 const ATTACHMENT_ACCEPT = "application/pdf,image/png,image/jpeg";
 
-/** A returnable the profile can answer, and whether the profile has a current copy. */
-function fromProfile(r: TenderRequirement, sme: SmeProfile) {
-  const key = PROFILE_RETURNABLES[returnableKey(r.text)] as DocKey | undefined;
-  if (!key) return null;
-  return { label: DOCUMENTS.find((d) => d.key === key)?.label ?? key, status: docStatus(sme, key) };
+/** Outstanding documents, grouped by where they go. */
+export function OutstandingDocuments({
+  items,
+  applied,
+  application,
+  canChange = false,
+}: {
+  items: Outstanding[];
+  applied: boolean;
+  application?: { id: Id<"applications">; attachments: { label: string; name: string }[] };
+  canChange?: boolean;
+}) {
+  if (items.length === 0) {
+    return (
+      <p className="flex items-center gap-2 text-sm">
+        <CircleCheckIcon className="size-4 text-success" aria-hidden />
+        {applied
+          ? "Every document the tender asks for is in order."
+          : "Your profile has every standard document this tender asks for."}
+      </p>
+    );
+  }
+  const onProfile = items.filter((i) => i.where === "profile");
+  const toAttach = items.filter((i) => i.where === "application");
+  return (
+    <div className="space-y-6">
+      {onProfile.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Upload to your Documents tab ({onProfile.length})</h3>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/sme/documents">Go to Documents</Link>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Standard company documents count for every tender
+            {applied ? ", and your application is checked again when you upload one" : ""}.
+          </p>
+          <ItemList items={onProfile} />
+        </section>
+      )}
+      {toAttach.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">
+              {applied ? "Attach to your application" : "Bring these when you apply"} ({toAttach.length})
+            </h3>
+            {applied && canChange && application && (
+              <AddDocumentsButton
+                application={application}
+                suggestions={toAttach.filter((i) => !i.name.includes(":")).map((i) => i.name)}
+              />
+            )}
+          </div>
+          <ItemList items={toAttach} />
+        </section>
+      )}
+    </div>
+  );
 }
 
-/** What the tender asks for, before the SME applies. */
-export function TenderPreview({ tender, sme }: { tender: Tender; sme: SmeProfile }) {
-  const codes = requirementCodes(tender.requirements);
-  const scored = tender.requirements.filter((r) => r.kind === "scored");
-  const toAttach = tender.requirements.filter(
-    (r) => r.kind === "returnable" && r.action !== "review" && fromProfile(r, sme)?.status !== "ok",
-  );
-
+function ItemList({ items }: { items: Outstanding[] }) {
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        Your application is checked against each of these
-        {tender.documentName ? `, read from ${tender.documentName}` : ""}.{" "}
-        {scored.length > 0 &&
-          `Scored criteria carry ${scored.reduce((sum, r) => sum + (r.points ?? 0), 0)} points${
-            tender.threshold !== null ? `; you need at least ${tender.threshold} to proceed` : ""
-          }. `}
-        {toAttach.length > 0 &&
-          `Attach the ${toAttach.length} document${toAttach.length === 1 ? "" : "s"} your profile doesn’t cover when you apply.`}
-      </p>
-      {REQUIREMENT_GROUPS.map((group) => {
-        const list = tender.requirements.filter((r) => r.kind === group.kind && r.action !== "review");
-        if (!list.length) return null;
-        return (
-          <div key={group.kind}>
-            <p className="mb-2 text-xs font-medium text-muted-foreground">{group.title}</p>
-            <ul className="divide-y rounded-lg border">
-              {list.map((r) => {
-                const profile = r.kind === "returnable" ? fromProfile(r, sme) : null;
-                return (
-                  <li key={r.id} className="space-y-1.5 p-3 text-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="min-w-0">
-                        <span className="mr-1.5 font-mono text-xs text-muted-foreground">{codes.get(r.id)}</span>
-                        {r.text}
-                      </p>
-                      {r.points !== undefined && (
-                        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{r.points} points</span>
-                      )}
-                      {profile &&
-                        (profile.status === "ok" ? (
-                          <Status tone="success">On your profile</Status>
-                        ) : (
-                          <Status tone="warning">
-                            {profile.status === "expired" ? "Renew on your profile" : "Add to your profile"}
-                          </Status>
-                        ))}
-                    </div>
-                    {(r.action || r.tier) && (
-                      <p className="flex flex-wrap gap-1.5">
-                        {r.action && <Tag>{ACTION_LABELS[r.action]}</Tag>}
-                        {r.tier && <Tag>{TIER_LABELS[r.tier]}</Tag>}
-                      </p>
-                    )}
-                    {r.items && r.items.length > 0 && (
-                      <ul className="list-disc pl-5 text-xs text-muted-foreground">
-                        {r.items.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    )}
-                    {r.scoring && r.scoring.length > 0 && (
-                      <p className="text-xs text-muted-foreground">How it’s scored: {r.scoring.join("; ")}</p>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+    <ul className="divide-y rounded-lg border">
+      {items.map((item) => (
+        <li
+          key={item.id}
+          className={cn(
+            "space-y-1 p-3 text-sm",
+            item.weight === "disqualifies" && "border-l-4 border-l-destructive",
+            item.weight === "may-disqualify" && "border-l-4 border-l-warning",
+          )}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <p className="min-w-0 font-medium">{item.name}</p>
+            <Tag>{WEIGHTS[item.weight]}</Tag>
           </div>
-        );
-      })}
-    </div>
+          <p className="text-xs text-muted-foreground">{item.todo}</p>
+        </li>
+      ))}
+    </ul>
   );
 }
 

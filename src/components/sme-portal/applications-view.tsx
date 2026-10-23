@@ -30,7 +30,8 @@ import {
   recommendationsFor,
 } from "./opportunities-shared";
 import { SectionHeader } from "./require-sme";
-import { AddDocumentsButton, TenderPreview } from "./tender-feedback";
+import { outstandingBeforeApplying } from "../../../convex/lib/outstanding";
+import { AddDocumentsButton, OutstandingDocuments } from "./tender-feedback";
 
 /*
  * The SME's Opportunities tab. An SME sees only the status of its applications (in progress, submitted or
@@ -261,16 +262,30 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
         <BeforeYouApply opportunity={o} recommendations={recommendations} />
       )}
 
-      {o.tender && (
+      {o.tender && a?.status !== "withdrawn" && (
         <Card>
           <CardHeader>
-            <CardTitle>What the tender asks for</CardTitle>
+            <CardTitle>Documents outstanding</CardTitle>
             <CardDescription>
-              Mandatory requirements, scored criteria and the documents to return, from the buyer’s tender.
+              {a
+                ? "What the buyer’s tender still needs from you, from the documents you sent and your profile."
+                : "What this tender asks for that your profile doesn’t cover yet, and the tender’s own forms to bring."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TenderPreview tender={o.tender} sme={sme} />
+            {a && !o.outstanding ? (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Spinner /> Checking your documents against the tender.
+              </p>
+            ) : (
+              <OutstandingDocuments
+                // Before applying, the tips above cover the profile; this adds what the tender itself asks for
+                items={o.outstanding ?? outstandingBeforeApplying(o.tender, [], sme)}
+                applied={!!a}
+                application={a ?? undefined}
+                canChange={!!a && a.status === "submitted" && !isFinished(phaseOf(o))}
+              />
+            )}
           </CardContent>
         </Card>
       )}

@@ -227,6 +227,8 @@ export const evaluation = v.object({
   requirements: v.optional(v.array(requirementResult)),
   /** Technical points from the register's scored criteria, against the tender's threshold. */
   technical: v.optional(v.object({ points: v.number(), available: v.number(), threshold: v.optional(v.number()) })),
+  /** The tender's returnable documents: in order, there but incomplete, and how many it asks for. */
+  returnables: v.optional(v.object({ met: v.number(), partial: v.number(), total: v.number() })),
 });
 
 /** A file an SME attaches to one application: a proposal, pricing schedule or returnable form. */
