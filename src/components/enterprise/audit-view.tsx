@@ -22,6 +22,7 @@ const SOURCE: ChangeLogSource = {
   commands: api.enterpriseAudit.commands,
   commandChanges: api.enterpriseAudit.commandChanges,
   documentHistory: api.enterpriseAudit.documentHistory,
+  technical: false,
 };
 
 /** The records an organisation owns, to filter the log by. */
