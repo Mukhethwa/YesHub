@@ -322,9 +322,11 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
                 <CardTitle>Applicants</CardTitle>
                 <CardDescription>
                   Ranked best fit first: SMEs that meet every requirement, then by score.{" "}
-                  {reviewed
-                    ? "Scored against your evaluation criteria."
-                    : "Eligibility checked. Document review in progress."}
+                  {detail.tender?.status === "confirmed"
+                    ? "Scored on the tender’s own evaluation criteria and the returnable documents each SME supplied."
+                    : reviewed
+                      ? "Scored against your evaluation criteria."
+                      : "Eligibility checked. Document review in progress."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 px-0">
@@ -663,7 +665,7 @@ function ApplicantTable({
                 </TableCell>
                 <TableCell className="text-sm">{a.sme.bbbeeLevel || "Not stated"}</TableCell>
                 <TableCell>
-                  <Score value={a.evaluation.score} />
+                  <TenderScore evaluation={a.evaluation} />
                 </TableCell>
                 <TableCell>
                   {a.evaluation.qualifies ? (
@@ -719,6 +721,36 @@ function ApplicantTable({
         })}
       </TableBody>
     </Table>
+  );
+}
+
+/**
+ * An applicant's score. With a confirmed tender it's the tender's own: technical points on its scoring rules
+ * against the minimum, and returnable documents in order; otherwise the score out of 100.
+ */
+function TenderScore({ evaluation }: { evaluation: Applicant["evaluation"] }) {
+  const { technical, returnables } = evaluation;
+  if (!technical && !returnables) return <Score value={evaluation.score} />;
+  return (
+    <span className="block space-y-0.5 text-sm tabular-nums">
+      {technical && (
+        <span className="block">
+          <span className="font-medium">{technical.points}</span>
+          <span className="text-muted-foreground"> of {technical.available} points</span>
+          {technical.threshold !== undefined && (
+            <span className="block text-xs text-muted-foreground">
+              {technical.points >= technical.threshold ? "Meets" : "Below"} the minimum of {technical.threshold}
+            </span>
+          )}
+        </span>
+      )}
+      {returnables && returnables.total > 0 && (
+        <span className="block text-xs text-muted-foreground">
+          {returnables.met} of {returnables.total} returnables in order
+          {returnables.partial ? `, ${returnables.partial} incomplete` : ""}
+        </span>
+      )}
+    </span>
   );
 }
 

@@ -308,12 +308,28 @@ export function groupRequirements(
 }
 
 /** Profile documents (DocKey values) that answer a returnable, by its key. The SME doesn't have to send them again. */
-export const PROFILE_RETURNABLES: Record<string, string> = {
-  bbbee: "bbbeeCertificate",
-  tax: "taxCertificate",
-  registration: "cipcCertificate",
-  csd: "csdReport",
-};
+const PROFILE_DOCUMENTS: [RegExp, string][] = [
+  [/b-?bbee|bee (certificate|affidavit)|sworn affidavit/i, "bbbeeCertificate"],
+  [/tax (clearance|compliance|verification|status)|\btcs\b|tax pin|sars pin/i, "taxCertificate"],
+  [/\bcsd\b|central supplier database|maaa/i, "csdReport"],
+  [
+    /company registration|\bcipc\b|registration (certificate|document)|certificate of incorporation|\bcor ?14/i,
+    "cipcCertificate",
+  ],
+  [/company profile|business profile|capability statement/i, "companyProfile"],
+  [/bank (confirmation|letter|account|details)|banking details|letter from (your|the) bank/i, "bankLetter"],
+  [/coida|letter of good standing|compensation fund|workmen.?s compensation/i, "coidaLetter"],
+  [/proof of (business |physical )?address|utility bill|municipal (account|bill)|lease agreement/i, "proofOfAddress"],
+];
+
+/**
+ * The standard company document (a DocKey from the SME's Documents tab) that answers a returnable, if any,
+ * e.g. "Annexure A – Certified B-BBEE certificate" → bbbeeCertificate. The SME doesn't send these again:
+ * the copy on their profile counts.
+ */
+export function profileDocumentFor(name: string) {
+  return PROFILE_DOCUMENTS.find(([pattern]) => pattern.test(name))?.[1];
+}
 
 /** Points a scoring rule awards: "Bidder complies on 4 of the listed skills = 2%" → 2. */
 export function rulePoints(rule: string) {

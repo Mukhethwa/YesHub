@@ -7,6 +7,7 @@ import { mutation, query } from "./functions";
 import { organizationsFor } from "./account";
 import { authComponent } from "./auth";
 import { deleteApplicationsForSme } from "./lib/opportunities";
+import { reviewApplicationsUsing } from "./review";
 import { type DocKey, type DocRef, type SmeDetails, smeDetails, smeDetailsValidator, smeSettings } from "./schema";
 
 async function getOwnSme(ctx: QueryCtx) {
@@ -163,7 +164,9 @@ export const setDocument = mutation({
 
     await ctx.db.patch("smes", sme._id, { documents: { ...sme.documents, [args.key]: ref } });
     if (previous?.storageId) await ctx.storage.delete(previous.storageId);
-    return null;
+    // Open applications that ask for this document are checked again with the new copy
+    const updated = await ctx.db.get("smes", sme._id);
+    return updated ? await reviewApplicationsUsing(ctx, updated, args.key) : 0;
   },
 });
 

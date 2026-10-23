@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { checkFile } from "@/components/sme/controls";
 import { Badge } from "@/components/ui/badge";
@@ -121,7 +122,13 @@ function DocRow({ doc, sme, url }: { doc: DocumentType; sme: SmeProfile; url?: s
     if (!picked) return;
     const issue = checkFile(picked);
     if (issue) return setError(issue);
-    void run("upload", async () => setDocument({ key: doc.key, file: await uploadFile(picked) }));
+    void run("upload", async () => {
+      const rechecked = await setDocument({ key: doc.key, file: await uploadFile(picked) });
+      if (rechecked)
+        toast.success(
+          `${doc.label} saved. ${rechecked} open application${rechecked === 1 ? " that asks" : "s that ask"} for it ${rechecked === 1 ? "is" : "are"} being checked again.`,
+        );
+    });
   };
 
   return (

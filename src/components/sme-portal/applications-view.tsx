@@ -9,7 +9,7 @@ import { useMemo, useState } from "react";
 import { FilterTabs, formatDateTime } from "@/components/admin/shared";
 import { useBreadcrumb } from "@/components/portal/breadcrumbs";
 import { closingLabel, formatRand, KIND_LABELS, PhasePill, isFinished, phaseOf } from "@/components/enterprise/tenders";
-import { CriteriaList, DecisionPill, ReviewStatus } from "@/components/review/review-parts";
+import { DecisionPill, ReviewStatus } from "@/components/review/review-parts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -21,7 +21,7 @@ import { evaluateApplication, type EvaluableOpportunity } from "../../../convex/
 import { rand } from "../../../convex/lib/procurement";
 import { ApplicationStatusPill, ApplyButton, ChecksList, FitPill, reachLabel, reachOf } from "./opportunities-shared";
 import { SectionHeader } from "./require-sme";
-import { TenderFeedback, TenderPreview } from "./tender-feedback";
+import { OutstandingDocuments, outstandingAfterReview, outstandingBeforeApplying } from "./tender-feedback";
 
 /** The Opportunities tab: the SME's applications, or one opportunity when the URL has ?id=. */
 export function ApplicationsView({ sme }: { sme: SmeProfile }) {
@@ -200,18 +200,10 @@ function ApplicationCard({ row }: { row: Row }) {
           <dd>{formatDate(a.submittedAt)}</dd>
         </div>
         <div>
-          <dt className="text-xs text-muted-foreground">Your ranking</dt>
-          <dd>
-            {a.rank} of {a.applicants} applicant{a.applicants === 1 ? "" : "s"}
-          </dd>
-        </div>
-        <div>
           <dt className="text-xs text-muted-foreground">
             {a.evaluation.engine === "jev" ? "Review" : "When you applied"}
           </dt>
-          <dd>
-            {a.evaluation.qualifies ? "Qualified" : "Didn’t qualify"}, score {a.evaluation.score}
-          </dd>
+          <dd>{a.evaluation.qualifies ? "Qualified" : "Didn’t qualify yet"}</dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">Buyer activity</dt>
@@ -327,14 +319,6 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
         <CardContent className="space-y-5">
           <div className="flex flex-wrap items-center gap-3">
             <FitPill evaluation={evaluation} />
-            <span className="text-sm">
-              Fit score <span className="font-semibold tabular-nums">{evaluation.score}</span>
-            </span>
-            {a && (
-              <span className="text-sm text-muted-foreground">
-                Ranked {a.rank} of {a.applicants} applicant{a.applicants === 1 ? "" : "s"}
-              </span>
-            )}
           </div>
           <ChecksList evaluation={evaluation} />
           {a && <ApplicationReview application={a} />}
@@ -380,30 +364,36 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
         </CardContent>
       </Card>
 
-      {o.tender && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{a ? "Against the tender’s requirements" : "What the tender asks for"}</CardTitle>
-            <CardDescription>
-              {a
-                ? "What your application already has, and what you still need to qualify and score well."
-                : "Mandatory requirements, scored criteria and the documents to return, from the buyer’s tender."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {a ? (
-              <TenderFeedback
-                tender={o.tender}
-                evaluation={a.evaluation}
-                application={a}
-                canChange={!isFinished(phase) && a.status === "submitted" && !a.decision}
-              />
-            ) : (
-              <TenderPreview tender={o.tender} sme={sme} />
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Documents outstanding</CardTitle>
+          <CardDescription>
+            {a
+              ? "What the buyer’s tender still needs from you, read from the documents you sent and your profile."
+              : o.tender
+                ? "What this tender asks for that your profile doesn’t cover yet, and the tender’s own forms to bring."
+                : "Documents this opportunity asks for that your profile doesn’t have yet."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {a && o.tender && !a.evaluation.requirements ? (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Spinner /> Checking your documents against the tender.
+            </p>
+          ) : (
+            <OutstandingDocuments
+              items={
+                a && o.tender
+                  ? outstandingAfterReview(o.tender, a.evaluation)
+                  : outstandingBeforeApplying(o.tender, o.requiredDocuments, sme)
+              }
+              applied={!!a}
+              application={a ?? undefined}
+              canChange={!!a && !isFinished(phase) && a.status === "submitted" && !a.decision}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       {o.listing && (
         <Card>
@@ -498,9 +488,6 @@ function ApplicationReview({ application: a }: { application: MyApplication }) {
         <div className="rounded-lg border bg-muted/40 p-4">
           <div className="flex flex-wrap items-center gap-2">
             <DecisionPill decision={a.decision} />
-            {a.decision.totalPoints !== null && (
-              <span className="text-sm text-muted-foreground">{a.decision.totalPoints} points</span>
-            )}
           </div>
           <p className="mt-2 text-sm">{a.decision.rationale}</p>
         </div>
@@ -508,8 +495,6 @@ function ApplicationReview({ application: a }: { application: MyApplication }) {
 
       {evaluation.engine === "jev" ? (
         <>
-          <p className="text-sm">{evaluation.summary}</p>
-          <CriteriaList criteria={evaluation.criteria ?? []} />
           {(evaluation.concerns ?? []).length > 0 && (
             <div>
               <p className="mb-1 text-sm font-medium">What to look at</p>
