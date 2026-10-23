@@ -36,6 +36,8 @@ const LOGGED_TABLES = [
   "applications",
   "documentExtractions",
   "decisionRuns",
+  // Not applicationDrafts: changes are listed per listing in the buyer's audit log, and an SME's unfinished
+  // application must never reach the buyer
 ] as const;
 
 type CommandState = {

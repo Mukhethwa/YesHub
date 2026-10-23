@@ -208,10 +208,13 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
 
   const phase = phaseOf(detail);
   const filter: ApplicantFilter = chosenFilter ?? detail.defaultApplicantFilter;
-  const qualifying = detail.applicants.filter((a) => a.evaluation.qualifies);
-  const visible = detail.applicants.filter((a) =>
-    filter === "all" ? true : filter === "qualify" ? a.evaluation.qualifies : !a.evaluation.qualifies,
-  );
+  const qualifying = detail.applicants.filter((a) => a.status !== "withdrawn" && a.evaluation.qualifies);
+  const active = detail.applicants.filter((a) => a.status !== "withdrawn");
+  // Withdrawn applications show under All only
+  const visible =
+    filter === "all"
+      ? detail.applicants
+      : active.filter((a) => (filter === "qualify" ? a.evaluation.qualifies : !a.evaluation.qualifies));
   const reviewed = detail.applicants.some((a) => a.evaluation.engine === "jev");
 
   return (
@@ -336,7 +339,7 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
                     options={[
                       { id: "all", label: "All", count: detail.applicants.length },
                       { id: "qualify", label: "Qualify", count: qualifying.length },
-                      { id: "not", label: "Don’t qualify", count: detail.applicants.length - qualifying.length },
+                      { id: "not", label: "Don’t qualify", count: active.length - qualifying.length },
                     ]}
                   />
                 </div>
@@ -350,7 +353,10 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
                     canShortlist={detail.canShortlist}
                     canAward={detail.canAward}
                     applicants={visible}
-                    ranks={new Map(detail.applicants.map((a, i) => [a.id, i + 1]))}
+                    // Withdrawn applications have no rank
+                    ranks={
+                      new Map(detail.applicants.filter((a) => a.status !== "withdrawn").map((a, i) => [a.id, i + 1]))
+                    }
                     requirements={detail.tender?.status === "confirmed" ? detail.tender.requirements : undefined}
                   />
                 )}
@@ -608,6 +614,7 @@ const STATUS_LABELS: Record<Applicant["status"], string> = {
   shortlisted: "Shortlisted",
   declined: "Not taken further",
   awarded: "Awarded",
+  withdrawn: "Withdrawn by the supplier",
 };
 
 function ApplicantTable({
@@ -650,12 +657,13 @@ function ApplicantTable({
           return (
             <Fragment key={a.id}>
               <TableRow>
-                <TableCell className="pl-6 font-medium tabular-nums">{ranks.get(a.id)}</TableCell>
+                <TableCell className="pl-6 font-medium tabular-nums">{ranks.get(a.id) ?? "–"}</TableCell>
                 <TableCell className="max-w-72">
                   <span className="flex items-center gap-2">
                     <span className="truncate font-medium">{a.sme.companyName}</span>
                     {a.sme.verified && <Pill tone="info">Verified</Pill>}
                     {a.status === "shortlisted" && <Pill tone="success">Shortlisted</Pill>}
+                    {a.status === "withdrawn" && <Pill tone="neutral">Withdrawn</Pill>}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {a.sme.city}, {a.sme.hqProvince}, {a.sme.industry}

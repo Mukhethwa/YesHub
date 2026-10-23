@@ -29,12 +29,23 @@ async function deleteApplication(ctx: MutationCtx, applicationId: Id<"applicatio
   await ctx.db.delete("applications", applicationId);
 }
 
-/** Removes an SME's applications and their activity. Call wherever an SME profile is deleted. */
+/** Deletes an unfinished application with the files saved on it. */
+export async function deleteDraft(ctx: MutationCtx, draft: Doc<"applicationDrafts">) {
+  await Promise.all(draft.attachments.map((f) => ctx.storage.delete(f.storageId).catch(() => {})));
+  await ctx.db.delete("applicationDrafts", draft._id);
+}
+
+/** Removes an SME's applications, unfinished ones too, and their activity. Call wherever an SME profile is deleted. */
 export async function deleteApplicationsForSme(ctx: MutationCtx, smeId: Id<"smes">) {
   for await (const application of ctx.db
     .query("applications")
     .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", smeId))) {
     await deleteApplication(ctx, application._id);
+  }
+  for await (const draft of ctx.db
+    .query("applicationDrafts")
+    .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", smeId))) {
+    await deleteDraft(ctx, draft);
   }
 }
 
@@ -51,6 +62,11 @@ export async function deleteOpportunitiesForOrganization(ctx: MutationCtx, organ
       .query("applications")
       .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))) {
       await deleteApplication(ctx, application._id);
+    }
+    for await (const draft of ctx.db
+      .query("applicationDrafts")
+      .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))) {
+      await deleteDraft(ctx, draft);
     }
     for await (const doc of ctx.db
       .query("opportunityDocuments")
