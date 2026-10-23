@@ -8,15 +8,15 @@ import type { SmeProfile } from "@/lib/sme/types";
 import { SetupProfile } from "./setup-profile";
 
 /**
- * Renders a dashboard section once the profile loads, or the setup prompt if there isn't one. Forms sit in a
- * readable column; `wide` lists use the page's full width.
+ * Renders a dashboard section once the profile loads, or the setup prompt if there isn't one. Every section
+ * uses the page's full width, like the rest of the portal; long forms lay their fields out in columns.
  */
-export function RequireSme({ children, wide = false }: { children: (sme: SmeProfile) => ReactNode; wide?: boolean }) {
+export function RequireSme({ children }: { children: (sme: SmeProfile) => ReactNode }) {
   const sme = useCurrentSme();
 
   if (sme === undefined) return <Spinner className="mx-auto mt-24" />;
   if (sme === null) return <SetupProfile />;
-  return <div className={wide ? "w-full" : "mx-auto max-w-4xl"}>{children(sme)}</div>;
+  return <div className="w-full">{children(sme)}</div>;
 }
 
 export function SectionHeader({ title, description }: { title: string; description: ReactNode }) {

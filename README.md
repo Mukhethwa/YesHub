@@ -134,9 +134,60 @@ pnpm exec convex run seed:devData '{"inviterEmail":"you@example.com"}'   # invit
 ```
 
 It refuses to run unless the deployment's `SITE_URL` is on localhost (or `ALLOW_SEED` is `true`, for a shared test
-deployment; unset it again afterwards), and it's safe to re-run. Every seed account
-uses the password in `SEED_PASSWORD` (`convex/seed.ts`); `naledi@maslink.test` is a super admin, `musa@`,
-`lindiwe@` and `tumi@maslink.test` are an admin, a moderator and a viewer.
+deployment; unset it again afterwards), and it's safe to re-run: if the accounts below stop signing in on a dev
+deployment, run it again.
+
+### Dev accounts
+
+Development deployments only. Every seed account signs in with the same password, `YesHubDev2026!`
+(`SEED_PASSWORD` in `convex/seed.ts`). Never seed production: the password is public.
+
+**MASLink staff** (admin area at `/admin`)
+
+| Email | Name | Access |
+| --- | --- | --- |
+| `naledi@maslink.test` | Naledi Dube | Super admin (owner of the staff organisation) |
+| `musa@maslink.test` | Musa Khoza | Admin |
+| `lindiwe@maslink.test` | Lindiwe Moyo | Moderator |
+| `tumi@maslink.test` | Tumi Radebe | Viewer |
+
+**Enterprises and funders** (dashboard at `/dashboard`)
+
+| Email | Name | Organisation | Role |
+| --- | --- | --- | --- |
+| `naledi.dlamini@umhlaba.test` | Naledi Dlamini | Umhlaba Property Group (verified) | Owner, Procurement |
+| `johan.vanwyk@umhlaba.test` | Johan van Wyk | Umhlaba Property Group | Admin, Procurement and Facilities |
+| `ayanda.nkosi@umhlaba.test` | Ayanda Nkosi | Umhlaba Property Group | Member, Human Resources |
+| `priya.naidoo@umhlaba.test` | Priya Naidoo | Umhlaba Property Group | Member, Facilities |
+| `sipho.mthembu@siyanda.test` | Sipho Mthembu | Siyanda Retail (awaiting verification) | Owner, Logistics |
+| `lerato.molefe@siyanda.test` | Lerato Molefe | Siyanda Retail | Member, Merchandise |
+| `grace@ubuntufund.test` | Grace Khumalo | Ubuntu Enterprise Development Fund (awaiting verification) | Owner |
+| `tenders@umhlaba-property.test` | Umhlaba Procurement | Umhlaba Property Tenders (rejected impostor) | Owner |
+
+**SMEs** (portal at `/sme`)
+
+| Email | Name | Business |
+| --- | --- | --- |
+| `thandi@ubuntufacilities.test` | Thandi Mokoena | Ubuntu Facilities Services |
+| `kabelo@lethabocatering.test` | Kabelo Sithole | Lethabo Catering & Events |
+| `bongani@siyakhabuild.test` | Bongani Zulu | Siyakha Construction |
+| `fatima@mzansiit.test` | Fatima Patel | Mzansi IT Solutions (suspended) |
+| `pieter@karoologistics.test` | Pieter Botha | Karoo Logistics |
+| `nomsa@imbalicleaning.test` | Nomsa Shabalala | Imbali Cleaning Co-operative |
+| `tebogo@thusoprojects.test` | Tebogo Maluleke | Thuso Projects |
+| `ayesha@kasikitchen.test` | Ayesha Jacobs | Kasi Kitchen Caterers |
+| `sibusiso@izikosecurity.test` | Sibusiso Ngcobo | Iziko Security Services |
+
+**Other accounts**
+
+| Email | Name | What it shows |
+| --- | --- | --- |
+| `zanele.mahlangu@gmail.test` | Zanele Mahlangu | A new account with no profile or organisation yet |
+| `kgosi@outlook.test` | Kgosi Masilo | A new account with no profile or organisation yet |
+| `win-every-tender@spam.test` | Cheap Tenders 4U | A banned account (can't sign in) |
+
+Local sign-in only works on `http://localhost:3000`, the deployment's `SITE_URL`. If another dev server already
+holds port 3000, a second one starts on 3001 and sign-in fails there.
 
 Seeded applications are scored by the rules until Jev reviews them. To have Jev review them (a fraction of a cent each):
 

@@ -3,11 +3,11 @@
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Pill } from "@/components/admin/page-header";
-import { daysUntil } from "@/components/enterprise/tenders";
+import { daysUntil, KindTile } from "@/components/enterprise/tenders";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -467,5 +467,65 @@ export function ApplyButton({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * An opportunity as a card in a two-column grid: the kind's tile and the reference as its name, the title
+ * and buyer, a row of facts, and the actions at the bottom. Cards in a row share a height, so their facts
+ * and actions line up.
+ */
+export function OpportunityCard({
+  kind,
+  reference,
+  title,
+  href,
+  subtitle,
+  status,
+  facts,
+  note,
+  actions,
+}: {
+  kind: OpportunityKind;
+  reference: string;
+  title: string;
+  href: string;
+  subtitle: string;
+  status?: ReactNode;
+  facts: { label: string; value: ReactNode; note?: string }[];
+  /** A line between the facts and the actions, such as a tip. */
+  note?: ReactNode;
+  actions: ReactNode;
+}) {
+  return (
+    <li className="flex h-full flex-col rounded-xl border bg-card">
+      <div className="flex items-start gap-3 p-5 pb-4">
+        <KindTile kind={kind} className="mt-0.5 size-9" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+            {/* The reference is how SMEs and buyers refer to a listing, so it's the card's name */}
+            <Link href={href} className="font-semibold tracking-tight hover:underline">
+              {reference}
+            </Link>
+            {status && <div className="flex flex-wrap items-center gap-2">{status}</div>}
+          </div>
+          <p className="mt-1 line-clamp-2 text-sm font-medium">{title}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</p>
+        </div>
+      </div>
+      <dl className="grid grid-cols-3 gap-px border-y bg-border">
+        {facts.map((fact) => (
+          <div key={fact.label} className="min-w-0 bg-card px-4 py-3 first:pl-5">
+            <dt className="text-xs text-muted-foreground">{fact.label}</dt>
+            <dd className="mt-0.5 text-sm font-medium break-words tabular-nums">{fact.value}</dd>
+            {fact.note && <dd className="text-xs text-muted-foreground">{fact.note}</dd>}
+          </div>
+        ))}
+      </dl>
+      <div className="mt-auto flex flex-col gap-3 p-5 pt-4">
+        {note && <div className="text-sm text-muted-foreground">{note}</div>}
+        <div className="flex flex-wrap justify-end gap-2">{actions}</div>
+      </div>
+    </li>
   );
 }

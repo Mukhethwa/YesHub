@@ -13,10 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { getSettings } from "@/lib/sme/settings";
+import { formatDate } from "@/lib/sme/format";
 import type { SmeProfile } from "@/lib/sme/types";
 import type { OpportunityKind } from "../../../convex/schema";
 import {
   ApplyButton,
+  OpportunityCard,
   fitsProfile,
   type Match,
   minimumValue,
@@ -143,7 +145,7 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
           </CardContent>
         </Card>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-4 lg:grid-cols-2">
           {visible.map((m) => (
             <MatchCard key={m.id} match={m} sme={sme} />
           ))}
@@ -155,47 +157,46 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
 
 export function MatchCard({ match, sme }: { match: Match; sme: SmeProfile }) {
   const tip = recommendationsFor(match.evaluation, match)[0];
+  const href = `/sme/opportunities?id=${match.id}`;
   return (
-    <li className="rounded-xl border bg-card p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <Link href={`/sme/opportunities?id=${match.id}`} className="block font-medium hover:underline">
-            {match.title}
-          </Link>
-          <p className="text-sm text-muted-foreground">
-            {match.organizationName}, {KIND_LABELS[match.kind]}, {match.reference}
-          </p>
-          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-            <Pill tone={match.reach === "outside" ? "warning" : "neutral"}>{reachLabel(match.reach, match, sme)}</Pill>
-            <span className="text-muted-foreground">{formatRand(match.value)}</span>
-            <span className="text-muted-foreground">{closingLabel(match.closesAt)}</span>
-          </div>
-        </div>
-      </div>
-      <div className="mt-4 flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          {tip ? (
-            <>
-              <span className="font-medium text-foreground">Tip:</span> {tip.text}
-            </>
-          ) : (
-            "Your profile covers what this opportunity asks for."
-          )}
-        </p>
-        <div className="flex shrink-0 gap-2">
+    <OpportunityCard
+      kind={match.kind}
+      reference={match.reference}
+      title={match.title}
+      href={href}
+      subtitle={`${match.organizationName}, ${KIND_LABELS[match.kind]}`}
+      status={
+        <Pill tone={match.reach === "outside" ? "warning" : "neutral"}>{reachLabel(match.reach, match, sme)}</Pill>
+      }
+      facts={[
+        { label: "Value", value: formatRand(match.value) },
+        { label: "Closes", value: formatDate(match.closesAt), note: closingLabel(match.closesAt) },
+        { label: "Where", value: match.provinces.length ? match.provinces.join(", ") : "Nationwide" },
+      ]}
+      note={
+        tip ? (
+          <>
+            <span className="font-medium text-foreground">Tip:</span> {tip.text}
+          </>
+        ) : (
+          "Your profile covers what this opportunity asks for."
+        )
+      }
+      actions={
+        <>
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/sme/opportunities?id=${match.id}`}>View details</Link>
+            <Link href={href}>View details</Link>
           </Button>
           {match.inProgress ? (
             // The saved answers load on the opportunity's page
             <Button size="sm" asChild>
-              <Link href={`/sme/opportunities?id=${match.id}`}>Continue application</Link>
+              <Link href={href}>Continue application</Link>
             </Button>
           ) : (
             <ApplyButton opportunityId={match.id} title={match.title} scoresPrice={match.scoresPrice} />
           )}
-        </div>
-      </div>
-    </li>
+        </>
+      }
+    />
   );
 }

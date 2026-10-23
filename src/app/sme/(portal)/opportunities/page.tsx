@@ -9,7 +9,7 @@ export default function OpportunitiesPage() {
   // ApplicationsView reads ?id= to open one opportunity, which needs a Suspense boundary
   return (
     <Suspense>
-      <RequireSme wide>{(sme) => <ApplicationsView sme={sme} />}</RequireSme>
+      <RequireSme>{(sme) => <ApplicationsView sme={sme} />}</RequireSme>
     </Suspense>
   );
 }

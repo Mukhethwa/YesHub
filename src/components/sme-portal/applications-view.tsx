@@ -23,6 +23,7 @@ import { rand } from "../../../convex/lib/procurement";
 import type { SmeApplicationStatus } from "../../../convex/smeOpportunities";
 import {
   ApplicationStatusPill,
+  OpportunityCard,
   ApplyButton,
   reachLabel,
   reachOf,
@@ -111,7 +112,7 @@ function ApplicationsList({ sme }: { sme: SmeProfile }) {
             ]}
           />
 
-          <ul className="space-y-3">
+          <ul className="grid gap-4 lg:grid-cols-2">
             {visible.map((row) => (
               <ApplicationCard key={row.id} row={row} />
             ))}
@@ -126,44 +127,34 @@ function ApplicationCard({ row }: { row: Row }) {
   const { opportunity: o } = row;
   const finished = isFinished(phaseOf(o));
   const href = `/sme/opportunities?id=${o.id}`;
+  const continuing = row.status === "in_progress" && !finished;
   return (
-    <li className="rounded-xl border bg-card p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        {/* The reference is how SMEs and buyers refer to a listing, so it's the title */}
-        <div className="min-w-0 space-y-0.5">
-          <Link href={href} className="block font-semibold hover:underline">
-            {o.reference}
-          </Link>
-          <p className="text-sm font-medium">{o.title}</p>
-          <p className="text-sm text-muted-foreground">
-            {o.organizationName}, {KIND_LABELS[o.kind]}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+    <OpportunityCard
+      kind={o.kind}
+      reference={o.reference}
+      title={o.title}
+      href={href}
+      subtitle={`${o.organizationName}, ${KIND_LABELS[o.kind]}`}
+      status={
+        <>
           <ApplicationStatusPill status={row.status} />
           <PhasePill phase={phaseOf(o)} />
-        </div>
-      </div>
-      <div className="mt-4 flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-end sm:justify-between">
-        <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-xs text-muted-foreground">
-              {row.status === "in_progress" ? "Last saved" : row.status === "withdrawn" ? "Withdrawn" : "Submitted"}
-            </dt>
-            <dd>{formatDate(row.at)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">{finished ? "Closed" : "Closes"}</dt>
-            <dd>
-              {formatDate(o.closesAt)} <span className="text-muted-foreground">({closingLabel(o.closesAt)})</span>
-            </dd>
-          </div>
-        </dl>
-        <Button size="sm" variant={row.status === "in_progress" && !finished ? "default" : "outline"} asChild>
-          <Link href={href}>{row.status === "in_progress" && !finished ? "Continue application" : "View"}</Link>
+        </>
+      }
+      facts={[
+        {
+          label: row.status === "in_progress" ? "Last saved" : row.status === "withdrawn" ? "Withdrawn" : "Submitted",
+          value: formatDate(row.at),
+        },
+        { label: finished ? "Closed" : "Closes", value: formatDate(o.closesAt), note: closingLabel(o.closesAt) },
+        { label: "Value", value: formatRand(o.value) },
+      ]}
+      actions={
+        <Button size="sm" variant={continuing ? "default" : "outline"} asChild>
+          <Link href={href}>{continuing ? "Continue application" : "View"}</Link>
         </Button>
-      </div>
-    </li>
+      }
+    />
   );
 }
 
