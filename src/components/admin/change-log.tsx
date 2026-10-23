@@ -3,7 +3,7 @@
 import { usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { ChevronDownIcon, LockIcon, SearchIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,16 +20,71 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { diffRecords, humanise, isRecord, listRecord, visibleKey } from "./diff";
 import { Pill } from "./page-header";
 import { FilterTabs, formatDateTime } from "./shared";
 
 /*
  * The command log as diffs: every mutation that changed data, who ran it, and for each document it touched,
- * each field before and after. Encrypted fields are shown decrypted to staff with audit access and marked.
+ * each field before and after. Encrypted fields are shown decrypted to readers with access and marked.
+ * Staff see every command (admin area); an enterprise sees the commands that changed its own data
+ * (convex/enterpriseAudit.ts), through the same component with a different source.
  */
 
-type Command = FunctionReturnType<typeof api.audit.commands>["page"][number];
+export type Command = FunctionReturnType<typeof api.audit.commands>["page"][number];
 type ChangeRow = NonNullable<FunctionReturnType<typeof api.audit.commandChanges>>[number];
+
+/** The queries the log reads. Both sources return the same shapes. */
+export type ChangeLogSource = {
+  commands: typeof api.audit.commands;
+  commandChanges: typeof api.audit.commandChanges;
+  documentHistory: typeof api.audit.documentHistory;
+  /** Staff see ids and the service behind the automated review; organisations see what the values mean. */
+  technical: boolean;
+};
+
+const STAFF_SOURCE: ChangeLogSource = {
+  commands: api.audit.commands,
+  commandChanges: api.audit.commandChanges,
+  documentHistory: api.audit.documentHistory,
+  technical: true,
+};
+
+const SourceContext = createContext<ChangeLogSource>(STAFF_SOURCE);
+
+/** Plain words for the actions people take, so the log reads without knowing function names. */
+const ACTION_LABELS: Record<string, string> = {
+  "opportunities.create": "Created an opportunity",
+  "opportunities.update": "Edited an opportunity",
+  "opportunities.publish": "Published an opportunity",
+  "opportunities.close": "Closed an opportunity early",
+  "opportunities.cancel": "Cancelled an opportunity",
+  "opportunities.removeDraft": "Deleted a draft",
+  "enterprise.setApplicationStatus": "Changed an applicant’s status",
+  "enterprise.setOpportunityDepartment": "Moved an opportunity to a department",
+  "enterprise.addOpportunityDocument": "Released a document",
+  "enterprise.removeOpportunityDocument": "Removed a released document",
+  "enterprise.updateOrganizationSettings": "Changed organisation settings",
+  "tenders.readTender": "Had the tender read",
+  "tenders.saveReading": "Tender requirements read",
+  "tenders.readingFailed": "Tender reading failed",
+  "tenders.saveRequirements": "Edited tender requirements",
+  "tenders.confirmRequirements": "Confirmed tender requirements",
+  "tenders.removeRequirements": "Removed tender requirements",
+  "review.requestDecision": "Asked for a shortlist",
+  "review.applyDecision": "Shortlist recommended",
+  "review.calculatePoints": "Points calculated",
+  "review.saveExtraction": "Document read",
+  "review.saveAssessment": "Application scored",
+  "review.retryReview": "Restarted a review",
+  "smeOpportunities.apply": "Applied",
+  "smeOpportunities.addDocuments": "Added documents to an application",
+};
+
+function actionLabel(name: string) {
+  const { module, fn } = splitName(name);
+  return ACTION_LABELS[`${module}.${fn}`];
+}
 
 const TABLE_LABELS: Record<string, string> = {
   smes: "SME profile",
@@ -50,8 +105,17 @@ const OPERATION: Record<ChangeRow["operation"], { label: string; tone: "success"
 
 type Filter = "all" | "people" | "system";
 
-export function ChangeLog() {
-  const { results, status, loadMore } = usePaginatedQuery(api.audit.commands, {}, { initialNumItems: 50 });
+export function ChangeLog({
+  source = STAFF_SOURCE,
+  intro = "Every action that changed data is recorded as a command, with each document’s state before and after. Records are only ever added.",
+  tables = TABLE_LABELS,
+}: {
+  source?: ChangeLogSource;
+  intro?: string;
+  /** The kinds of record to filter by. */
+  tables?: Record<string, string>;
+}) {
+  const { results, status, loadMore } = usePaginatedQuery(source.commands, {}, { initialNumItems: 50 });
   const [filter, setFilter] = useState<Filter>("all");
   const [table, setTable] = useState("all");
   const [search, setSearch] = useState("");
@@ -62,7 +126,10 @@ export function ChangeLog() {
       (c) =>
         (filter === "all" || (filter === "people" ? !!c.actorId : !c.actorId)) &&
         (table === "all" || c.tables.includes(table)) &&
-        (!term || c.name.toLowerCase().includes(term) || c.actor.toLowerCase().includes(term)),
+        (!term ||
+          [c.name, c.actor, actionLabel(c.name) ?? "", c.reason ?? ""].some((text) =>
+            text.toLowerCase().includes(term),
+          )),
     );
   }, [results, filter, table, search]);
 
@@ -78,10 +145,7 @@ export function ChangeLog() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Every action that changed data is recorded as a command, with each document’s state before and after. Records
-        are only ever added.
-      </p>
+      <p className="text-sm text-muted-foreground">{intro}</p>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-3">
           <FilterTabs
@@ -100,7 +164,7 @@ export function ChangeLog() {
             onChange={setTable}
             options={[
               { id: "all", label: "All data" },
-              ...Object.entries(TABLE_LABELS).map(([id, label]) => ({ id, label })),
+              ...Object.entries(tables).map(([id, label]) => ({ id, label })),
             ]}
           />
         </div>
@@ -110,7 +174,7 @@ export function ChangeLog() {
           </InputGroupAddon>
           <InputGroupInput
             type="search"
-            placeholder="Search action or person"
+            placeholder="Search action, person or reason"
             aria-label="Search changes"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -123,11 +187,7 @@ export function ChangeLog() {
           {results.length ? "No changes match." : "Nothing has changed yet."}
         </p>
       ) : (
-        <ul className="divide-y overflow-hidden rounded-xl border bg-card">
-          {visible.map((command) => (
-            <CommandItem key={command.id} command={command} />
-          ))}
-        </ul>
+        <CommandList commands={visible} source={source} />
       )}
 
       {status !== "Exhausted" && (
@@ -139,6 +199,19 @@ export function ChangeLog() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Commands as an expandable list, for the whole log and for one opportunity's history. */
+export function CommandList({ commands, source = STAFF_SOURCE }: { commands: Command[]; source?: ChangeLogSource }) {
+  return (
+    <SourceContext.Provider value={source}>
+      <ul className="divide-y overflow-hidden rounded-xl border bg-card">
+        {commands.map((command) => (
+          <CommandItem key={command.id} command={command} />
+        ))}
+      </ul>
+    </SourceContext.Provider>
   );
 }
 
@@ -163,12 +236,22 @@ function CommandItem({ command }: { command: Command }) {
         <span className="min-w-0 space-y-1">
           <span className="flex flex-wrap items-center gap-2 text-sm">
             <span className="font-medium">{command.actor}</span>
-            <span className="text-muted-foreground">ran</span>
+            {actionLabel(command.name) ? (
+              <span>{actionLabel(command.name)}</span>
+            ) : (
+              <span className="text-muted-foreground">ran</span>
+            )}
             <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
               {module}.<span className="font-semibold">{fn}</span>
             </code>
             {command.visibility === "internal" && <Pill>Internal</Pill>}
           </span>
+          {command.reason && (
+            <span className="block border-l-2 pl-2 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Reason: </span>
+              {command.reason}
+            </span>
+          )}
           <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <span className="tabular-nums">{formatDateTime(command.at)}</span>
             <span>
@@ -191,7 +274,8 @@ function CommandItem({ command }: { command: Command }) {
 }
 
 function CommandChanges({ commandId }: { commandId: Id<"commands"> }) {
-  const changes = useQuery(api.audit.commandChanges, { commandId });
+  const source = useContext(SourceContext);
+  const changes = useQuery(source.commandChanges, { commandId });
   if (changes === undefined) return <Spinner className="mx-auto" />;
   if (!changes?.length) return <p className="text-sm text-muted-foreground">No changes recorded.</p>;
   return (
@@ -210,14 +294,25 @@ function documentLabel(change: ChangeRow) {
   return typeof name === "string" ? name : null;
 }
 
+/** Rows shown before "Show all": a re-evaluation can change dozens of values. */
+const ROW_LIMIT = 12;
+
 export function ChangeDiff({ change, showHistory = true }: { change: ChangeRow; showHistory?: boolean }) {
+  const { technical } = useContext(SourceContext);
+  const [showAll, setShowAll] = useState(false);
   const op = OPERATION[change.operation];
   const label = documentLabel(change);
-  // Updates show what changed; creates and deletes show the whole record
-  const fields =
+  // Updates show the values that changed; creates and deletes show every value in the record
+  const rows =
     change.operation === "update"
-      ? change.fields
-      : Object.keys((change.after ?? change.before) as Record<string, unknown>).sort();
+      ? diffRecords(change.before, change.after, change.fields, technical)
+      : listRecord((change.after ?? change.before)!, technical, change.operation === "delete");
+  // A field whose stored form changed but whose value didn't: only encryption does that
+  const reencrypted =
+    change.operation === "update"
+      ? change.fields.filter((f) => change.encryptedFields.includes(f) && sameValue(change, f))
+      : [];
+  const shown = showAll ? rows : rows.slice(0, ROW_LIMIT);
 
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
@@ -226,54 +321,82 @@ export function ChangeDiff({ change, showHistory = true }: { change: ChangeRow; 
           <Pill tone={op.tone}>{op.label}</Pill>
           <span className="font-medium">{TABLE_LABELS[change.table] ?? change.table}</span>
           {label && <span className="truncate text-muted-foreground">{label}</span>}
-          <code className="text-xs text-muted-foreground">{change.documentId}</code>
+          {technical && <code className="text-xs text-muted-foreground">{change.documentId}</code>}
         </div>
         {showHistory && <DocumentHistory table={change.table} documentId={change.documentId} title={label} />}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-xs text-muted-foreground">
-            <tr className="border-b">
-              <th className="w-40 px-3 py-1.5 text-left font-medium">Field</th>
-              {change.operation !== "insert" && <th className="px-3 py-1.5 text-left font-medium">Before</th>}
-              {change.operation !== "delete" && <th className="px-3 py-1.5 text-left font-medium">After</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {fields.map((field) => (
-              <tr key={field} className="border-b align-top last:border-0">
-                <td className="px-3 py-2">
-                  <span className="flex items-center gap-1.5 font-mono text-xs">
-                    {field}
-                    {change.encryptedFields.includes(field) && (
-                      <LockIcon className="size-3 text-muted-foreground" aria-label="Encrypted at rest" />
-                    )}
-                  </span>
-                </td>
-                {change.operation === "update" && sameValue(change, field) ? (
-                  // Only an encrypted field can change in storage without changing in value
-                  <td colSpan={2} className="px-3 py-2 text-xs text-muted-foreground">
-                    <Value field={field} value={change.after?.[field]} />, unchanged, now stored encrypted
-                  </td>
-                ) : (
-                  <>
-                    {change.operation !== "insert" && (
-                      <td className="bg-destructive/5 px-3 py-2">
-                        <Value field={field} value={change.before?.[field]} />
-                      </td>
-                    )}
-                    {change.operation !== "delete" && (
-                      <td className="bg-success/5 px-3 py-2">
-                        <Value field={field} value={change.after?.[field]} />
-                      </td>
-                    )}
-                  </>
-                )}
+      {rows.length === 0 && reencrypted.length === 0 ? (
+        <p className="px-3 py-3 text-sm text-muted-foreground">Only internal references changed.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full table-fixed text-sm">
+            <thead className="text-xs text-muted-foreground">
+              <tr className="border-b">
+                <th className="w-[34%] px-3 py-1.5 text-left font-medium">What</th>
+                {change.operation !== "insert" && <th className="px-3 py-1.5 text-left font-medium">Before</th>}
+                {change.operation !== "delete" && <th className="px-3 py-1.5 text-left font-medium">After</th>}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {shown.map((row) => (
+                <tr key={row.path.join("›")} className="border-b align-top last:border-0">
+                  <td className="px-3 py-2">
+                    <span className="flex flex-wrap items-center gap-x-1 text-xs">
+                      {row.path.map((segment, i) => (
+                        <span key={i} className={i === row.path.length - 1 ? "font-medium" : "text-muted-foreground"}>
+                          {segment}
+                          {i < row.path.length - 1 && <span className="ml-1 text-muted-foreground/60">›</span>}
+                        </span>
+                      ))}
+                      {change.encryptedFields.includes(row.field) && (
+                        <LockIcon className="size-3 text-muted-foreground" aria-label="Encrypted at rest" />
+                      )}
+                    </span>
+                  </td>
+                  {change.operation !== "insert" && (
+                    <td className="bg-destructive/5 px-3 py-2">
+                      <Value
+                        name={row.key}
+                        value={row.before}
+                        other={row.after}
+                        technical={technical}
+                        title={row.path.at(-1)}
+                      />
+                    </td>
+                  )}
+                  {change.operation !== "delete" && (
+                    <td className="bg-success/5 px-3 py-2">
+                      <Value
+                        name={row.key}
+                        value={row.after}
+                        other={row.before}
+                        technical={technical}
+                        title={row.path.at(-1)}
+                        removed={row.before !== undefined}
+                      />
+                    </td>
+                  )}
+                </tr>
+              ))}
+              {reencrypted.map((field) => (
+                <tr key={field} className="border-b align-top last:border-0">
+                  <td className="px-3 py-2 text-xs font-medium">{humanise(field)}</td>
+                  <td colSpan={2} className="px-3 py-2 text-xs text-muted-foreground">
+                    Unchanged, now stored encrypted
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length > ROW_LIMIT && (
+            <div className="border-t px-3 py-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowAll(!showAll)}>
+                {showAll ? "Show fewer" : `Show all ${rows.length} values`}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -281,24 +404,111 @@ export function ChangeDiff({ change, showHistory = true }: { change: ChangeRow; 
 const sameValue = (change: ChangeRow, field: string) =>
   JSON.stringify(change.before?.[field]) === JSON.stringify(change.after?.[field]);
 
-/** Timestamps (fields ending in "At") read as dates, with the stored number kept for reference. */
-function Value({ field, value }: { field: string; value: unknown }) {
-  if (value === undefined) return <span className="text-xs text-muted-foreground italic">not set</span>;
-  if (typeof value === "number" && /At$/.test(field) && value > 1e12) {
+const isPlainList = (v: unknown): v is (string | number | boolean)[] =>
+  Array.isArray(v) && v.every((item) => typeof item !== "object" || item === null);
+
+/** One value as people read it: dates as dates, yes and no, lists as lists, long text folded. */
+function Value({
+  name,
+  value,
+  other,
+  technical,
+  title,
+  removed = false,
+}: {
+  /** The field's own key, e.g. "statusChangedAt". */
+  name: string;
+  value: unknown;
+  /** The value on the other side, so a list can say what was added or removed. */
+  other: unknown;
+  technical: boolean;
+  /** What the row is called, so a record shown whole doesn't repeat its own name. */
+  title?: string;
+  /** The value was there before and isn't now. */
+  removed?: boolean;
+}) {
+  const muted = (text: string) => <span className="text-xs text-muted-foreground italic">{text}</span>;
+  if (value === undefined) return muted(removed ? "removed" : "not set");
+  if (value === null) return muted("none");
+  if (value === "") return muted("empty");
+  if (typeof value === "boolean") return <span>{value ? "Yes" : "No"}</span>;
+  if (typeof value === "number") {
+    if (/At$/.test(name) && value > 1e12) {
+      return (
+        <span className="tabular-nums" title={technical ? String(value) : undefined}>
+          {formatDateTime(value)}
+        </span>
+      );
+    }
+    return <span className="tabular-nums">{value.toLocaleString("en-ZA")}</span>;
+  }
+  if (typeof value === "string") return <LongText text={value} />;
+  if (isPlainList(value)) {
+    if (!value.length) return muted("none");
+    const others = new Set(isPlainList(other) ? other.map(String) : []);
+    const compare = isPlainList(other);
     return (
-      <span title={String(value)}>
-        {formatDateTime(value)} <span className="text-xs text-muted-foreground tabular-nums">({value})</span>
-      </span>
+      <ul className="space-y-0.5">
+        {value.map((item, i) => (
+          <li key={i} className="break-words">
+            {String(item)}
+            {compare && !others.has(String(item)) && (
+              <span className="ml-1.5 text-xs text-muted-foreground">(only here)</span>
+            )}
+          </li>
+        ))}
+      </ul>
     );
   }
-  if (value === "") return <span className="text-xs text-muted-foreground italic">empty</span>;
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return <span className="break-words whitespace-pre-wrap">{String(value)}</span>;
+  if (Array.isArray(value)) {
+    // A list of records, shown whole because it exists on this side only
+    return (
+      <ul className="space-y-2">
+        {value.map((item, i) => (
+          <li key={i}>
+            <Value name={name} value={item} other={undefined} technical={technical} />
+          </li>
+        ))}
+      </ul>
+    );
   }
+  if (isRecord(value)) {
+    // The item's own name is already in the path
+    const keys = Object.keys(value).filter((k) => visibleKey(k, technical, true) && value[k] !== title);
+    if (!keys.length) return muted("empty");
+    return (
+      <dl className="space-y-1 rounded-md border bg-card/60 p-2 text-xs">
+        {keys.map((k) => (
+          <div key={k} className="grid grid-cols-[minmax(5rem,auto)_1fr] gap-2">
+            <dt className="text-muted-foreground">{humanise(k)}</dt>
+            <dd className="min-w-0">
+              <Value name={k} value={value[k]} other={undefined} technical={technical} />
+            </dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
+  return <span className="font-mono text-xs break-words">{String(value)}</span>;
+}
+
+/** Text longer than a few lines is folded, so one long description doesn't push the rest away. */
+function LongText({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 280;
   return (
-    <pre className="max-h-48 overflow-auto rounded bg-muted/60 p-2 font-mono text-xs whitespace-pre-wrap">
-      {JSON.stringify(value, null, 2)}
-    </pre>
+    <span className="block">
+      <span className={cn("block break-words whitespace-pre-wrap", long && !open && "line-clamp-4")}>{text}</span>
+      {long && (
+        <button
+          type="button"
+          className="mt-1 text-xs text-primary underline-offset-2 hover:underline"
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Show less" : "Show all"}
+        </button>
+      )}
+    </span>
   );
 }
 
@@ -326,7 +536,8 @@ function DocumentHistory({ table, documentId, title }: { table: string; document
 }
 
 function HistoryBody({ table, documentId }: { table: string; documentId: string }) {
-  const history = useQuery(api.audit.documentHistory, { table, documentId });
+  const source = useContext(SourceContext);
+  const history = useQuery(source.documentHistory, { table, documentId });
   if (history === undefined) return <Spinner className="mx-auto" />;
   if (!history?.length) return <p className="text-sm text-muted-foreground">No history.</p>;
   return history.map((change) => (
@@ -335,6 +546,7 @@ function HistoryBody({ table, documentId }: { table: string; documentId: string 
         <span className="tabular-nums">{formatDateTime(change.at)}</span>
         {change.command && <code className="ml-2">{change.command.replace(/\.js:/, ".")}</code>}
       </p>
+      {change.reason && <p className="text-xs text-muted-foreground">Reason: {change.reason}</p>}
       <ChangeDiff change={change} showHistory={false} />
     </div>
   ));

@@ -1,7 +1,7 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { type MutationCtx } from "./_generated/server";
 import { internalMutation, query } from "./functions";
@@ -80,6 +80,7 @@ export const commands = query({
         actorId: c.actorId ?? null,
         changeCount: c.changeCount,
         tables: c.tables,
+        reason: c.reason ?? null,
       })),
     };
   },
@@ -111,13 +112,18 @@ export const documentHistory = query({
     return Promise.all(
       changes.map(async (change) => {
         const command = await ctx.db.get("commands", change.commandId);
-        return { ...(await changeRow(change)), command: command?.name ?? null, at: change._creationTime };
+        return {
+          ...(await changeRow(change)),
+          command: command?.name ?? null,
+          reason: command?.reason ?? null,
+          at: change._creationTime,
+        };
       }),
     );
   },
 });
 
-async function changeRow(change: Doc<"changes">) {
+export async function changeRow(change: Doc<"changes">) {
   const decrypt = (snapshot: unknown) =>
     snapshot && typeof snapshot === "object" ? decryptFields(change.table, snapshot as Record<string, unknown>) : null;
   const encrypted = ENCRYPTED_FIELDS[change.table as keyof typeof ENCRYPTED_FIELDS] ?? [];
@@ -133,3 +139,36 @@ async function changeRow(change: Doc<"changes">) {
     after: (await decrypt(change.after)) as Record<string, unknown> | null,
   };
 }
+
+/**
+ * Tags changes recorded before organisations had an audit log with their organisation and opportunity, a
+ * batch at a time, so the enterprise audit log shows the whole history. Safe to run again.
+ *
+ *   pnpm exec convex run audit:backfillOrganizations
+ */
+export const backfillOrganizations = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, args) => {
+    const page = await ctx.db.query("changes").paginate({ cursor: args.cursor ?? null, numItems: 200 });
+    let tagged = 0;
+    for (const change of page.page) {
+      if (change.organizationId) continue;
+      const doc = (change.after ?? change.before) as Record<string, unknown> | undefined;
+      const organizationId = typeof doc?.organizationId === "string" ? doc.organizationId : undefined;
+      if (!organizationId) continue;
+      const opportunityId =
+        change.table === "opportunities"
+          ? change.documentId
+          : typeof doc?.opportunityId === "string"
+            ? doc.opportunityId
+            : undefined;
+      await ctx.db.patch("changes", change._id, { organizationId, opportunityId });
+      const command = await ctx.db.get("commands", change.commandId);
+      if (command && !command.organizationId) await ctx.db.patch("commands", command._id, { organizationId });
+      tagged++;
+    }
+    if (!page.isDone)
+      await ctx.scheduler.runAfter(0, internal.audit.backfillOrganizations, { cursor: page.continueCursor });
+    return { tagged, done: page.isDone };
+  },
+});

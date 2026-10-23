@@ -5,8 +5,7 @@ import { INDUSTRIES, PROVINCES } from "../src/lib/sme/constants";
 import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { getEnterprise, organizationDetail, ownOpportunity, teamIdsOf } from "./enterprise";
-import { mutation } from "./functions";
-import { type AuditChange, auditValue, recordAudit } from "./lib/audit";
+import { mutation, noteReason } from "./functions";
 import { canManage } from "./lib/organizationSettings";
 import { APPLICATION_LIMIT, referencePrefix } from "./lib/opportunities";
 import { addTrail } from "./review";
@@ -15,12 +14,12 @@ import { opportunityKind, type OpportunityKind } from "./schema";
 /*
  * An opportunity's life, as the buyer runs it: created as a draft with a reference MASLink generates, edited,
  * published, amended while open (with a reason), closed early or cancelled (with a reason applicants see).
- * Every step that changes its state goes on the organisation's audit log (lib/audit.ts) with what changed.
+ * Every change is on the organisation's audit log as a diff (the command log, convex/functions.ts), with the
+ * reason given for amending, closing or cancelling.
  */
 
 /** The reference's middle part says what kind of opportunity it is: UMH-RFQ-2026-017. */
 const KIND_CODES: Record<OpportunityKind, string> = { tender: "TND", rfq: "RFQ", grant: "GRT" };
-const KIND_WORDS: Record<OpportunityKind, string> = { tender: "tender", rfq: "RFQ", grant: "grant" };
 const VALID_DOC_KEYS = new Set<string>(DOCUMENTS.map((d) => d.key));
 /** Most opportunities read when numbering a new one. */
 const NUMBERING_LIMIT = 2000;
@@ -158,32 +157,6 @@ async function nextReference(
   }
 }
 
-const label = (o: Pick<Doc<"opportunities">, "reference" | "title">) => `${o.reference}: ${o.title}`;
-
-/** What the buyer changed, field by field, for the audit log. */
-function changesBetween(before: Doc<"opportunities">, after: ReturnType<typeof clean>): AuditChange[] {
-  const docLabel = (keys: string[]) => keys.map((k) => DOCUMENTS.find((d) => d.key === k)?.label ?? k);
-  const pairs: [string, unknown, unknown][] = [
-    ["Title", before.title, after.title],
-    ["Description", before.description, after.description],
-    ["Industry", before.industry, after.industry],
-    ["Services", before.services, after.services],
-    ["Provinces", before.provinces, after.provinces],
-    ["Minimum B-BBEE level", before.minBbbeeLevel, after.minBbbeeLevel],
-    ["Required documents", docLabel(before.requiredDocuments), docLabel(after.requiredDocuments)],
-    ["Estimated value (R)", before.value, after.value],
-    ["Closing date", before.closesAt, after.closesAt],
-    ["Scope of work", before.listing?.scope, after.listing.scope],
-    ["Contract period", before.listing?.contractPeriod, after.listing.contractPeriod],
-    ["Briefing session", before.listing?.briefing, after.listing.briefing],
-    ["How to submit", before.listing?.submission, after.listing.submission],
-    ["Evaluation criteria", before.listing?.evaluationCriteria, after.listing.evaluationCriteria],
-    ["Enquiries", before.listing?.enquiriesName, after.listing.enquiriesName],
-    ["Enquiries email", before.listing?.enquiriesEmail, after.listing.enquiriesEmail],
-  ];
-  return pairs.map(([field, b, a]) => ({ field, before: auditValue(b), after: auditValue(a) }));
-}
-
 /** Only owners and admins, or members of the opportunity's department (any member while it's unassigned). */
 async function canEdit(
   ctx: MutationCtx,
@@ -239,15 +212,6 @@ export const create = mutation({
       reference,
       status: publish ? "open" : "draft",
     });
-    await recordAudit(ctx, {
-      organizationId: enterprise.organization.id,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action: publish ? "opportunity.published" : "opportunity.created",
-      opportunityId,
-      targetLabel: `${reference}: ${f.title}`,
-      summary: `${enterprise.user.name} ${publish ? "created and published" : "created a draft of"} the ${KIND_WORDS[f.kind]} ${reference}, closing ${f.closesAt}.`,
-    });
     return { id: opportunityId, reference };
   },
 });
@@ -275,8 +239,7 @@ export const update = mutation({
       why = requireReason(reason ?? "");
       if (f.closesAt < todayInSouthAfrica()) throw new ConvexError("The closing date can’t be in the past.");
     }
-    const changes = changesBetween(opportunity, f);
-    if (changes.every((c) => c.before === c.after)) return null;
+    if (why) await noteReason(ctx, why);
 
     const next = { ...rest, listing: { ...listing, publishedAt: opportunity.listing?.publishedAt ?? Date.now() } };
     if (published) readyToPublish(next);
@@ -284,21 +247,6 @@ export const update = mutation({
     const reopens = opportunity.status === "closed" && f.closesAt > todayInSouthAfrica();
     await ctx.db.patch("opportunities", opportunity._id, { ...next, ...(reopens ? { status: "open" as const } : {}) });
 
-    const extended = f.closesAt !== opportunity.closesAt;
-    const action = !published ? "opportunity.edited" : extended ? "opportunity.closing_changed" : "opportunity.amended";
-    await recordAudit(ctx, {
-      organizationId: opportunity.organizationId,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action,
-      opportunityId: opportunity._id,
-      targetLabel: label({ ...opportunity, title: f.title }),
-      summary: `${enterprise.user.name} ${published ? "amended" : "edited"} ${opportunity.reference}${
-        extended ? `, moving the closing date from ${opportunity.closesAt} to ${f.closesAt}` : ""
-      }${reopens ? ", which opens it again" : ""}.`,
-      reason: why,
-      changes,
-    });
     if (published) {
       await addTrail(ctx, {
         opportunityId: opportunity._id,
@@ -306,10 +254,7 @@ export const update = mutation({
         kind: "action",
         actor: enterprise.user.name,
         summary: `${enterprise.user.name} amended the listing.`,
-        details: [
-          why!,
-          ...changes.filter((c) => c.before !== c.after).map((c) => `${c.field}: ${c.before} → ${c.after}`),
-        ],
+        details: [why!],
       });
     }
     return null;
@@ -330,16 +275,6 @@ export const publish = mutation({
       status: "open",
       listing: { ...opportunity.listing!, publishedAt: Date.now() },
     });
-    await recordAudit(ctx, {
-      organizationId: opportunity.organizationId,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action: "opportunity.published",
-      opportunityId: opportunity._id,
-      targetLabel: label(opportunity),
-      summary: `${enterprise.user.name} published ${opportunity.reference}, closing ${opportunity.closesAt}.`,
-      changes: [{ field: "Status", before: "Draft", after: "Open" }],
-    });
     return null;
   },
 });
@@ -352,18 +287,8 @@ export const close = mutation({
     requireManager(enterprise, "close opportunities");
     if (opportunity.status !== "open") throw new ConvexError("Only open opportunities can be closed.");
     const reason = requireReason(args.reason);
+    await noteReason(ctx, reason);
     await ctx.db.patch("opportunities", opportunity._id, { status: "closed" });
-    await recordAudit(ctx, {
-      organizationId: opportunity.organizationId,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action: "opportunity.closed",
-      opportunityId: opportunity._id,
-      targetLabel: label(opportunity),
-      summary: `${enterprise.user.name} closed ${opportunity.reference} to new applications.`,
-      reason,
-      changes: [{ field: "Status", before: "Open", after: "Closed" }],
-    });
     await addTrail(ctx, {
       opportunityId: opportunity._id,
       organizationId: opportunity.organizationId,
@@ -391,20 +316,10 @@ export const cancel = mutation({
     if (applications.some((a) => a.status === "awarded"))
       throw new ConvexError("An applicant has already been awarded this opportunity.");
     const reason = requireReason(args.reason);
+    await noteReason(ctx, reason);
     await ctx.db.patch("opportunities", opportunity._id, {
       status: "cancelled",
       cancellation: { reason, by: enterprise.user.name, at: Date.now() },
-    });
-    await recordAudit(ctx, {
-      organizationId: opportunity.organizationId,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action: "opportunity.cancelled",
-      opportunityId: opportunity._id,
-      targetLabel: label(opportunity),
-      summary: `${enterprise.user.name} cancelled ${opportunity.reference}.`,
-      reason,
-      changes: [{ field: "Status", before: opportunity.status === "draft" ? "Draft" : "Open", after: "Cancelled" }],
     });
     await addTrail(ctx, {
       opportunityId: opportunity._id,
@@ -435,14 +350,6 @@ export const removeDraft = mutation({
       await ctx.db.delete("opportunityDocuments", doc._id);
     }
     await ctx.db.delete("opportunities", opportunity._id);
-    await recordAudit(ctx, {
-      organizationId: opportunity.organizationId,
-      actorId: enterprise.user._id,
-      actorName: enterprise.user.name,
-      action: "opportunity.draft_deleted",
-      targetLabel: label(opportunity),
-      summary: `${enterprise.user.name} deleted the draft ${opportunity.reference}. Its reference isn’t reused.`,
-    });
     return null;
   },
 });
