@@ -7,6 +7,7 @@ import {
   CircleXIcon,
   ClipboardCheckIcon,
   FileSearchIcon,
+  FileTextIcon,
   GavelIcon,
   ListChecksIcon,
   type LucideIcon,
@@ -227,6 +228,7 @@ const TRAIL: Record<TrailKind, { label: string; icon: LucideIcon; tone: string }
   guardrail: { label: "Rule applied", icon: ShieldAlertIcon, tone: "bg-brand-yellow/25 text-warning" },
   override: { label: "Changed by buyer", icon: UserPenIcon, tone: "bg-brand-yellow/25 text-warning" },
   action: { label: "Buyer action", icon: GavelIcon, tone: "bg-primary/15 text-primary" },
+  tender: { label: "Tender requirements", icon: FileTextIcon, tone: "bg-brand-blue/15 text-brand-blue" },
   error: { label: "Error", icon: CircleXIcon, tone: "bg-destructive/15 text-destructive" },
 };
 

@@ -107,7 +107,7 @@ export function can(role: string | null | undefined, permissions: Permissions) {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// Organisation roles. Every account belongs to at most one organisation: an enterprise (Capitec, Boxer, …)
+// Organisation roles. Every account belongs to at most one organisation: an enterprise (a company or funder)
 // or the MASLink staff organisation. Staff access levels come from the role in the staff organisation.
 // ---------------------------------------------------------------------------------------------------------
 

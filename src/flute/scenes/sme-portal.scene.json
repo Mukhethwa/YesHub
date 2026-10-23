@@ -1,0 +1,224 @@
+{
+  "version": 1,
+  "id": "sme-portal",
+  "title": "SME portal",
+  "description": "The SME's dashboard: the sidebar floats off the page and the readiness band comes forward.",
+  "definition": {
+    "scene": {
+      "version": 3,
+      "camera": {
+        "rotateZ": 0,
+        "x": -360,
+        "y": -80,
+        "z": -380,
+        "perspective": 1600,
+        "rotateX": 6,
+        "rotateY": -18
+      },
+      "focus": {
+        "distance": 1220,
+        "fStop": 5.6,
+        "focalLength": 100,
+        "maxBlur": 6
+      },
+      "nodes": [
+        {
+          "id": "app"
+        },
+        {
+          "id": "sidebar",
+          "parentId": "app"
+        },
+        {
+          "id": "topbar",
+          "parentId": "app"
+        },
+        {
+          "id": "page",
+          "parentId": "app"
+        },
+        {
+          "id": "page-heading",
+          "parentId": "page"
+        },
+        {
+          "id": "stats",
+          "parentId": "page"
+        },
+        {
+          "id": "section-profile-readiness",
+          "parentId": "page"
+        },
+        {
+          "id": "section-documents",
+          "parentId": "page"
+        },
+        {
+          "id": "section-where-you-re-matched",
+          "parentId": "page"
+        },
+        {
+          "id": "section-latest-matches",
+          "parentId": "page"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 5000,
+      "speed": 0.65,
+      "tracks": [
+        {
+          "target": {
+            "kind": "surface",
+            "id": "app"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -300,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1800,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "sidebar"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1600,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2800,
+              "value": 120,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "stats"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2600,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3600,
+              "value": 90,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -360,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": 140,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -80,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": -20,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -18,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": -12,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "focus"
+          },
+          "property": "distance",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 1220,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2800,
+              "value": 1150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3600,
+              "value": 1130,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5000,
+              "value": 1150,
+              "easing": "cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    "width": 1920,
+    "height": 1080
+  }
+}

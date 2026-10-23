@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 
-/** "Capitec Bank" → "capitec-bank-4f2a"; the suffix keeps two organisations with the same name apart. */
+/** "Umhlaba Property Group" → "umhlaba-property-group-4f2a"; the suffix keeps two organisations with the same name apart. */
 function slugFor(name: string) {
   const base = name
     .toLowerCase()
@@ -59,7 +59,7 @@ export function CreateOrganisation() {
               id="organisation-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Capitec Bank"
+              placeholder="e.g. Umhlaba Property Group"
               autoComplete="organization"
               autoFocus
             />

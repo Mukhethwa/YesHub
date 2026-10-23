@@ -139,9 +139,13 @@ export function FitPill({ evaluation }: { evaluation: Evaluation }) {
 
 /** Requirements and strengths, met or not. */
 export function ChecksList({ evaluation }: { evaluation: Evaluation }) {
+  // The tender's own requirements have their own checklist, with what to do about each
+  const checks = evaluation.requirements
+    ? evaluation.checks.filter((c) => !c.id.startsWith("tender-") || c.id === "tender-threshold")
+    : evaluation.checks;
   const groups = [
-    { title: "Requirements", checks: evaluation.checks.filter((c) => c.required) },
-    { title: "Strengths", checks: evaluation.checks.filter((c) => !c.required) },
+    { title: "Requirements", checks: checks.filter((c) => c.required) },
+    { title: "Strengths", checks: checks.filter((c) => !c.required) },
   ];
   return (
     <div className="grid gap-6 md:grid-cols-2">

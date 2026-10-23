@@ -3,6 +3,7 @@ import {
   LayoutDashboardIcon,
   ListChecksIcon,
   SearchCheckIcon,
+  ScrollTextIcon,
   SettingsIcon,
   UsersIcon,
 } from "lucide-react";
@@ -15,5 +16,6 @@ export const ENTERPRISE_NAV = {
   suppliers: { href: "/dashboard/suppliers", label: "Find suppliers", icon: SearchCheckIcon },
   shortlists: { href: "/dashboard/shortlists", label: "Shortlists", icon: ListChecksIcon },
   team: { href: "/dashboard/team", label: "Team", icon: UsersIcon },
+  audit: { href: "/dashboard/audit", label: "Audit log", icon: ScrollTextIcon },
   settings: { href: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
 } satisfies Record<string, PortalNavItem>;

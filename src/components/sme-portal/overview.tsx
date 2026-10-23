@@ -22,6 +22,7 @@ import { Status, Tag } from "@/components/app/status";
 import { Illustration } from "@/components/illustrations/illustration";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Part } from "@/components/scene-parts";
 import { DOCUMENTS, docStatus, documentProgress } from "@/lib/sme/documents";
 import { getReadiness } from "@/lib/sme/readiness";
 import type { SmeProfile } from "@/lib/sme/types";
@@ -43,12 +44,12 @@ export function Overview({ sme }: { sme: SmeProfile }) {
         <WelcomeBanner sme={sme} />
       </Suspense>
 
-      <div>
+      <Part id="page-heading">
         <h1 className="text-2xl font-semibold tracking-tight">{sme.companyName}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {[sme.industry, `${sme.city}, ${sme.hqProvince}`, `B-BBEE ${sme.bbbeeLevel}`].join(", ")}
         </p>
-      </div>
+      </Part>
 
       <SmeSummary sme={sme} score={score} documents={docs} />
 

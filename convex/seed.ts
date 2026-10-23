@@ -20,14 +20,14 @@ import { samplePdf } from "./lib/samplePdf";
 const SEED_PASSWORD = "YesHubDev2026!";
 
 const PEOPLE = {
-  capitecOwner: { name: "Naledi Dlamini", email: "naledi.dlamini@capitec.test" },
-  capitecAdmin: { name: "Johan van Wyk", email: "johan.vanwyk@capitec.test" },
-  capitecHr: { name: "Ayanda Nkosi", email: "ayanda.nkosi@capitec.test" },
-  capitecFacilities: { name: "Priya Naidoo", email: "priya.naidoo@capitec.test" },
-  boxerOwner: { name: "Sipho Mthembu", email: "sipho.mthembu@boxer.test" },
-  boxerMerch: { name: "Lerato Molefe", email: "lerato.molefe@boxer.test" },
+  umhlabaOwner: { name: "Naledi Dlamini", email: "naledi.dlamini@umhlaba.test" },
+  umhlabaAdmin: { name: "Johan van Wyk", email: "johan.vanwyk@umhlaba.test" },
+  umhlabaHr: { name: "Ayanda Nkosi", email: "ayanda.nkosi@umhlaba.test" },
+  umhlabaFacilities: { name: "Priya Naidoo", email: "priya.naidoo@umhlaba.test" },
+  siyandaOwner: { name: "Sipho Mthembu", email: "sipho.mthembu@siyanda.test" },
+  siyandaMerch: { name: "Lerato Molefe", email: "lerato.molefe@siyanda.test" },
   foundationOwner: { name: "Grace Khumalo", email: "grace@ubuntufund.test" },
-  fakeCapitec: { name: "Capitec Procurement", email: "tenders@capitec-bank.test" },
+  impostor: { name: "Umhlaba Procurement", email: "tenders@umhlaba-property.test" },
   smeUbuntu: { name: "Thandi Mokoena", email: "thandi@ubuntufacilities.test" },
   smeLethabo: { name: "Kabelo Sithole", email: "kabelo@lethabocatering.test" },
   smeSiyakha: { name: "Bongani Zulu", email: "bongani@siyakhabuild.test" },
@@ -38,10 +38,10 @@ const PEOPLE = {
   smeKasi: { name: "Ayesha Jacobs", email: "ayesha@kasikitchen.test" },
   smeIziko: { name: "Sibusiso Ngcobo", email: "sibusiso@izikosecurity.test" },
   // A test super admin, so the full admin area can be tried without a real account
-  staffOwner: { name: "Naledi Dube", email: "naledi@yeshub.test" },
-  staffAdmin: { name: "Musa Khoza", email: "musa@yeshub.test" },
-  staffModerator: { name: "Lindiwe Moyo", email: "lindiwe@yeshub.test" },
-  staffViewer: { name: "Tumi Radebe", email: "tumi@yeshub.test" },
+  staffOwner: { name: "Naledi Dube", email: "naledi@maslink.test" },
+  staffAdmin: { name: "Musa Khoza", email: "musa@maslink.test" },
+  staffModerator: { name: "Lindiwe Moyo", email: "lindiwe@maslink.test" },
+  staffViewer: { name: "Tumi Radebe", email: "tumi@maslink.test" },
   newUserA: { name: "Zanele Mahlangu", email: "zanele.mahlangu@gmail.test" },
   newUserB: { name: "Kgosi Masilo", email: "kgosi@outlook.test" },
   spammer: { name: "Cheap Tenders 4U", email: "win-every-tender@spam.test" },
@@ -382,26 +382,26 @@ export const devData = internalAction({
     await ctx.runMutation(components.betterAuth.seed.organizations, {
       enterprises: [
         {
-          name: "Capitec Bank",
-          slug: "capitec",
+          name: "Umhlaba Property Group",
+          slug: "umhlaba",
           verificationStatus: "verified",
           teams: ["Procurement", "Human Resources", "Facilities"],
           members: [
-            { userId: id("capitecOwner"), role: "owner", teams: ["Procurement"] },
-            { userId: id("capitecAdmin"), role: "admin", teams: ["Procurement", "Facilities"] },
-            { userId: id("capitecHr"), role: "member", teams: ["Human Resources"] },
-            { userId: id("capitecFacilities"), role: "member", teams: ["Facilities"] },
+            { userId: id("umhlabaOwner"), role: "owner", teams: ["Procurement"] },
+            { userId: id("umhlabaAdmin"), role: "admin", teams: ["Procurement", "Facilities"] },
+            { userId: id("umhlabaHr"), role: "member", teams: ["Human Resources"] },
+            { userId: id("umhlabaFacilities"), role: "member", teams: ["Facilities"] },
           ],
-          invitations: [{ email: "finance.lead@capitec.test", role: "member", inviterId: id("capitecOwner") }],
+          invitations: [{ email: "finance.lead@umhlaba.test", role: "member", inviterId: id("umhlabaOwner") }],
         },
         {
-          name: "Boxer Superstores",
-          slug: "boxer",
+          name: "Siyanda Retail",
+          slug: "siyanda",
           verificationStatus: "unverified",
           teams: ["Merchandise", "Logistics"],
           members: [
-            { userId: id("boxerOwner"), role: "owner", teams: ["Logistics"] },
-            { userId: id("boxerMerch"), role: "member", teams: ["Merchandise"] },
+            { userId: id("siyandaOwner"), role: "owner", teams: ["Logistics"] },
+            { userId: id("siyandaMerch"), role: "member", teams: ["Merchandise"] },
           ],
           invitations: [],
         },
@@ -414,12 +414,12 @@ export const devData = internalAction({
           invitations: [],
         },
         {
-          name: "Capitec Bank Tenders",
-          slug: "capitec-bank-tenders",
+          name: "Umhlaba Property Tenders",
+          slug: "umhlaba-property-tenders",
           verificationStatus: "rejected",
-          verificationNote: "Not affiliated with Capitec. Domain capitec-bank.test isn’t Capitec’s.",
+          verificationNote: "Not affiliated with Umhlaba Property Group. Domain umhlaba-property.test isn’t theirs.",
           teams: [],
-          members: [{ userId: id("fakeCapitec"), role: "owner", teams: [] }],
+          members: [{ userId: id("impostor"), role: "owner", teams: [] }],
           invitations: [],
         },
       ],
@@ -429,17 +429,17 @@ export const devData = internalAction({
         { userId: id("staffModerator"), role: "moderator" },
         { userId: id("staffViewer"), role: "viewer" },
       ],
-      staffInvitations: inviterId ? [{ email: "new.admin@yeshub.test", role: "admin", inviterId }] : [],
+      staffInvitations: inviterId ? [{ email: "new.admin@maslink.test", role: "admin", inviterId }] : [],
       banned: [{ userId: id("spammer"), reason: "Posting fake tender adverts with payment links." }],
     });
 
-    // Capitec (verified) gets sample tenders with applications from the seeded SMEs
-    const [capitec] = await ctx.runQuery(components.betterAuth.organizations.forUser, { userId: id("capitecOwner") });
-    const opportunities: number = capitec
+    // Umhlaba (verified) gets sample tenders with applications from the seeded SMEs
+    const [umhlaba] = await ctx.runQuery(components.betterAuth.organizations.forUser, { userId: id("umhlabaOwner") });
+    const opportunities: number = umhlaba
       ? await ctx.runMutation(internal.enterprise.seedSampleOpportunities, {
-          organizationId: capitec.id,
-          organizationName: capitec.name,
-          createdBy: id("capitecOwner"),
+          organizationId: umhlaba.id,
+          organizationName: umhlaba.name,
+          createdBy: id("umhlabaOwner"),
         })
       : 0;
 
@@ -676,5 +676,91 @@ export const sampleProposals = internalMutation({
       }
     }
     return updated;
+  },
+});
+
+/*
+ * The seed's buyers used to be named after real companies, and the staff test accounts used the old
+ * product name's domain. A demo or a video shouldn't suggest a real
+ * company uses MASLink, so they're fictional now. This renames an existing dev deployment's records to
+ * match, without reseeding. Safe to run more than once:
+ *
+ *   pnpm exec convex run seed:renameSampleBuyers
+ */
+const RENAMED_ORGANIZATIONS = [
+  { slug: "capitec", newSlug: "umhlaba", name: "Umhlaba Property Group" },
+  { slug: "boxer", newSlug: "siyanda", name: "Siyanda Retail" },
+  {
+    slug: "capitec-bank-tenders",
+    newSlug: "umhlaba-property-tenders",
+    name: "Umhlaba Property Tenders",
+    verificationNote: "Not affiliated with Umhlaba Property Group. Domain umhlaba-property.test isn’t theirs.",
+  },
+];
+const RENAMED_USERS = [
+  ...["naledi.dlamini", "johan.vanwyk", "ayanda.nkosi", "priya.naidoo"].map((local) => ({
+    email: `${local}@capitec.test`,
+    newEmail: `${local}@umhlaba.test`,
+  })),
+  ...["sipho.mthembu", "lerato.molefe"].map((local) => ({
+    email: `${local}@boxer.test`,
+    newEmail: `${local}@siyanda.test`,
+  })),
+  { email: "tenders@capitec-bank.test", newEmail: "tenders@umhlaba-property.test", name: "Umhlaba Procurement" },
+  // Staff test accounts moved to the new name's domain
+  ...["naledi", "musa", "lindiwe", "tumi"].map((local) => ({
+    email: `${local}@yeshub.test`,
+    newEmail: `${local}@maslink.test`,
+  })),
+];
+/** Old text in sample opportunities and their documents, and what replaces it. */
+const RENAMED_TEXT: [string | RegExp, string][] = [
+  ["Capitec Bank", "Umhlaba Property Group"],
+  ["capitecbank.test", "umhlabapropertygroup.test"],
+  [/\bCAP-/g, "UMH-"],
+  ["Stellenbosch", "Umhlanga"],
+];
+const renameText = (text: string) =>
+  RENAMED_TEXT.reduce(
+    (t, [from, to]) => (typeof from === "string" ? t.split(from).join(to) : t.replace(from, to)),
+    text,
+  );
+const renameDeep = (value: unknown): unknown =>
+  typeof value === "string"
+    ? renameText(value)
+    : Array.isArray(value)
+      ? value.map(renameDeep)
+      : value && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, renameDeep(v)]))
+        : value;
+
+export const renameSampleBuyers = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    assertDevSite();
+    const auth = await ctx.runMutation(components.betterAuth.seed.renameSeedRecords, {
+      organizations: RENAMED_ORGANIZATIONS,
+      users: RENAMED_USERS,
+      invitations: [
+        { email: "finance.lead@capitec.test", newEmail: "finance.lead@umhlaba.test" },
+        { email: "new.admin@yeshub.test", newEmail: "new.admin@maslink.test" },
+      ],
+    });
+    let records = 0;
+    for (const table of ["opportunities", "opportunityDocuments"] as const) {
+      for await (const doc of ctx.db.query(table)) {
+        const patch: Record<string, unknown> = {};
+        for (const [field, value] of Object.entries(doc)) {
+          if (field.startsWith("_")) continue;
+          const next = renameDeep(value);
+          if (JSON.stringify(next) !== JSON.stringify(value)) patch[field] = next;
+        }
+        if (Object.keys(patch).length) {
+          await ctx.db.patch(table, doc._id as never, patch as never);
+          records++;
+        }
+      }
+    }
+    return { ...auth, records };
   },
 });

@@ -2014,6 +2014,22 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         null,
         Name
       >;
+      renameSeedRecords: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          invitations: Array<{ email: string; newEmail: string }>;
+          organizations: Array<{
+            name: string;
+            newSlug: string;
+            slug: string;
+            verificationNote?: string;
+          }>;
+          users: Array<{ email: string; name?: string; newEmail: string }>;
+        },
+        { invitations: number; organizations: number; users: number },
+        Name
+      >;
     };
     users: {
       deleteUserByEmail: FunctionReference<

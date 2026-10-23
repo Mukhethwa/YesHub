@@ -2,6 +2,7 @@ import { ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Part } from "@/components/scene-parts";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,6 +17,7 @@ export function Section({
   action,
   children,
   className,
+  part,
 }: {
   title: string;
   /** Only when it says something the title can't. */
@@ -25,27 +27,31 @@ export function Section({
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Its id in the marketing video's scenes; defaults to one made from the title. */
+  part?: string;
 }) {
   return (
-    <section className={cn("space-y-3", className)}>
-      <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold">{title}</h2>
-          {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
+    <Part id={part ?? `section-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
+      <section className={cn("space-y-3", className)}>
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold">{title}</h2>
+            {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
+          </div>
+          {action}
+          {href && (
+            <Link
+              href={href}
+              className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              {linkLabel ?? "View all"}
+              <ArrowRightIcon className="size-3.5" />
+            </Link>
+          )}
         </div>
-        {action}
-        {href && (
-          <Link
-            href={href}
-            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            {linkLabel ?? "View all"}
-            <ArrowRightIcon className="size-3.5" />
-          </Link>
-        )}
-      </div>
-      {children}
-    </section>
+        {children}
+      </section>
+    </Part>
   );
 }
 

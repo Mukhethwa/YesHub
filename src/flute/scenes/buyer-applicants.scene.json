@@ -1,0 +1,248 @@
+{
+  "version": 1,
+  "id": "buyer-applicants",
+  "title": "Applicants",
+  "description": "Down one opportunity: its shortlisting comes forward, then the ranked applicants.",
+  "definition": {
+    "scene": {
+      "version": 3,
+      "camera": {
+        "rotateZ": 0,
+        "x": -120,
+        "y": -420,
+        "z": -380,
+        "perspective": 1600,
+        "rotateX": -10,
+        "rotateY": -12
+      },
+      "focus": {
+        "distance": 1220,
+        "fStop": 5.6,
+        "focalLength": 100,
+        "maxBlur": 6
+      },
+      "nodes": [
+        {
+          "id": "app"
+        },
+        {
+          "id": "sidebar",
+          "parentId": "app"
+        },
+        {
+          "id": "topbar",
+          "parentId": "app"
+        },
+        {
+          "id": "page",
+          "parentId": "app"
+        },
+        {
+          "id": "opp-back",
+          "parentId": "page"
+        },
+        {
+          "id": "page-heading",
+          "parentId": "page"
+        },
+        {
+          "id": "opp-facts",
+          "parentId": "page"
+        },
+        {
+          "id": "stats",
+          "parentId": "page"
+        },
+        {
+          "id": "opp-tabs",
+          "parentId": "page"
+        },
+        {
+          "id": "opp-evaluation",
+          "parentId": "page"
+        },
+        {
+          "id": "opp-applicants",
+          "parentId": "page"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 5200,
+      "speed": 0.65,
+      "tracks": [
+        {
+          "target": {
+            "kind": "surface",
+            "id": "app"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -300,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1500,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "opp-evaluation"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1800,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2700,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3700,
+              "value": 150,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4400,
+              "value": 0,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "opp-applicants"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3500,
+              "value": 0,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4500,
+              "value": 130,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -420,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5200,
+              "value": 330,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -120,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5200,
+              "value": 80,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "rotateY",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -12,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5200,
+              "value": -8,
+              "easing": "cinematic"
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "focus"
+          },
+          "property": "distance",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 1220,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 1800,
+              "value": 1220,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 2700,
+              "value": 1070,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 3700,
+              "value": 1070,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 4500,
+              "value": 1090,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 5200,
+              "value": 1090,
+              "easing": "cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    "width": 1920,
+    "height": 1080
+  }
+}

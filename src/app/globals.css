@@ -235,3 +235,27 @@
     @apply font-sans;
   }
 }
+
+/*
+ * Marketing video scenes (src/flute). Clipping and isolation flatten 3D, so containers that hold movable
+ * parts drop them inside a scene, and purely decorative layers (the faint logo, the shader) are left out.
+ */
+[data-flute-scene] .scene-unclip {
+  overflow: visible;
+  isolation: auto;
+}
+[data-flute-scene] .scene-hide {
+  display: none;
+}
+/* The portal shell in a scene: the frame is the scene's surface, not the browser window */
+[data-flute-scene] [data-slot="sidebar-wrapper"] {
+  min-height: 0;
+  height: 100%;
+}
+[data-flute-scene] [data-slot="sidebar-container"] {
+  position: absolute;
+  height: 100%;
+}
+[data-flute-scene] header.sticky {
+  position: relative;
+}

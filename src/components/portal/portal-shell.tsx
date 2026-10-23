@@ -4,6 +4,7 @@ import { SearchIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { type CSSProperties, type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
 
+import { Part, useScenePathname } from "@/components/scene-parts";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Separator } from "@/components/ui/separator";
@@ -38,7 +39,8 @@ export function PortalShell({
 }) {
   // Redirects to sign-in when there's no session (and if it ends while the page is open)
   useRequireSession();
-  const pathname = usePathname();
+  const realPathname = usePathname();
+  const pathname = useScenePathname() ?? realPathname;
   const page = activeNavItem(nav, pathname);
 
   // Prerendered open; the browser then applies the saved state
@@ -59,36 +61,40 @@ export function PortalShell({
       style={{ "--sidebar-width": "13rem" } as CSSProperties}
       className={cn(!animate && "[&_*]:transition-none!")}
     >
-      <PortalSidebar label={label} homeHref={homeHref} nav={nav} />
+      <Part id="sidebar">
+        <PortalSidebar label={label} homeHref={homeHref} nav={nav} />
+      </Part>
 
       {/* min-w-0 lets wide content (tables) scroll inside the page instead of widening it */}
       <SidebarInset className="min-w-0">
         <BreadcrumbProvider>
-          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-1 data-vertical:h-5 data-vertical:self-center" />
-            <Breadcrumbs
-              crumbs={[{ label, href: homeHref }, ...(page ? [{ label: page.label, href: page.href }] : [])]}
-            />
+          <Part id="topbar">
+            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-1 data-vertical:h-5 data-vertical:self-center" />
+              <Breadcrumbs
+                crumbs={[{ label, href: homeHref }, ...(page ? [{ label: page.label, href: page.href }] : [])]}
+              />
 
-            {searchPlaceholder && (
-              <InputGroup className="ml-auto hidden w-64 shrink md:flex lg:w-80">
-                <InputGroupAddon>
-                  <SearchIcon />
-                </InputGroupAddon>
-                <InputGroupInput type="search" placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
-              </InputGroup>
-            )}
+              {searchPlaceholder && (
+                <InputGroup className="ml-auto hidden w-64 shrink md:flex lg:w-80">
+                  <InputGroupAddon>
+                    <SearchIcon />
+                  </InputGroupAddon>
+                  <InputGroupInput type="search" placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
+                </InputGroup>
+              )}
 
-            <div className="ml-auto flex items-center gap-1 md:ml-2">
-              <ThemeToggle />
-            </div>
-          </header>
+              <div className="ml-auto flex items-center gap-1 md:ml-2">
+                <ThemeToggle />
+              </div>
+            </header>
+          </Part>
 
           {/* SidebarInset is the <main> element */}
-          <div className="mx-auto w-full max-w-7xl flex-1 p-4 md:p-6 lg:p-8">
+          <Part id="page" className="mx-auto w-full max-w-7xl flex-1 p-4 md:p-6 lg:p-8">
             <PortalGuard area={area}>{children}</PortalGuard>
-          </div>
+          </Part>
         </BreadcrumbProvider>
       </SidebarInset>
     </SidebarProvider>

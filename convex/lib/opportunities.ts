@@ -108,7 +108,7 @@ const SAMPLE_OPPORTUNITIES: SampleOpportunity[] = [
   {
     code: "CAT",
     kind: "rfq",
-    title: "Staff canteen catering, Stellenbosch head office",
+    title: "Staff canteen catering, Umhlanga head office",
     description: "Breakfast and lunch for about 600 staff, five days a week, with halaal and vegetarian options.",
     industry: "Hospitality, Catering & Events",
     services: ["Corporate catering"],
@@ -197,9 +197,9 @@ const SAMPLE_LISTINGS: Record<
   },
   CAT: {
     scope:
-      "Breakfast and lunch service for about 600 staff at the Stellenbosch head office, five days a week, from the on-site kitchen. Menus must include halaal and vegetarian options and rotate every four weeks.",
+      "Breakfast and lunch service for about 600 staff at the Umhlanga head office, five days a week, from the on-site kitchen. Menus must include halaal and vegetarian options and rotate every four weeks.",
     contractPeriod: "12 months, renewable for a further 12 months",
-    briefing: "Compulsory site visit at the Stellenbosch head office kitchen, 09:00 on the Thursday after publication",
+    briefing: "Compulsory site visit at the Umhlanga head office kitchen, 09:00 on the Thursday after publication",
     submission: "Quote through MASLink with a sample four-week menu and your price per meal.",
     evaluationCriteria: ["Price per meal: 80 points", "B-BBEE status: 20 points", "Food safety certificate required"],
     documents: ["Request for quotation", "Kitchen equipment list"],
@@ -324,7 +324,7 @@ export function sampleProposal(sme: Doc<"smes">, title: string) {
     .join(" ");
 }
 
-/** "Capitec Bank" → "CAP". */
+/** "Umhlaba Property Group" → "UMH". */
 export function referencePrefix(name: string) {
   const letters = name.replace(/[^A-Za-z]/g, "").toUpperCase();
   return (letters.slice(0, 3) || "ORG").padEnd(3, "X");

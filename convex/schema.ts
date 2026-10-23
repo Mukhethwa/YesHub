@@ -96,6 +96,8 @@ export const opportunityStatus = v.union(
   v.literal("open"),
   v.literal("closed"),
   v.literal("awarded"),
+  /** Withdrawn by the buyer before an award, with a reason applicants see. */
+  v.literal("cancelled"),
 );
 export const applicationStatus = v.union(
   v.literal("submitted"),
@@ -147,6 +149,61 @@ export const criterionAssessment = v.object({
   evidence: v.array(v.string()),
 });
 
+/** One requirement in a tender's register, in the tender's own wording (see convex/lib/tender.ts). */
+export const tenderRequirement = v.object({
+  id: v.string(),
+  kind: v.union(v.literal("mandatory"), v.literal("scored"), v.literal("returnable"), v.literal("condition")),
+  text: v.string(),
+  /** Scored criteria: points or percentage available. */
+  points: v.optional(v.number()),
+  /** Scored criteria: how the points are awarded, as the tender states it. */
+  scoring: v.optional(v.array(v.string())),
+  /** Scored criteria: the items it counts, e.g. listed skills or accreditations. */
+  items: v.optional(v.array(v.string())),
+  /** Returnables: what the bidder does with it. */
+  action: v.optional(
+    v.union(v.literal("submit"), v.literal("complete_and_sign"), v.literal("review"), v.literal("demonstrate")),
+  ),
+  /** Returnables: missing it disqualifies (mandatory), may disqualify (essential), or only loses points. */
+  tier: v.optional(v.union(v.literal("mandatory"), v.literal("essential"), v.literal("scoring"))),
+  /** The tender page it was read from. Absent for requirements the buyer added. */
+  page: v.optional(v.number()),
+  source: v.union(v.literal("tender"), v.literal("buyer")),
+});
+
+/** What a tender requires, read from its document by Jev and confirmed by the buyer. */
+export const tenderRegister = v.object({
+  /** Applications are only checked against the register once the buyer confirms it. */
+  status: v.union(v.literal("reading"), v.literal("draft"), v.literal("confirmed"), v.literal("failed")),
+  documentId: v.optional(v.id("opportunityDocuments")),
+  documentName: v.optional(v.string()),
+  requirements: v.array(tenderRequirement),
+  /** Minimum technical points to proceed, when the tender sets one. */
+  threshold: v.optional(v.number()),
+  /** What the tender itself doesn't state clearly, for the buyer to fix before SMEs rely on it. */
+  gaps: v.array(v.string()),
+  error: v.optional(v.string()),
+  readAt: v.optional(v.number()),
+  readBy: v.optional(v.string()),
+  confirmedAt: v.optional(v.number()),
+  confirmedBy: v.optional(v.string()),
+  model: v.optional(v.string()),
+});
+
+/** How an application stands against one requirement in the tender's register. */
+export const requirementResult = v.object({
+  id: v.string(),
+  status: v.union(v.literal("met"), v.literal("partial"), v.literal("missing")),
+  /** What the application already shows, e.g. "Found in Bid pack.pdf, signed". */
+  has: v.array(v.string()),
+  /** What the SME still needs to add or fix. Empty when met. */
+  needs: v.array(v.string()),
+  /** Scored criteria: points awarded on the evidence. */
+  points: v.optional(v.number()),
+  /** 0 to 1: how sure the reading is. */
+  confidence: v.number(),
+});
+
 export const evaluation = v.object({
   /** "rules" is MASLink's built-in eligibility check (convex/lib/evaluation.ts); "jev" once Jev ranks it. */
   engine: v.union(v.literal("rules"), v.literal("jev")),
@@ -160,8 +217,12 @@ export const evaluation = v.object({
   criteria: v.optional(v.array(criterionAssessment)),
   /** Jev only: concerns a reviewer should look at, e.g. a certificate in another company's name. */
   concerns: v.optional(v.array(v.string())),
-  /** Jev only: the model OpenRouter's Jev router chose. */
+  /** Jev only: the versioned Jev model that answered, e.g. jev-1.14.0. */
   model: v.optional(v.string()),
+  /** Jev only, when the buyer confirmed a tender register: the application against each requirement. */
+  requirements: v.optional(v.array(requirementResult)),
+  /** Technical points from the register's scored criteria, against the tender's threshold. */
+  technical: v.optional(v.object({ points: v.number(), available: v.number(), threshold: v.optional(v.number()) })),
 });
 
 /** A file an SME attaches to one application: a proposal, pricing schedule or returnable form. */
@@ -273,6 +334,9 @@ export type CriterionKind = Infer<typeof criterionKind>;
 export type CriterionAssessment = Infer<typeof criterionAssessment>;
 export type ApplicationAttachment = Infer<typeof applicationAttachment>;
 export type ApplicationDecision = Infer<typeof applicationDecision>;
+export type TenderRequirement = Infer<typeof tenderRequirement>;
+export type TenderRegister = Infer<typeof tenderRegister>;
+export type RequirementResult = Infer<typeof requirementResult>;
 
 /** What one step of a review or decision recorded, for the paper trail. */
 export const trailKind = v.union(
@@ -286,6 +350,8 @@ export const trailKind = v.union(
   v.literal("override"),
   /** Something a person in the buyer's organisation did, with the reason they gave. */
   v.literal("action"),
+  /** Reading a tender document into its requirements register, and the buyer confirming it. */
+  v.literal("tender"),
   v.literal("error"),
 );
 export type TrailKind = Infer<typeof trailKind>;
@@ -317,7 +383,7 @@ export default defineSchema({
     createdBy: v.string(),
     kind: opportunityKind,
     title: v.string(),
-    /** The buyer's own reference, e.g. "CAP-FAC-2026-014". */
+    /** The buyer's own reference, e.g. "UMH-FAC-2026-014". */
     reference: v.string(),
     description: v.string(),
     /** One of INDUSTRIES, or empty when any industry may apply. */
@@ -337,11 +403,16 @@ export default defineSchema({
     status: opportunityStatus,
     /** The published notice. Missing on opportunities created before listings existed. */
     listing: v.optional(opportunityListing),
+    /** Set when the buyer cancels it: why, who and when. Applicants see the reason. */
+    cancellation: v.optional(v.object({ reason: v.string(), by: v.string(), at: v.number() })),
+    /** What the tender document requires, once a buyer has had it read. */
+    tender: v.optional(tenderRegister),
     /** The department (Better Auth team) that owns it, or absent when it's unassigned. */
     teamId: v.optional(v.string()),
     isDemo: v.optional(v.boolean()),
   })
     .index("by_organization", ["organizationId"])
+    .index("by_organization_and_reference", ["organizationId", "reference"])
     .index("by_status", ["status"]),
 
   /** Settings an enterprise's owners and admins choose for the whole organisation. One row per organisation. */
@@ -433,6 +504,10 @@ export default defineSchema({
     summary: v.string(),
     /** The start of the text read from the file, kept so a reviewer can see what Jev saw. */
     excerpt: v.string(),
+    /** Which of the tender's returnables the document contains, and whether each is filled in and signed. */
+    returnables: v.optional(
+      v.array(v.object({ id: v.string(), contains: v.number(), completed: v.optional(v.number()) })),
+    ),
     model: v.optional(v.string()),
   }).index("by_application_and_key", ["applicationId", "key"]),
 
@@ -469,7 +544,7 @@ export default defineSchema({
     /** Supporting detail: Jev's reasoning, the numbers behind points, the text of an override reason. */
     details: v.optional(v.array(v.string())),
     model: v.optional(v.string()),
-    /** OpenRouter's generation id, to look the call up in OpenRouter's logs. */
+    /** OpenRouter's generation id, on records from before Jev moved to TypeSafe's own API. */
     generationId: v.optional(v.string()),
     costUsd: v.optional(v.number()),
   })
@@ -505,6 +580,41 @@ export default defineSchema({
   })
     .index("by_command", ["commandId"])
     .index("by_document", ["table", "documentId"]),
+
+  /** The last reference number an organisation used each year, so numbers are never reused. */
+  referenceCounters: defineTable({
+    organizationId: v.string(),
+    year: v.number(),
+    last: v.number(),
+  }).index("by_organization_and_year", ["organizationId", "year"]),
+
+  /**
+   * The evidence trail of an enterprise organisation: every decision that changes the state of an opportunity
+   * or an application, who made it, why, and what changed. Append-only, and each entry carries a hash of the
+   * one before it, so a removed or altered entry shows (convex/lib/audit.ts).
+   */
+  organizationAudit: defineTable({
+    organizationId: v.string(),
+    /** 1, 2, 3… within the organisation. */
+    sequence: v.number(),
+    actorId: v.optional(v.string()),
+    actorName: v.string(),
+    /** e.g. "opportunity.cancelled", "application.awarded", "tender.confirmed". */
+    action: v.string(),
+    opportunityId: v.optional(v.id("opportunities")),
+    applicationId: v.optional(v.id("applications")),
+    /** The opportunity's reference and title, or the applicant's name, at the time. */
+    targetLabel: v.string(),
+    summary: v.string(),
+    reason: v.optional(v.string()),
+    /** Field by field, what it was and what it became. */
+    changes: v.array(v.object({ field: v.string(), before: v.string(), after: v.string() })),
+    /** SHA-256 of this entry's contents and the previous entry's hash. */
+    hash: v.string(),
+    previousHash: v.string(),
+  })
+    .index("by_organization_and_sequence", ["organizationId", "sequence"])
+    .index("by_opportunity", ["opportunityId"]),
 
   /** Every action MASLink staff take in the admin area, newest first by _creationTime. */
   auditLog: defineTable({

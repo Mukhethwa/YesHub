@@ -1,38 +1,68 @@
 "use node";
 
+import type { FunctionReturnType } from "convex/server";
 import { v } from "convex/values";
 import { extractText, getDocumentProxy } from "unpdf";
 
+import { DOCUMENTS } from "../src/lib/sme/documents";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
-import { asBoolean, asObject, asScore, asString, asStrings, askJev, clip, JevError } from "./lib/jev";
+import {
+  type Answer,
+  askJev,
+  type ChoiceAnswer,
+  clip,
+  type NoulAnswer,
+  percent,
+  type Question,
+  type ScoreAnswer,
+} from "./lib/jev";
+import { PROFILE_RETURNABLES, returnableKey, rulePoints } from "./lib/tender";
 import type { Candidate } from "./review";
-import type { CriterionAssessment, Evaluation } from "./schema";
+import type { CriterionAssessment, Evaluation, RequirementResult } from "./schema";
 
 /*
  * Jev's three jobs in a review, each called as a workflow step from review.ts: read a document, score an
- * application against the buyer's criteria, and recommend a shortlist. Answers are checked before they're
- * saved; anything malformed throws, so the workflow retries the step.
+ * application against the buyer's criteria, and check the shortlist. Jev answers typed questions with
+ * probabilities (lib/jev.ts); every reason saved here is composed from those answers, the buyer's criteria
+ * and the calculated points, so each one can be traced back to what it rests on.
  */
 
 /** Most text sent to Jev from one document. Certificates are a page or two; proposals can be long. */
 const MAX_DOCUMENT_CHARS = 15_000;
-/** Images larger than this aren't sent to Jev. */
-const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+/** Most of a tender's returnables looked for in one document. */
+const MAX_RETURNABLES = 40;
 
 const today = () => new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-const JEV_ROLE =
-  "You are Jev, the reviewer on MASLink, a South African platform that matches SMEs with enterprise tenders, " +
-  "RFQs and grants. You are careful, fair and factual: you only rely on what the documents and profile say, " +
-  "you never invent values, and you explain your reasoning so a procurement officer could audit it. You " +
-  "apply South African procurement law fairly (Constitution s217, PPPFA, PAJA), use only information " +
-  "relevant to the evaluation criteria (POPIA), and never consider personal characteristics.";
+const yes = (p: number) => p >= 0.5;
+const yesNo = (p: number) => `${yes(p) ? "Yes" : "No"}, ${percent(p)}`;
+
+/** A rubric answer as 0–100, and how it reads. The level is the one the expected score rounds to, so the
+ * words and the number always agree. */
+function rubric(a: ScoreAnswer, levels: string[]) {
+  const max = levels.length - 1;
+  const expected = Math.max(0, Math.min(max, a.score));
+  return {
+    score: Math.round((expected / max) * 100),
+    level: a.legend[String(Math.round(expected))] ?? levels[Math.round(expected)],
+    confidence: a.confidence >= 0.05 ? `${percent(a.confidence)} confident` : "low confidence",
+  };
+}
 
 /* ------------------------------------------------------------------------------------------------------ */
 /* Reading a document                                                                                     */
 /* ------------------------------------------------------------------------------------------------------ */
+
+const OTHER_DOCUMENT = "Something else";
+const APPLICATION_FILE = "Proposal, pricing schedule or returnable form";
+const DOCUMENT_TYPES: Record<string, string> = {
+  ...Object.fromEntries(DOCUMENTS.map((d) => [d.label, d.description])),
+  [APPLICATION_FILE]: "A document written for this application: a proposal, a pricing schedule, a menu, an SBD form.",
+  [OTHER_DOCUMENT]: "Not one of the documents above.",
+};
 
 async function readPdf(bytes: ArrayBuffer) {
   const pdf = await getDocumentProxy(new Uint8Array(bytes));
@@ -64,87 +94,131 @@ export const extractDocument = internalAction({
       await unreadable("The file is missing from storage.");
       return null;
     }
-
+    if (document.type !== "application/pdf") {
+      await unreadable("Only PDF documents can be reviewed. Upload this document as a PDF.");
+      return null;
+    }
     let text = "";
-    let image: string | null = null;
-    if (document.type === "application/pdf") {
-      try {
-        text = await readPdf(await blob.arrayBuffer());
-      } catch {
-        await unreadable("The PDF couldn’t be opened. It may be damaged or password-protected.");
-        return null;
-      }
-      if (text.length < 20) {
-        await unreadable("No text could be read from the PDF. It may be a scan without a text layer.");
-        return null;
-      }
-    } else if (document.type.startsWith("image/")) {
-      if (blob.size > MAX_IMAGE_BYTES) {
-        await unreadable("The image is too large to read.");
-        return null;
-      }
-      image = `data:${document.type};base64,${Buffer.from(await blob.arrayBuffer()).toString("base64")}`;
-    } else {
-      await unreadable("Only PDFs and images can be read.");
+    try {
+      text = await readPdf(await blob.arrayBuffer());
+    } catch {
+      await unreadable("The PDF couldn’t be opened. It may be damaged or password-protected.");
+      return null;
+    }
+    if (text.length < 20) {
+      await unreadable("No text could be read from the PDF. It may be a scan without a text layer.");
       return null;
     }
 
-    const instructions = [
-      `Today is ${today()}. An SME submitted the document below as their "${document.label}".`,
-      "Report what the document says and check it against the SME's profile.",
-      "",
-      "SME profile:",
-      JSON.stringify(profile, null, 2),
-      "",
-      "List as issues: a different company name or registration number than the profile, an expiry date before",
-      "today, a B-BBEE level different from the profile, a document that isn't what it was uploaded as, or anything",
-      "that makes it unreliable (unsigned where a signature is expected, illegible, incomplete).",
-      sampleData
-        ? 'This is a demonstration account: documents marked "SAMPLE DOCUMENT FOR TESTING" are expected. Note it in the summary, but don\'t list it as an issue.'
-        : 'A document marked as a sample or "not a real certificate" is an issue.',
-      "",
-      "Fields to report when present: company name, registration number, CSD supplier number, B-BBEE level,",
-      "issue date, expiry or valid-until date (as yyyy-mm-dd), issuing body, and any amounts or references.",
-      "",
-      "Reply with JSON only, in this shape:",
-      '{"documentType": "what the document is", "matchesLabel": true, "fields": [{"name": "Company name", "value": "..."}], "issues": ["..."], "summary": "one or two sentences"}',
-    ].join("\n");
+    const profileDocument = DOCUMENTS.find((d) => d.key === document.key);
+    const today_ = today();
+    const questions: Record<string, Question> = {
+      kind: {
+        type: "choice",
+        instructions: "What is the document in `document`?",
+        criteria: DOCUMENT_TYPES,
+      },
+      issuedTo: {
+        type: "noul",
+        instructions: `Is the document issued to, or about, ${profile.companyName}${
+          profile.registrationNumber ? ` (registration number ${profile.registrationNumber})` : ""
+        }?`,
+      },
+      current: {
+        type: "noul",
+        instructions: `Is the document still valid on ${today_}? If it shows no expiry or valid-until date, answer true.`,
+      },
+      sample: {
+        type: "noul",
+        instructions: "Is the document marked as a sample, a test, or “not a real certificate”?",
+      },
+      complete: {
+        type: "noul",
+        instructions: "Is the document complete and readable: not cut off, garbled, or missing parts it refers to?",
+      },
+      ...(document.key === "bbbeeCertificate" && profile.bbbeeLevel
+        ? {
+            bbbee: {
+              type: "noul" as const,
+              instructions: `Does the document show B-BBEE ${profile.bbbeeLevel}, the level on the SME's profile?`,
+            },
+          }
+        : {}),
+    };
+    // The tender's returnables: whether this document is (or contains) each one, and for forms whether that
+    // part is filled in and signed. A bid pack can hold several, so each is its own question.
+    const returnables = input.returnables.slice(0, MAX_RETURNABLES);
+    returnables.forEach((r, i) => {
+      questions[`has${i}`] = {
+        type: "noul",
+        instructions: `Is \`document\` the tender's returnable “${r.name}”, or does it contain it (as one of its pages or sections)?`,
+      };
+      if (r.action === "complete_and_sign")
+        questions[`done${i}`] = {
+          type: "noul",
+          instructions: `If \`document\` contains “${r.name}”, is that part completed: every field filled in, signed and dated, with no blank lines, empty boxes or placeholders left? Answer false if it isn't in the document.`,
+        };
+    });
 
     const result = await askJev({
-      system: JEV_ROLE,
-      user: image
-        ? [
-            { type: "text", text: instructions },
-            { type: "image_url", image_url: { url: image } },
-          ]
-        : `${instructions}\n\nDocument text:\n"""\n${text.slice(0, MAX_DOCUMENT_CHARS)}\n"""`,
-      maxTokens: 4000,
-      parse: (value) => {
-        const o = asObject(value, "the document reading");
-        const fields = Array.isArray(o.fields)
-          ? o.fields.slice(0, 30).flatMap((f) => {
-              const field = f && typeof f === "object" ? (f as Record<string, unknown>) : null;
-              const name = asString(field?.name);
-              const fieldValue = asString(field?.value);
-              return name && fieldValue ? [{ name: clip(name, 100), value: clip(fieldValue, 300) }] : [];
-            })
-          : [];
-        return {
-          documentType: clip(asString(o.documentType, "Unknown"), 120),
-          matchesLabel: asBoolean(o.matchesLabel) ?? false,
-          fields,
-          issues: asStrings(o.issues).map((i) => clip(i, 300)),
-          summary: clip(asString(o.summary), 600),
-        };
-      },
+      state: { today: today_, uploadedAs: document.label, profile, document: text.slice(0, MAX_DOCUMENT_CHARS) },
+      questions,
     });
+    const a = result.answers as Record<string, Answer>;
+    const kind = a.kind as Extract<Answer, { type: "choice" }>;
+    const p = (name: string) => (a[name] as Extract<Answer, { type: "noul" }> | undefined)?.noul;
+
+    const documentType = kind.choice;
+    const matchesLabel = profileDocument ? documentType === profileDocument.label : documentType !== OTHER_DOCUMENT;
+    const issues: string[] = [];
+    if (!matchesLabel)
+      issues.push(
+        `Reads as “${documentType}” (${percent(kind.confidence)}), not the ${document.label} it was sent as.`,
+      );
+    if (!yes(p("issuedTo")!))
+      issues.push(`May not be issued to ${profile.companyName} (${percent(p("issuedTo")!)} that it is).`);
+    if (!yes(p("current")!))
+      issues.push(`May have expired before ${today_} (${percent(p("current")!)} that it’s still valid).`);
+    if (p("bbbee") !== undefined && !yes(p("bbbee")!))
+      issues.push(`May not show ${profile.bbbeeLevel} (${percent(p("bbbee")!)} that it does).`);
+    if (yes(p("sample")!) && !sampleData)
+      issues.push(`Marked as a sample or test document (${percent(p("sample")!)}).`);
+    if (!yes(p("complete")!))
+      issues.push(`May be incomplete or hard to read (${percent(p("complete")!)} that it’s complete).`);
+
+    const fields = [
+      { name: "Reads as", value: `${documentType} (${percent(kind.confidence)} confident)` },
+      { name: `Issued to ${profile.companyName}`, value: yesNo(p("issuedTo")!) },
+      { name: `Valid on ${today_}`, value: yesNo(p("current")!) },
+      ...(p("bbbee") !== undefined ? [{ name: `Shows ${profile.bbbeeLevel}`, value: yesNo(p("bbbee")!) }] : []),
+      { name: "Complete and readable", value: yesNo(p("complete")!) },
+      { name: "Marked as a sample", value: yesNo(p("sample")!) },
+    ];
+    returnables.forEach((r, i) => {
+      if (!yes(p(`has${i}`)!)) return;
+      const done = p(`done${i}`);
+      fields.push({
+        name: `Contains ${r.name}`,
+        value: `${yesNo(p(`has${i}`)!)}${done !== undefined ? `; completed and signed: ${yesNo(done).toLowerCase()}` : ""}`,
+      });
+    });
+    const summary = issues.length
+      ? `Reads as ${documentType}. ${issues.length} check${issues.length === 1 ? "" : "s"} need${issues.length === 1 ? "s" : ""} a look.`
+      : `Reads as ${documentType}, issued to ${profile.companyName} and valid. Every check passed.${
+          sampleData && yes(p("sample")!) ? " Marked as sample data, as expected for a demonstration account." : ""
+        }`;
 
     await ctx.runMutation(internal.review.saveExtraction, {
       ...args,
       status: "read",
-      ...result.answer,
-      excerpt: image ? "(image)" : clip(text, 3000),
-      call: { model: result.model, generationId: result.generationId, costUsd: result.costUsd },
+      documentType,
+      matchesLabel,
+      fields,
+      issues,
+      summary,
+      excerpt: clip(text, 3000),
+      returnables: returnables.map((r, i) => ({ id: r.id, contains: p(`has${i}`)!, completed: p(`done${i}`) })),
+      call: { model: result.model, costUsd: result.costUsd },
     });
     return null;
   },
@@ -154,96 +228,347 @@ export const extractDocument = internalAction({
 /* Scoring against the buyer's criteria                                                                   */
 /* ------------------------------------------------------------------------------------------------------ */
 
+/** How strong the evidence is for a functionality or assessed criterion. Level 4 is 100. */
+const EVIDENCE_RUBRIC = [
+  "No evidence for this criterion",
+  "Weak evidence: a claim with little support",
+  "Some relevant evidence, with gaps",
+  "Clear, relevant evidence",
+  "Strong, specific evidence backed by documents or references",
+];
+/** How well the whole application fits, on the evaluation criteria only. */
+const FIT_RUBRIC = ["Not suited", "Weak fit", "Adequate", "Good fit", "Strong fit"];
+
+/* ------------------------------------------------------------------------------------------------------ */
+/* Checking against the tender's own requirements                                                         */
+/* ------------------------------------------------------------------------------------------------------ */
+
+type AssessmentInput = NonNullable<FunctionReturnType<typeof internal.review.assessmentInput>>;
+type Register = NonNullable<AssessmentInput["tender"]>;
+
+const NOTHING = "Nothing shows it";
+const NO_RULE = "None of these";
+
+/** Where evidence can come from, as choices for "which of these shows it". */
+function evidenceSources(input: AssessmentInput) {
+  return {
+    ...Object.fromEntries(
+      input.documents.map((d) => [`${d.label} (${d.name})`, `The document ${d.name}, sent as ${d.label}.`]),
+    ),
+    ...(input.application.proposal ? { "Your proposal": "The written proposal sent with the application." } : {}),
+    "Your profile": "The SME's MASLink profile: services, capabilities, accreditations, years trading.",
+    [NOTHING]: "None of the documents, the proposal or the profile shows it.",
+  };
+}
+
+/** Questions for every requirement in the register, keyed so the answers can be matched back. */
+function requirementQuestions(register: Register, input: AssessmentInput) {
+  const questions: Record<string, Question> = {};
+  const sources = evidenceSources(input);
+  for (const r of register.requirements) {
+    if (r.kind === "mandatory") {
+      questions[`m_${r.id}`] = {
+        type: "noul",
+        instructions: `Mandatory requirement in the tender: “${r.text}”. Does the evidence (documents, proposal and profile) show the applicant meets it?`,
+      };
+      questions[`w_${r.id}`] = {
+        type: "choice",
+        instructions: `Which of these best shows the applicant meets “${clip(r.text, 300)}”?`,
+        criteria: sources,
+      };
+    } else if (r.kind === "scored") {
+      (r.items ?? []).forEach((item, k) => {
+        questions[`i_${r.id}_${k}`] = {
+          type: "noul",
+          instructions: `For the tender criterion “${clip(r.text, 200)}”: does the application show “${item}”?`,
+        };
+      });
+      const rules = (r.scoring ?? []).filter((rule) => rulePoints(rule) !== undefined);
+      if (rules.length) {
+        questions[`p_${r.id}`] = {
+          type: "choice",
+          instructions: `The tender scores “${clip(r.text, 300)}” with these rules. Which one does the evidence meet? Choose the highest-scoring rule that is fully met.`,
+          criteria: {
+            ...Object.fromEntries(rules.map((rule) => [rule, rule])),
+            [NO_RULE]: "The evidence doesn't meet any of the rules.",
+          },
+        };
+      } else if (!(r.items ?? []).length) {
+        questions[`p_${r.id}`] = {
+          type: "score",
+          instructions: `Rate the evidence for the tender criterion “${r.text}”. Count what the documents and proposal show; a claim made only on the profile counts for less.`,
+          criteria: EVIDENCE_RUBRIC,
+        };
+      }
+      questions[`w_${r.id}`] = {
+        type: "choice",
+        instructions: `Which of these gives the strongest evidence for “${clip(r.text, 300)}”?`,
+        criteria: sources,
+      };
+    }
+  }
+  return questions;
+}
+
+/** Scored points to one decimal place. */
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/** Each requirement's result: what the application has, what the SME still needs, and the points scored. */
+function requirementResults(register: Register, input: AssessmentInput, a: Record<string, Answer>) {
+  const noul = (name: string) => (a[name] as NoulAnswer | undefined)?.noul;
+  const choice = (name: string) => a[name] as ChoiceAnswer | undefined;
+  const shownIn = (name: string) => {
+    const c = choice(name);
+    return c && c.choice !== NOTHING ? `Best evidence: ${c.choice}` : null;
+  };
+
+  return register.requirements.flatMap((r): RequirementResult[] => {
+    if (r.kind === "mandatory") {
+      const p = noul(`m_${r.id}`) ?? 0;
+      const where = shownIn(`w_${r.id}`);
+      return [
+        {
+          id: r.id,
+          status: p >= 0.6 ? "met" : p >= 0.4 ? "partial" : "missing",
+          has:
+            p >= 0.4
+              ? [
+                  `${p >= 0.6 ? "Shown" : "Partly shown"} by the evidence (${percent(p)} sure)`,
+                  ...(where ? [where] : []),
+                ]
+              : [],
+          needs:
+            p >= 0.6
+              ? []
+              : [
+                  p >= 0.4
+                    ? "The evidence for this is unclear. Add a document that shows it plainly, or explain it in your proposal."
+                    : "Nothing you sent shows this. Add a document (a certificate, letter or reference) or explain it in your proposal.",
+                ],
+          confidence: Math.abs(p - 0.5) * 2,
+        },
+      ];
+    }
+
+    if (r.kind === "scored") {
+      const items = r.items ?? [];
+      const have = items.filter((_, k) => yes(noul(`i_${r.id}_${k}`) ?? 0));
+      const lacking = items.filter((item) => !have.includes(item));
+      const available = r.points ?? 0;
+      const answer = a[`p_${r.id}`];
+      const rules = (r.scoring ?? []).filter((rule) => rulePoints(rule) !== undefined);
+      let points: number;
+      let confidence = 1;
+      const has: string[] = [];
+      const needs: string[] = [];
+      if (answer?.type === "choice") {
+        points = answer.choice === NO_RULE ? 0 : (rulePoints(answer.choice) ?? 0);
+        confidence = answer.confidence;
+        if (points > 0) has.push(`Meets “${answer.choice}”`);
+        // The next rule up is what the SME needs to reach to score more
+        const better = rules
+          .filter((rule) => (rulePoints(rule) ?? 0) > points)
+          .sort((x, y) => (rulePoints(x) ?? 0) - (rulePoints(y) ?? 0))[0];
+        if (better) needs.push(`To score more, meet “${better}”.`);
+      } else if (answer?.type === "score") {
+        const level = rubric(answer, EVIDENCE_RUBRIC);
+        points = round1((available * level.score) / 100);
+        confidence = answer.confidence;
+        has.push(`Evidence rated “${level.level}”`);
+        if (level.score < 100)
+          needs.push("Strengthen the evidence: references, CVs, certificates or examples of similar work.");
+      } else {
+        // Points for the share of listed items shown
+        points = items.length ? round1((available * have.length) / items.length) : 0;
+      }
+      points = Math.min(points, available || points);
+      if (items.length)
+        has.unshift(`${have.length} of ${items.length} listed: ${have.length ? have.join("; ") : "none"}`);
+      if (lacking.length) needs.unshift(`Show evidence of: ${lacking.join("; ")}.`);
+      const where = shownIn(`w_${r.id}`);
+      if (where && points > 0) has.push(where);
+      return [
+        {
+          id: r.id,
+          status: available && points >= available ? "met" : points > 0 ? "partial" : "missing",
+          has,
+          needs: available && points >= available ? [] : needs.length ? needs : ["Add evidence for this criterion."],
+          points,
+          confidence,
+        },
+      ];
+    }
+
+    if (r.kind === "returnable") {
+      if (r.action === "review") return [];
+      const profileKey = PROFILE_RETURNABLES[returnableKey(r.text)];
+      const profileReading = profileKey ? input.documents.find((d) => d.key === profileKey) : undefined;
+      const found = input.documents
+        .flatMap((d) =>
+          d.returnables.filter((x) => x.id === r.id && yes(x.contains)).map((x) => ({ document: d, ...x })),
+        )
+        .sort((x, y) => y.contains - x.contains);
+      const best = found[0];
+      if (best) {
+        const signed = r.action === "complete_and_sign" ? best.completed : undefined;
+        const complete = signed === undefined || yes(signed);
+        return [
+          {
+            id: r.id,
+            status: complete ? "met" : "partial",
+            has: [`Found in ${best.document.name}${signed !== undefined && complete ? ", completed and signed" : ""}`],
+            needs: complete
+              ? []
+              : [`It looks incomplete: fill in every field, sign and date it, then send ${r.text} again.`],
+            confidence: Math.min(best.contains, signed ?? 1),
+          },
+        ];
+      }
+      if (profileReading && profileReading.status === "read") {
+        return [
+          {
+            id: r.id,
+            status: profileReading.issues.length ? "partial" : "met",
+            has: [`${profileReading.label} on your profile`],
+            needs: profileReading.issues.slice(0, 2).map((issue) => `${profileReading.label}: ${issue}`),
+            confidence: 1,
+          },
+        ];
+      }
+      const label = profileKey ? input.profileDocuments[profileKey]?.label : undefined;
+      return [
+        {
+          id: r.id,
+          status: "missing",
+          has: [],
+          needs: [
+            profileKey
+              ? `Upload your ${DOCUMENTS.find((d) => d.key === profileKey)?.label ?? label ?? r.text} to your profile, or attach ${r.text}.`
+              : r.action === "complete_and_sign"
+                ? `Complete and sign ${r.text}, then attach it.`
+                : `Attach ${r.text}.`,
+          ],
+          confidence: 1,
+        },
+      ];
+    }
+    return [];
+  });
+}
+
 export const assessApplication = internalAction({
   args: { applicationId: v.id("applications") },
   handler: async (ctx, args): Promise<null> => {
     const input = await ctx.runQuery(internal.review.assessmentInput, args);
     if (!input) return null;
     const { opportunity, rules } = input;
-    const criteria = opportunity.criteria;
+    const register = input.tender;
+    const tenderScores = !!register?.requirements.some((r) => r.kind === "scored");
+    // The tender's scored criteria replace the listing's judged ones; price and B-BBEE are still calculated
+    const criteria = tenderScores
+      ? opportunity.criteria.filter((c) => c.kind !== "functionality" && c.kind !== "assessed")
+      : opportunity.criteria;
 
-    const prompt = [
-      `Today is ${today()}. Assess this application to a ${opportunity.kind} against the buyer's evaluation criteria.`,
-      "",
-      "Opportunity:",
-      JSON.stringify({ ...opportunity, criteria: undefined }, null, 2),
-      "",
-      "Evaluation criteria, numbered. Kinds: gate = must be met (true/false); functionality = score 0-100,",
-      "the number is the minimum to proceed; assessed = score 0-100; price and bbbee = MASLink calculates the",
-      "points with the preferential procurement formulas, so don't score them: for price, check a quote was",
-      "submitted; for bbbee, set met to whether the B-BBEE certificate supports the level on the profile.",
-      ...criteria.map((c, i) => `${i + 1}. [${c.kind}${c.points !== undefined ? `, ${c.points}` : ""}] ${c.criterion}`),
-      "",
-      "SME profile:",
-      JSON.stringify(input.sme, null, 2),
-      "",
-      "Application:",
-      JSON.stringify(input.application, null, 2),
-      "",
-      "What Jev read from the documents:",
-      JSON.stringify(input.documents, null, 2),
-      "",
-      "MASLink's eligibility rules (location, B-BBEE minimum, required documents, good standing):",
-      JSON.stringify(
-        rules.checks.filter((c) => c.required),
-        null,
-        2,
-      ),
-      "",
-      "Scoring guide for functionality and assessed criteria: 0-39 no evidence, 40-59 weak, 60-79 adequate,",
-      "80-100 strong, with evidence in the documents or proposal. Claims only on the profile count for less",
-      "than the same claim backed by a document. Cite evidence as 'Document or source: what it shows'.",
-      "",
-      "qualifies is false only for a specific problem you can name in concerns, such as a gate not met, a",
-      "functionality score under its minimum, or documents that contradict the profile. Otherwise true.",
-      "score is your overall 0-100 view of how strong the application is.",
-      "",
-      "Reply with JSON only, in this shape:",
-      '{"criteria": [{"number": 1, "met": true, "score": 70, "reasoning": "...", "evidence": ["..."]}], "qualifies": true, "score": 72, "summary": "two sentences", "concerns": ["..."]}',
-      "Use met for gates and bbbee, score for functionality and assessed; omit what doesn't apply.",
-    ].join("\n");
+    const questions: Record<string, Question> = {
+      fit: {
+        type: "score",
+        instructions:
+          "How well does the application fit the opportunity, judged only on the evaluation criteria and the evidence in the documents and proposal?",
+        criteria: FIT_RUBRIC,
+      },
+      contradicts: {
+        type: "noul",
+        instructions:
+          "Do the documents contradict the SME's profile, for example a different company name, registration number or B-BBEE level?",
+      },
+    };
+    criteria.forEach((c, i) => {
+      if (c.kind === "gate") {
+        questions[`c${i}`] = {
+          type: "noul",
+          instructions: `Requirement: “${c.criterion}”. Does the evidence (documents, proposal and profile) show the applicant meets it?`,
+        };
+      } else if (c.kind === "bbbee") {
+        questions[`c${i}`] = {
+          type: "noul",
+          instructions: `Does the applicant's B-BBEE evidence support the level on their profile (${input.sme.bbbeeLevel})?`,
+        };
+      } else if (c.kind === "functionality" || c.kind === "assessed") {
+        questions[`c${i}`] = {
+          type: "score",
+          instructions: `Rate the evidence for this criterion: “${c.criterion}”. Count what the documents and proposal show; a claim made only on the profile counts for less.`,
+          criteria: EVIDENCE_RUBRIC,
+        };
+      }
+    });
+
+    if (register) Object.assign(questions, requirementQuestions(register, input));
 
     const result = await askJev({
-      system: JEV_ROLE,
-      user: prompt,
-      maxTokens: 6000,
-      parse: (value) => {
-        const o = asObject(value, "the assessment");
-        const answers = Array.isArray(o.criteria) ? o.criteria : [];
-        const assessed: CriterionAssessment[] = criteria.map((c, i) => {
-          const raw = answers.find((a) => Number((a as Record<string, unknown>)?.number) === i + 1) ?? answers[i];
-          const a = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-          const scored = c.kind === "functionality" || c.kind === "assessed";
-          const judged = c.kind === "gate" || c.kind === "bbbee";
-          return {
-            criterion: c.criterion,
-            kind: c.kind,
-            points: c.points,
-            met: judged ? (asBoolean(a.met) ?? (c.kind === "bbbee" ? undefined : false)) : undefined,
-            score: scored ? (asScore(a.score) ?? 0) : undefined,
-            reasoning: clip(
-              asString(a.reasoning, c.kind === "price" ? "Calculated from the quote." : "No reasoning given."),
-              800,
-            ),
-            evidence: asStrings(a.evidence, 8).map((e) => clip(e, 300)),
-          };
-        });
-        const score = asScore(o.score);
-        if (score === undefined) throw new JevError("The assessment had no overall score.");
-        return {
-          criteria: assessed,
-          qualifies: asBoolean(o.qualifies) ?? true,
-          score,
-          summary: clip(asString(o.summary), 600),
-          concerns: asStrings(o.concerns, 10).map((c) => clip(c, 300)),
-        };
+      state: {
+        today: today(),
+        opportunity: { ...opportunity, criteria: criteria.map((c) => c.criterion) },
+        sme: input.sme,
+        application: input.application,
+        documents: input.documents,
+        eligibility: rules.checks.filter((c) => c.required).map((c) => ({ check: c.label, passed: c.passed })),
       },
+      questions,
     });
-    const answer = result.answer;
+    const a = result.answers as Record<string, Answer>;
+
+    // What every criterion was judged on, for the record
+    const evidence = [
+      ...input.documents.map((d) =>
+        clip(
+          `${d.label}: ${d.status === "unreadable" ? "couldn’t be read" : d.issues.length ? d.issues[0] : "checks passed"}`,
+          300,
+        ),
+      ),
+      input.application.proposal ? "Proposal: included with the application" : "Proposal: none",
+    ].slice(0, 8);
+
+    const assessed: CriterionAssessment[] = criteria.map((c, i) => {
+      const answer = a[`c${i}`];
+      if (c.kind === "price") {
+        return {
+          criterion: c.criterion,
+          kind: c.kind,
+          points: c.points,
+          reasoning: input.application.quote ? "Points are calculated from the quote." : "No quote was submitted.",
+          evidence: [],
+        };
+      }
+      if (answer?.type === "noul") {
+        return {
+          criterion: c.criterion,
+          kind: c.kind,
+          points: c.points,
+          met: yes(answer.noul),
+          reasoning: `${yes(answer.noul) ? "Met" : "Not met"}: ${percent(answer.noul)} that the evidence shows it.`,
+          evidence,
+        };
+      }
+      const r = rubric(answer as ScoreAnswer, EVIDENCE_RUBRIC);
+      return {
+        criterion: c.criterion,
+        kind: c.kind,
+        points: c.points,
+        score: r.score,
+        reasoning: `Rated “${r.level}”: ${r.score}/100 (${r.confidence}).`,
+        evidence,
+      };
+    });
+
+    const fit = rubric(a.fit as ScoreAnswer, FIT_RUBRIC);
+    const contradicts = (a.contradicts as Extract<Answer, { type: "noul" }>).noul;
+    const concerns = yes(contradicts)
+      ? [`The documents may contradict the profile (${percent(contradicts)}). Check the document readings.`]
+      : [];
 
     // Requirements combine MASLink's rules (facts from the profile) with Jev's reading of each gate
     const checks: Evaluation["checks"] = [...rules.checks];
-    answer.criteria.forEach((c, i) => {
+    assessed.forEach((c, i) => {
       if (c.kind === "gate") {
         checks.push({
           id: `criterion-${i + 1}`,
@@ -259,10 +584,47 @@ export const assessApplication = internalAction({
           label: minimum ? `Functionality of at least ${minimum}` : "Functionality",
           required: !!minimum,
           passed: (c.score ?? 0) >= minimum,
-          detail: `Scored ${c.score}. ${c.reasoning}`,
+          detail: c.reasoning,
         });
       }
     });
+    // The tender's own requirements: mandatory ones and mandatory returnables decide eligibility, and the
+    // scored criteria are totalled against the tender's minimum
+    const results = register ? requirementResults(register, input, a) : undefined;
+    let technical: Evaluation["technical"];
+    if (register && results) {
+      const byId = new Map(results.map((r) => [r.id, r]));
+      for (const r of register.requirements) {
+        const result = byId.get(r.id);
+        if (!result) continue;
+        const mandatory = r.kind === "mandatory" || (r.kind === "returnable" && r.tier === "mandatory");
+        if (!mandatory) continue;
+        checks.push({
+          id: `tender-${r.id}`,
+          label: clip(r.kind === "returnable" ? `${r.text} (mandatory returnable)` : r.text, 140),
+          required: true,
+          passed: result.status === "met",
+          detail: [...result.has, ...result.needs].join(" ") || "Checked against the tender",
+        });
+      }
+      const scored = register.requirements.filter((r) => r.kind === "scored");
+      if (scored.length) {
+        technical = {
+          points: round1(scored.reduce((sum, r) => sum + (byId.get(r.id)?.points ?? 0), 0)),
+          available: round1(scored.reduce((sum, r) => sum + (r.points ?? 0), 0)),
+          threshold: register.threshold,
+        };
+        if (register.threshold !== undefined)
+          checks.push({
+            id: "tender-threshold",
+            label: `Technical score of at least ${register.threshold}`,
+            required: true,
+            passed: technical.points >= register.threshold,
+            detail: `Scored ${technical.points} of ${technical.available} technical points on the evidence.`,
+          });
+      }
+    }
+
     const documentIssues = input.documents.flatMap((d) => d.issues.map((issue) => `${d.label}: ${issue}`));
     checks.push({
       id: "documents-consistent",
@@ -272,22 +634,41 @@ export const assessApplication = internalAction({
       detail: documentIssues.length ? documentIssues.slice(0, 3).join(" ") : "No problems found in the documents",
     });
 
-    // Jev may only disqualify for a reason it states
-    const jevDisqualifies = !answer.qualifies && answer.concerns.length > 0;
-    const qualifies = checks.filter((c) => c.required).every((c) => c.passed) && !jevDisqualifies;
+    // Jev can only disqualify through a concern it can name: the documents contradicting the profile
+    const qualifies = checks.filter((c) => c.required).every((c) => c.passed) && concerns.length === 0;
     const failed = checks.filter((c) => c.required && !c.passed).map((c) => c.label);
+    // The score is the average of the scored criteria, the same number shortlisting ranks a grant by, so the
+    // applicant list and the shortlist always agree; with no scored criteria it's the overall fit
+    const scored = assessed.flatMap((c) => (c.score !== undefined ? [c.score] : []));
+    const score =
+      technical && technical.available > 0
+        ? Math.round((technical.points / technical.available) * 100)
+        : scored.length
+          ? Math.round(scored.reduce((sum, n) => sum + n, 0) / scored.length)
+          : fit.score;
+    const gates = assessed.filter((c) => c.kind === "gate");
+    const summary = `Overall “${fit.level}” (${fit.confidence}).${
+      gates.length ? ` ${gates.filter((g) => g.met).length} of ${gates.length} requirements shown by the evidence.` : ""
+    }${
+      results?.length
+        ? ` ${results.filter((r) => r.status === "met").length} of ${results.length} tender requirements met${
+            technical ? `, ${technical.points} of ${technical.available} technical points` : ""
+          }.`
+        : ""
+    }`;
 
     await ctx.runMutation(internal.review.saveAssessment, {
       ...args,
       qualifies,
       // Same convention as the rules: an applicant who doesn't qualify never outranks one who does
-      score: qualifies ? answer.score : Math.min(answer.score, 59),
-      summary:
-        qualifies || !failed.length ? answer.summary : `Doesn’t qualify: ${failed.join(", ")}. ${answer.summary}`,
+      score: qualifies ? score : Math.min(score, 59),
+      summary: qualifies || !failed.length ? summary : `Doesn’t qualify: ${failed.join(", ")}. ${summary}`,
       checks,
-      criteria: answer.criteria,
-      concerns: answer.concerns,
-      call: { model: result.model, generationId: result.generationId, costUsd: result.costUsd },
+      criteria: assessed,
+      concerns,
+      requirements: results,
+      technical,
+      call: { model: result.model, costUsd: result.costUsd },
     });
     return null;
   },
@@ -314,6 +695,24 @@ const vCandidate = v.object({
   reviewed: v.boolean(),
 });
 
+/** The order shortlisting follows: rank by points, then points, then the review's score. */
+const byRank = (a: Candidate, b: Candidate) =>
+  (a.rank ?? Infinity) - (b.rank ?? Infinity) || (b.totalPoints ?? -1) - (a.totalPoints ?? -1) || b.score - a.score;
+
+const pointsText = (c: Candidate) =>
+  c.totalPoints === undefined
+    ? `a review score of ${c.score}/100`
+    : `${c.totalPoints} points${
+        c.pricePoints !== undefined || c.bbbeePoints !== undefined
+          ? ` (${[
+              c.pricePoints !== undefined ? `price ${c.pricePoints}` : null,
+              c.bbbeePoints !== undefined ? `B-BBEE ${c.bbbeePoints}` : null,
+            ]
+              .filter(Boolean)
+              .join(", ")})`
+          : ""
+      }`;
+
 export const decide = internalAction({
   args: { runId: v.id("decisionRuns"), candidates: v.array(vCandidate) },
   handler: async (
@@ -322,98 +721,90 @@ export const decide = internalAction({
   ): Promise<{
     summary: string;
     decisions: { applicationId: Id<"applications">; shortlisted: boolean; rationale: string }[];
-    call: { model: string; generationId?: string; costUsd?: number };
+    call: { model: string; costUsd?: number };
   }> => {
     const input = await ctx.runQuery(internal.review.decisionInput, { runId: args.runId });
     if (!input) throw new Error("The decision run no longer exists.");
 
+    const notEligible = (c: Candidate) => ({
+      applicationId: c.applicationId,
+      shortlisted: false,
+      rationale: `Not shortlisted. Requirements not met: ${c.ineligibleReasons.join("; ")}.`,
+    });
+
+    const eligible = args.candidates.filter((c) => c.eligible).sort(byRank);
     // With nobody eligible there's nothing to judge: everyone's outcome follows from the rules
-    if (!args.candidates.some((c) => c.eligible)) {
+    if (eligible.length === 0) {
       return {
         summary: "No application met every requirement. Nobody was shortlisted.",
-        decisions: args.candidates.map((c) => ({
-          applicationId: c.applicationId,
-          shortlisted: false,
-          rationale: `Not shortlisted. Requirements not met: ${c.ineligibleReasons.join("; ")}`,
-        })),
+        decisions: args.candidates.map(notEligible),
         call: { model: "none (no eligible applicants)" },
       };
     }
 
-    // Short references keep ids out of the prompt and make Jev's answer easy to check
-    const refs = new Map(args.candidates.map((c, i) => [`A${i + 1}`, c]));
-    const applicants = [...refs].map(([ref, c]: [string, Candidate]) => ({
-      ref,
-      company: c.companyName,
-      eligible: c.eligible,
-      ineligibleReasons: c.ineligibleReasons,
-      rank: c.rank ?? null,
-      quote: c.quote ?? null,
-      pricePoints: c.pricePoints ?? null,
-      bbbeePoints: c.bbbeePoints ?? null,
-      totalPoints: c.totalPoints ?? null,
-      jevScore: c.score,
-      summary: c.summary,
-      criteria: c.criteria,
-      concerns: c.concerns,
-    }));
+    // Jev's one judgement here: whether an applicant's recorded concern is serious enough to keep it off. Only
+    // applicants with a concern are asked about, so nobody is held back without a reason they can read. Short
+    // references keep ids and company names out of the request.
+    const refs = eligible.map((c, i) => ({ ref: `A${i + 1}`, candidate: c }));
+    const withConcerns = refs.filter(({ candidate }) => candidate.concerns.length > 0);
+    const result = withConcerns.length
+      ? await askJev({
+          state: {
+            opportunity: input.opportunity,
+            applicants: withConcerns.map(({ ref, candidate: c }) => ({
+              ref,
+              rank: c.rank ?? null,
+              points: c.totalPoints ?? null,
+              reviewScore: c.score,
+              criteria: c.criteria,
+              concerns: c.concerns,
+            })),
+          },
+          questions: Object.fromEntries(
+            withConcerns.map(({ ref }) => [
+              ref,
+              {
+                type: "noul" as const,
+                instructions: `Is the concern recorded for applicant ${ref} serious enough, under the evaluation criteria, to keep it off the shortlist? Ignore names, places and anything about people.`,
+              },
+            ]),
+          ),
+        })
+      : null;
 
-    const prompt = [
-      `Recommend a shortlist for this ${input.opportunity.kind} of at most ${input.slots} applicant${input.slots === 1 ? "" : "s"}.`,
-      "The buyer makes the final award decision from your shortlist; you do not award or approve anyone.",
-      "",
-      "Opportunity:",
-      JSON.stringify(input.opportunity, null, 2),
-      "",
-      "Applicants. Points were calculated by MASLink with the preferential procurement formulas, and rank",
-      "orders the eligible applicants by points:",
-      JSON.stringify(applicants, null, 2),
-      "",
-      "Rules (Constitution s217 and the PPPFA: fair, equitable, transparent, competitive and cost-effective):",
-      "- Only eligible applicants can be shortlisted.",
-      "- Follow the ranking. Shortlisting a lower-ranked applicant ahead of a higher-ranked one needs a concrete,",
-      "  documented concern about the higher-ranked one (objective criteria); state it in both reasons.",
-      "- Shortlist fewer than the limit only if the remaining applicants have serious, documented concerns.",
-      "- Decide only on the evaluation criteria, points, documents and concerns given. Ignore names, locations",
-      "  and anything about people that isn't a criterion; B-BBEE counts only through the calculated points.",
-      "- Give every applicant written reasons (PAJA s5), one to three sentences they could read: why they were",
-      "  or weren't shortlisted, citing points, criteria or documents. Never name or compare other applicants.",
-      "",
-      "Reply with JSON only, in this shape:",
-      '{"summary": "two sentences for the buyer", "decisions": [{"ref": "A1", "shortlisted": true, "rationale": "..."}]}',
-      "Include every applicant exactly once.",
-    ].join("\n");
-
-    const result = await askJev({
-      system: JEV_ROLE,
-      user: prompt,
-      maxTokens: 8000,
-      parse: (value) => {
-        const o = asObject(value, "the decision");
-        if (!Array.isArray(o.decisions)) throw new JevError("The decision had no decisions.");
-        const seen = new Set<string>();
-        const decisions = o.decisions.flatMap((d) => {
-          const row = d && typeof d === "object" ? (d as Record<string, unknown>) : {};
-          const ref = asString(row.ref).toUpperCase();
-          const candidate = refs.get(ref);
-          if (!candidate || seen.has(ref)) return [];
-          seen.add(ref);
-          return [
-            {
-              applicationId: candidate.applicationId,
-              // Older answers said "approved"; treat it the same
-              shortlisted: asBoolean(row.shortlisted ?? row.approved) ?? false,
-              rationale: clip(asString(row.rationale, "No rationale given."), 800),
-            },
-          ];
+    const slots = input.slots;
+    const decisions: { applicationId: Id<"applications">; shortlisted: boolean; rationale: string }[] = [];
+    let filled = 0;
+    let heldBack = 0;
+    refs.forEach(({ ref, candidate: c }, i) => {
+      const answer = result?.answers[ref] as Extract<Answer, { type: "noul" }> | undefined;
+      const position = `ranked ${c.rank ?? i + 1} of ${eligible.length} eligible applicants with ${pointsText(c)}`;
+      if (filled < slots && answer && yes(answer.noul)) {
+        heldBack++;
+        decisions.push({
+          applicationId: c.applicationId,
+          shortlisted: false,
+          rationale: `Not shortlisted: ${position}, but this concern keeps it off (${percent(answer.noul)}): ${c.concerns[0]}`,
         });
-        return { summary: clip(asString(o.summary), 800), decisions };
-      },
+      } else if (filled < slots) {
+        filled++;
+        decisions.push({ applicationId: c.applicationId, shortlisted: true, rationale: `Shortlisted: ${position}.` });
+      } else {
+        decisions.push({
+          applicationId: c.applicationId,
+          shortlisted: false,
+          rationale: `Not shortlisted: ${position}. The ${slots} place${slots === 1 ? "" : "s"} went to higher-ranked applicants.`,
+        });
+      }
     });
+    decisions.push(...args.candidates.filter((c) => !c.eligible).map(notEligible));
 
     return {
-      ...result.answer,
-      call: { model: result.model, generationId: result.generationId, costUsd: result.costUsd },
+      summary: `${filled} shortlisted from ${eligible.length} eligible of ${args.candidates.length} applicants, in points order${
+        heldBack ? `; ${heldBack} held back for a documented concern` : ""
+      }. The buyer makes the final decision.`,
+      decisions,
+      call: result ? { model: result.model, costUsd: result.costUsd } : { model: "none (no concerns to weigh)" },
     };
   },
 });

@@ -15,6 +15,7 @@ import {
   type TrailRow,
   TrailList,
 } from "@/components/review/review-parts";
+import { RequirementsChecklist } from "@/components/review/requirements-checklist";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,7 +33,7 @@ import { formatBytes } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { rand } from "../../../convex/lib/procurement";
-import type { ApplicationStatus, Evaluation } from "../../../convex/schema";
+import type { ApplicationStatus, Evaluation, TenderRequirement } from "../../../convex/schema";
 
 /*
  * Shortlisting on the buyer's side. MASLink recommends a shortlist with written reasons for every applicant;
@@ -307,10 +308,13 @@ export function ApplicantReview({
   applicationId,
   companyName,
   evaluation,
+  requirements,
 }: {
   applicationId: Id<"applications">;
   companyName: string;
   evaluation: Evaluation;
+  /** The confirmed tender register, when the buyer has one. */
+  requirements?: TenderRequirement[];
 }) {
   const review = useQuery(api.review.applicationReview, { applicationId });
   const retry = useMutation(api.review.retryReview);
@@ -349,6 +353,13 @@ export function ApplicantReview({
       </div>
 
       {review.decision && <Outcome decision={review.decision} />}
+
+      {requirements && evaluation.requirements && (
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Against the tender’s requirements</p>
+          <RequirementsChecklist requirements={requirements} evaluation={evaluation} audience="buyer" />
+        </div>
+      )}
 
       {evaluation.engine === "jev" && (
         <div className="space-y-3">

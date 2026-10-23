@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { UserButton } from "@/components/auth/user/user-button";
+import { useScenePathname } from "@/components/scene-parts";
 import { Logo, LogoMark } from "@/components/logo";
 import {
   Sidebar,
@@ -32,7 +33,8 @@ export function activeNavItem(nav: PortalNavItem[], pathname: string) {
 
 /** Collapses to icons on desktop (the header button, the rail or Ctrl/⌘+B); a sheet on phones. */
 export function PortalSidebar({ label, homeHref, nav }: { label: string; homeHref: string; nav: PortalNavItem[] }) {
-  const pathname = usePathname();
+  const realPathname = usePathname();
+  const pathname = useScenePathname() ?? realPathname;
   const { setOpenMobile, state, isMobile } = useSidebar();
   const collapsed = state === "collapsed" && !isMobile;
   const active = activeNavItem(nav, pathname);

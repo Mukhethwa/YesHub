@@ -29,16 +29,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Part } from "@/components/scene-parts";
 import { useUploadFile } from "@/hooks/use-upload-file";
 import { errorMessage } from "@/lib/errors";
 import { DOCUMENTS } from "@/lib/sme/documents";
 import { formatBytes, formatDate } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
+import type { TenderRequirement } from "../../../convex/schema";
 import { CreateOrganisation } from "./create-organisation";
 import { OpportunityTable } from "./enterprise-overview";
 import { ApplicantActions, ApplicantReview, ApplicantReviewStatus, EvaluationCard } from "./evaluation";
+import { OpportunityActions } from "./opportunity-actions";
 import { DepartmentSelect } from "./team-view";
-import { closingLabel, formatRand, KIND_LABELS, percent, PhasePill, phaseOf } from "./tenders";
+import { RequirementsTab } from "./tender-requirements";
+import { closingLabel, formatRand, KIND_LABELS, percent, PhasePill, isFinished, phaseOf } from "./tenders";
 
 type Filter = "all" | "open" | "closing" | "closed";
 
@@ -46,6 +50,7 @@ function matches(row: Parameters<typeof phaseOf>[0], filter: Filter) {
   const phase = phaseOf(row);
   if (filter === "all") return true;
   if (filter === "open") return phase === "open" || phase === "closing";
+  if (filter === "closed") return isFinished(phase);
   return phase === filter;
 }
 
@@ -100,7 +105,11 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
 
   return (
     <div className="space-y-5">
-      <AdminPageHeader title="Opportunities" />
+      <AdminPageHeader title="Opportunities">
+        <Button asChild>
+          <Link href="/dashboard/opportunities/new">New opportunity</Link>
+        </Button>
+      </AdminPageHeader>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterTabs
@@ -207,50 +216,75 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
 
   return (
     <div className="space-y-6">
-      <Button variant="link" size="sm" className="-ml-3 text-muted-foreground" asChild>
-        <Link href="/dashboard/opportunities">All opportunities</Link>
-      </Button>
+      <Part id="opp-back">
+        <Button variant="link" size="sm" className="-ml-3 text-muted-foreground" asChild>
+          <Link href="/dashboard/opportunities">All opportunities</Link>
+        </Button>
+      </Part>
 
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          <PhasePill phase={phase} />
-          <span className="text-sm text-muted-foreground">
-            {KIND_LABELS[detail.kind]}, {detail.reference}
-          </span>
+      <Part id="page-heading">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <PhasePill phase={phase} />
+              <span className="text-sm text-muted-foreground">
+                {KIND_LABELS[detail.kind]}, {detail.reference}
+              </span>
+            </div>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight">{detail.title}</h1>
+            {detail.description && <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{detail.description}</p>}
+          </div>
+          <OpportunityActions
+            opportunityId={detail.id}
+            reference={detail.reference}
+            status={detail.status}
+            canManage={detail.canAward}
+          />
         </div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{detail.title}</h1>
-        {detail.description && <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{detail.description}</p>}
-      </div>
+      </Part>
 
-      <dl className="grid gap-x-6 gap-y-4 rounded-xl border bg-card p-5 sm:grid-cols-2 lg:grid-cols-4">
-        <Fact label="Closes">
-          {formatDate(detail.closesAt)}{" "}
-          <span className="text-muted-foreground">({closingLabel(detail.closesAt).toLowerCase()})</span>
-        </Fact>
-        <Fact label="Value">{formatRand(detail.value)}</Fact>
-        <Fact label="Where">{detail.provinces.length ? detail.provinces.join(", ") : "Nationwide"}</Fact>
-        <Fact label="Industry">{detail.industry || "Any industry"}</Fact>
-        <Fact label="Department">
-          {detail.canAssignDepartment && detail.departments.length > 0 ? (
-            <DepartmentSelect
-              opportunityId={detail.id}
-              value={detail.teamId}
-              departments={detail.departments}
-              allowed={detail.assignableDepartmentIds}
-              className="mt-0.5 h-8 w-full"
-            />
-          ) : (
-            (detail.teamName ?? "No department")
-          )}
-        </Fact>
-        <Fact label="Minimum B-BBEE">{detail.minBbbeeLevel ? `Level ${detail.minBbbeeLevel}` : "None"}</Fact>
-        <Fact label="Services">{detail.services.length ? detail.services.join(", ") : "Any"}</Fact>
-        <div className="sm:col-span-2">
-          <Fact label="Required documents">
-            {detail.requiredDocuments.length ? detail.requiredDocuments.map(docLabel).join(", ") : "None"}
+      {detail.cancellation && (
+        <div className="rounded-md border-l-4 border-l-destructive bg-destructive/10 p-4 text-sm">
+          <p className="font-medium">
+            Cancelled by {detail.cancellation.by} on {formatDateTime(detail.cancellation.at)}
+          </p>
+          <p className="mt-1 text-muted-foreground">{detail.cancellation.reason}</p>
+        </div>
+      )}
+
+      <Part id="opp-facts">
+        <dl className="grid gap-x-6 gap-y-4 rounded-xl border bg-card p-5 sm:grid-cols-2 lg:grid-cols-4">
+          <Fact label="Closes">
+            {formatDate(detail.closesAt)}{" "}
+            {!isFinished(phase) && (
+              <span className="text-muted-foreground">({closingLabel(detail.closesAt).toLowerCase()})</span>
+            )}
           </Fact>
-        </div>
-      </dl>
+          <Fact label="Value">{formatRand(detail.value)}</Fact>
+          <Fact label="Where">{detail.provinces.length ? detail.provinces.join(", ") : "Nationwide"}</Fact>
+          <Fact label="Industry">{detail.industry || "Any industry"}</Fact>
+          <Fact label="Department">
+            {detail.canAssignDepartment && detail.departments.length > 0 ? (
+              <DepartmentSelect
+                opportunityId={detail.id}
+                value={detail.teamId}
+                departments={detail.departments}
+                allowed={detail.assignableDepartmentIds}
+                className="mt-0.5 h-8 w-full"
+              />
+            ) : (
+              (detail.teamName ?? "No department")
+            )}
+          </Fact>
+          <Fact label="Minimum B-BBEE">{detail.minBbbeeLevel ? `Level ${detail.minBbbeeLevel}` : "None"}</Fact>
+          <Fact label="Services">{detail.services.length ? detail.services.join(", ") : "Any"}</Fact>
+          <div className="sm:col-span-2">
+            <Fact label="Required documents">
+              {detail.requiredDocuments.length ? detail.requiredDocuments.map(docLabel).join(", ") : "None"}
+            </Fact>
+          </div>
+        </dl>
+      </Part>
 
       <StatStrip
         items={[
@@ -267,52 +301,66 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
       />
 
       <Tabs defaultValue="applicants">
-        <TabsList>
-          <TabsTrigger value="applicants">Applicants ({detail.applicants.length})</TabsTrigger>
-          <TabsTrigger value="listing">Listing and documents ({detail.documents.length})</TabsTrigger>
-          <TabsTrigger value="activity">Activity</TabsTrigger>
-        </TabsList>
+        <Part id="opp-tabs">
+          <TabsList>
+            <TabsTrigger value="applicants">Applicants ({detail.applicants.length})</TabsTrigger>
+            <TabsTrigger value="requirements">
+              Requirements{detail.tender ? " (" + detail.tender.requirements.length + ")" : ""}
+            </TabsTrigger>
+            <TabsTrigger value="listing">Listing and documents ({detail.documents.length})</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
+          </TabsList>
+        </Part>
 
         <TabsContent value="applicants" className="space-y-6">
-          <EvaluationCard opportunityId={detail.id} applicants={detail.applicants.length} />
-          <Card>
-            <CardHeader>
-              <CardTitle>Applicants</CardTitle>
-              <CardDescription>
-                Ranked best fit first: SMEs that meet every requirement, then by score.{" "}
-                {reviewed
-                  ? "Scored against your evaluation criteria."
-                  : "Eligibility checked. Document review in progress."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 px-0">
-              <div className="px-6">
-                <FilterTabs
-                  label="Filter applicants"
-                  value={filter}
-                  onChange={setFilter}
-                  options={[
-                    { id: "all", label: "All", count: detail.applicants.length },
-                    { id: "qualify", label: "Qualify", count: qualifying.length },
-                    { id: "not", label: "Don’t qualify", count: detail.applicants.length - qualifying.length },
-                  ]}
-                />
-              </div>
-              {visible.length === 0 ? (
-                <p className="px-6 py-6 text-sm text-muted-foreground">
-                  {detail.applicants.length === 0 ? "No SMEs have applied yet." : "No applicants in this group."}
-                </p>
-              ) : (
-                <ApplicantTable
-                  opportunityId={detail.id}
-                  canShortlist={detail.canShortlist}
-                  canAward={detail.canAward}
-                  applicants={visible}
-                  ranks={new Map(detail.applicants.map((a, i) => [a.id, i + 1]))}
-                />
-              )}
-            </CardContent>
-          </Card>
+          <Part id="opp-evaluation">
+            <EvaluationCard opportunityId={detail.id} applicants={detail.applicants.length} />
+          </Part>
+          <Part id="opp-applicants">
+            <Card>
+              <CardHeader>
+                <CardTitle>Applicants</CardTitle>
+                <CardDescription>
+                  Ranked best fit first: SMEs that meet every requirement, then by score.{" "}
+                  {reviewed
+                    ? "Scored against your evaluation criteria."
+                    : "Eligibility checked. Document review in progress."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 px-0">
+                <div className="px-6">
+                  <FilterTabs
+                    label="Filter applicants"
+                    value={filter}
+                    onChange={setFilter}
+                    options={[
+                      { id: "all", label: "All", count: detail.applicants.length },
+                      { id: "qualify", label: "Qualify", count: qualifying.length },
+                      { id: "not", label: "Don’t qualify", count: detail.applicants.length - qualifying.length },
+                    ]}
+                  />
+                </div>
+                {visible.length === 0 ? (
+                  <p className="px-6 py-6 text-sm text-muted-foreground">
+                    {detail.applicants.length === 0 ? "No SMEs have applied yet." : "No applicants in this group."}
+                  </p>
+                ) : (
+                  <ApplicantTable
+                    opportunityId={detail.id}
+                    canShortlist={detail.canShortlist}
+                    canAward={detail.canAward}
+                    applicants={visible}
+                    ranks={new Map(detail.applicants.map((a, i) => [a.id, i + 1]))}
+                    requirements={detail.tender?.status === "confirmed" ? detail.tender.requirements : undefined}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </Part>
+        </TabsContent>
+
+        <TabsContent value="requirements">
+          <RequirementsTab detail={detail} />
         </TabsContent>
 
         <TabsContent value="listing" className="space-y-6">
@@ -568,12 +616,14 @@ function ApplicantTable({
   canAward,
   applicants,
   ranks,
+  requirements,
 }: {
   opportunityId: string;
   canShortlist: boolean;
   canAward: boolean;
   applicants: Applicant[];
   ranks: Map<string, number>;
+  requirements?: TenderRequirement[];
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const recordView = useMutation(api.enterprise.recordApplicationView);
@@ -655,7 +705,12 @@ function ApplicantTable({
               {expanded && (
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableCell colSpan={6} className="px-6 py-4 whitespace-normal">
-                    <ApplicantChecks applicant={a} canAct={canShortlist} canAward={canAward} />
+                    <ApplicantChecks
+                      applicant={a}
+                      canAct={canShortlist}
+                      canAward={canAward}
+                      requirements={requirements}
+                    />
                   </TableCell>
                 </TableRow>
               )}
@@ -671,10 +726,12 @@ function ApplicantChecks({
   applicant,
   canAct,
   canAward,
+  requirements,
 }: {
   applicant: Applicant;
   canAct: boolean;
   canAward: boolean;
+  requirements?: TenderRequirement[];
 }) {
   const { evaluation } = applicant;
   const required = evaluation.checks.filter((c) => c.required);
@@ -742,6 +799,7 @@ function ApplicantChecks({
         applicationId={applicant.id}
         companyName={applicant.sme.companyName}
         evaluation={applicant.evaluation}
+        requirements={requirements}
       />
       <ApplicationLog applicationId={applicant.id} companyName={applicant.sme.companyName} />
     </div>
