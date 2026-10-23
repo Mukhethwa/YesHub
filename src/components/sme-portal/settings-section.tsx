@@ -65,226 +65,231 @@ export function SettingsSection({ sme }: { sme: SmeProfile }) {
         description="Choose how we alert you, what we match you to and who can see your profile."
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Notifications</CardTitle>
-          <CardDescription>Where we send opportunity alerts and reminders.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="divide-y">
-            <SwitchRow
-              plain
-              checked={draft.notifyEmail}
-              onChange={(notifyEmail) => set({ notifyEmail })}
-              label="Email"
-              description={sme.email}
-            />
-            <SwitchRow
-              plain
-              checked={draft.notifySms}
-              onChange={(notifySms) => set({ notifySms })}
-              label="SMS"
-              description={sme.phone}
-            />
-            <SwitchRow
-              plain
-              checked={draft.notifyWhatsapp}
-              onChange={(notifyWhatsapp) => set({ notifyWhatsapp })}
-              label="WhatsApp"
-              description={`${sme.phone}. Works well on low data.`}
-            />
-          </div>
-          {noChannels && (
-            <p className="mt-2 text-sm text-destructive">
-              With every channel off you won’t receive any alerts, including closing date reminders.
-            </p>
-          )}
-          <FormField label="Language for alerts" htmlFor="language" className="mt-4 md:max-w-xs">
-            <SelectInput
-              id="language"
-              value={draft.language}
-              onChange={(language) => set({ language })}
-              placeholder="Select language"
-              options={LANGUAGES}
-            />
-          </FormField>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Alerts</CardTitle>
-          <CardDescription>What we notify you about.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="divide-y">
-            <SwitchRow
-              plain
-              checked={draft.alertNewMatches}
-              onChange={(alertNewMatches) => set({ alertNewMatches })}
-              label="New matching opportunities"
-              description="As soon as a tender, RFQ or grant that fits your profile is published."
-            />
-            <div>
+      {/* Two cards a row on wide screens */}
+      <div className="grid items-start gap-5 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+            <CardDescription>Where we send opportunity alerts and reminders.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
               <SwitchRow
                 plain
-                checked={draft.alertDeadlines}
-                onChange={(alertDeadlines) => set({ alertDeadlines })}
-                label="Closing date reminders"
-                description="For opportunities you’ve saved or started applying to."
+                checked={draft.notifyEmail}
+                onChange={(notifyEmail) => set({ notifyEmail })}
+                label="Email"
+                description={sme.email}
               />
-              {draft.alertDeadlines && (
-                <FormField label="Remind me" htmlFor="deadlineReminderDays" className="pb-4 md:max-w-xs">
-                  <SelectInput
-                    id="deadlineReminderDays"
-                    value={draft.deadlineReminderDays}
-                    onChange={(deadlineReminderDays) => set({ deadlineReminderDays })}
-                    placeholder="Select"
-                    options={REMINDER_DAYS}
-                  />
-                </FormField>
-              )}
+              <SwitchRow
+                plain
+                checked={draft.notifySms}
+                onChange={(notifySms) => set({ notifySms })}
+                label="SMS"
+                description={sme.phone}
+              />
+              <SwitchRow
+                plain
+                checked={draft.notifyWhatsapp}
+                onChange={(notifyWhatsapp) => set({ notifyWhatsapp })}
+                label="WhatsApp"
+                description={`${sme.phone}. Works well on low data.`}
+              />
             </div>
-            <SwitchRow
-              plain
-              checked={draft.alertStatusUpdates}
-              onChange={(alertStatusUpdates) => set({ alertStatusUpdates })}
-              label="Shortlist and application updates"
-              description="When a corporate or funder shortlists you, asks a question or makes a decision."
-            />
-            <SwitchRow
-              plain
-              checked={draft.alertDocExpiry}
-              onChange={(alertDocExpiry) => set({ alertDocExpiry })}
-              label="Document expiry reminders"
-              description="30 days before your B-BBEE certificate or tax clearance expires."
-            />
-            <SwitchRow
-              plain
-              checked={draft.weeklyDigest}
-              onChange={(weeklyDigest) => set({ weeklyDigest })}
-              label="Weekly summary"
-              description="One email every Monday with open opportunities in your area."
-            />
-          </div>
-        </CardContent>
-      </Card>
+            {noChannels && (
+              <p className="mt-2 text-sm text-destructive">
+                With every channel off you won’t receive any alerts, including closing date reminders.
+              </p>
+            )}
+            <FormField label="Language for alerts" htmlFor="language" className="mt-4 md:max-w-xs">
+              <SelectInput
+                id="language"
+                value={draft.language}
+                onChange={(language) => set({ language })}
+                placeholder="Select language"
+                options={LANGUAGES}
+              />
+            </FormField>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Matching preferences</CardTitle>
-          <CardDescription>Narrow down which opportunities we match you to.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FormField
-            label="Opportunity types"
-            htmlFor="opportunityTypes"
-            hint="Leave them all selected to see everything."
-          >
-            <ChipGroup
-              id="opportunityTypes"
-              options={OPPORTUNITY_TYPES}
-              value={draft.opportunityTypes}
-              onChange={(opportunityTypes) => set({ opportunityTypes })}
-            />
-          </FormField>
-          {draft.opportunityTypes.length === 0 && (
-            <p className="mt-2 text-sm text-destructive">
-              Select at least one type, or you won’t be matched to anything.
-            </p>
-          )}
-          <FormField label="Minimum contract value" htmlFor="minContractValue" className="mt-5 md:max-w-xs">
-            <SelectInput
-              id="minContractValue"
-              value={draft.minContractValue}
-              onChange={(minContractValue) => set({ minContractValue })}
-              placeholder="Select"
-              options={CONTRACT_VALUES}
-            />
-          </FormField>
-          <div className="mt-2 border-t">
-            <SwitchRow
-              plain
-              checked={draft.eligibleOnly}
-              onChange={(eligibleOnly) => set({ eligibleOnly })}
-              label="Only show opportunities that fit my profile"
-              description="Hide opportunities in provinces, fields or B-BBEE levels outside your profile. Missing documents never hide one: you get tips instead."
-            />
-          </div>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Alerts</CardTitle>
+            <CardDescription>What we notify you about.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              <SwitchRow
+                plain
+                checked={draft.alertNewMatches}
+                onChange={(alertNewMatches) => set({ alertNewMatches })}
+                label="New matching opportunities"
+                description="As soon as a tender, RFQ or grant that fits your profile is published."
+              />
+              <div>
+                <SwitchRow
+                  plain
+                  checked={draft.alertDeadlines}
+                  onChange={(alertDeadlines) => set({ alertDeadlines })}
+                  label="Closing date reminders"
+                  description="For opportunities you’ve saved or started applying to."
+                />
+                {draft.alertDeadlines && (
+                  <FormField label="Remind me" htmlFor="deadlineReminderDays" className="pb-4 md:max-w-xs">
+                    <SelectInput
+                      id="deadlineReminderDays"
+                      value={draft.deadlineReminderDays}
+                      onChange={(deadlineReminderDays) => set({ deadlineReminderDays })}
+                      placeholder="Select"
+                      options={REMINDER_DAYS}
+                    />
+                  </FormField>
+                )}
+              </div>
+              <SwitchRow
+                plain
+                checked={draft.alertStatusUpdates}
+                onChange={(alertStatusUpdates) => set({ alertStatusUpdates })}
+                label="Shortlist and application updates"
+                description="When a corporate or funder shortlists you, asks a question or makes a decision."
+              />
+              <SwitchRow
+                plain
+                checked={draft.alertDocExpiry}
+                onChange={(alertDocExpiry) => set({ alertDocExpiry })}
+                label="Document expiry reminders"
+                description="30 days before your B-BBEE certificate or tax clearance expires."
+              />
+              <SwitchRow
+                plain
+                checked={draft.weeklyDigest}
+                onChange={(weeklyDigest) => set({ weeklyDigest })}
+                label="Weekly summary"
+                description="One email every Monday with open opportunities in your area."
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Data and privacy</CardTitle>
-          <CardDescription>You gave consent to share your profile on {formatDate(sme.consentedAt)}.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="divide-y">
-            <SwitchRow
-              plain
-              checked={draft.lowDataMode}
-              onChange={(lowDataMode) => set({ lowDataMode })}
-              label="Low-data mode"
-              description="Lighter pages and text-only alerts for slow or expensive connections."
-            />
-            <SwitchRow
-              plain
-              checked={draft.profileVisible}
-              onChange={(profileVisible) => set({ profileVisible })}
-              label="Show my profile to corporates and funders"
-              description="Turning this off pauses all matching. Your data stays saved."
-            />
-            <SwitchRow
-              plain
-              checked={draft.shareContactAfterShortlist}
-              onChange={(shareContactAfterShortlist) => set({ shareContactAfterShortlist })}
-              label="Share contact details only after I’m shortlisted"
-              description="Buyers see your company profile first and your name, email and number once they shortlist you."
-            />
-          </div>
-          <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">Download a copy of everything we hold about your business.</p>
-            <Button variant="outline" onClick={downloadData}>
-              Download my data
+        <Card>
+          <CardHeader>
+            <CardTitle>Matching preferences</CardTitle>
+            <CardDescription>Narrow down which opportunities we match you to.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FormField
+              label="Opportunity types"
+              htmlFor="opportunityTypes"
+              hint="Leave them all selected to see everything."
+            >
+              <ChipGroup
+                id="opportunityTypes"
+                options={OPPORTUNITY_TYPES}
+                value={draft.opportunityTypes}
+                onChange={(opportunityTypes) => set({ opportunityTypes })}
+              />
+            </FormField>
+            {draft.opportunityTypes.length === 0 && (
+              <p className="mt-2 text-sm text-destructive">
+                Select at least one type, or you won’t be matched to anything.
+              </p>
+            )}
+            <FormField label="Minimum contract value" htmlFor="minContractValue" className="mt-5 md:max-w-xs">
+              <SelectInput
+                id="minContractValue"
+                value={draft.minContractValue}
+                onChange={(minContractValue) => set({ minContractValue })}
+                placeholder="Select"
+                options={CONTRACT_VALUES}
+              />
+            </FormField>
+            <div className="mt-2 border-t">
+              <SwitchRow
+                plain
+                checked={draft.eligibleOnly}
+                onChange={(eligibleOnly) => set({ eligibleOnly })}
+                label="Only show opportunities that fit my profile"
+                description="Hide opportunities in provinces, fields or B-BBEE levels outside your profile. Missing documents never hide one: you get tips instead."
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Data and privacy</CardTitle>
+            <CardDescription>You gave consent to share your profile on {formatDate(sme.consentedAt)}.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              <SwitchRow
+                plain
+                checked={draft.lowDataMode}
+                onChange={(lowDataMode) => set({ lowDataMode })}
+                label="Low-data mode"
+                description="Lighter pages and text-only alerts for slow or expensive connections."
+              />
+              <SwitchRow
+                plain
+                checked={draft.profileVisible}
+                onChange={(profileVisible) => set({ profileVisible })}
+                label="Show my profile to corporates and funders"
+                description="Turning this off pauses all matching. Your data stays saved."
+              />
+              <SwitchRow
+                plain
+                checked={draft.shareContactAfterShortlist}
+                onChange={(shareContactAfterShortlist) => set({ shareContactAfterShortlist })}
+                label="Share contact details only after I’m shortlisted"
+                description="Buyers see your company profile first and your name, email and number once they shortlist you."
+              />
+            </div>
+            <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Download a copy of everything we hold about your business.
+              </p>
+              <Button variant="outline" onClick={downloadData}>
+                Download my data
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-xl border bg-card px-5 py-4 shadow-md sm:flex-row sm:items-center sm:justify-between xl:col-span-2">
+          <p className={cn("text-sm", !dirty && "text-muted-foreground")}>
+            {dirty ? "You have unsaved changes." : "All changes saved."}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="ghost" disabled={!dirty || saving} onClick={() => setDraft(saved)}>
+              Discard
+            </Button>
+            <Button disabled={!dirty || saving} onClick={save}>
+              {saving && <Spinner />}
+              {saving ? "Saving…" : "Save changes"}
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-xl border bg-card px-5 py-4 shadow-md sm:flex-row sm:items-center sm:justify-between">
-        <p className={cn("text-sm", !dirty && "text-muted-foreground")}>
-          {dirty ? "You have unsaved changes." : "All changes saved."}
-        </p>
-        <div className="flex gap-2">
-          <Button variant="ghost" disabled={!dirty || saving} onClick={() => setDraft(saved)}>
-            Discard
-          </Button>
-          <Button disabled={!dirty || saving} onClick={save}>
-            {saving && <Spinner />}
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Sign-in and security</CardTitle>
+            <CardDescription>
+              Your password, sign-in email and active sessions are managed with your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" asChild>
+              <Link href="/settings/security">
+                Account security
+                <ArrowRightIcon />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <DeleteProfileCard sme={sme} />
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Sign-in and security</CardTitle>
-          <CardDescription>
-            Your password, sign-in email and active sessions are managed with your account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" asChild>
-            <Link href="/settings/security">
-              Account security
-              <ArrowRightIcon />
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
-
-      <DeleteProfileCard sme={sme} />
     </div>
   );
 }

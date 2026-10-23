@@ -32,6 +32,19 @@ import { FilterTabs } from "./shared";
 
 type Data = NonNullable<FunctionReturnType<typeof api.analytics.platform>>;
 
+/** "platform" for MASLink staff; "organisation" for an enterprise, where the SMEs are its applicants. */
+export type AnalyticsScope = "platform" | "organisation";
+
+const WORDS = {
+  platform: { smes: "SMEs", newSmes: "New SMEs", opportunities: "Opportunities", published: "Opportunities published" },
+  organisation: {
+    smes: "Applicants",
+    newSmes: "New applicants",
+    opportunities: "Listings",
+    published: "Listings published",
+  },
+} as const;
+
 /** Every kind of opportunity, procurement then ESD, in the colours their tiles use. */
 const KIND = {
   tender: { label: "Tenders", className: "bg-brand-blue" },
@@ -118,13 +131,24 @@ function provinceValues(
   );
 }
 
-function MapMetricTabs({ value, onChange }: { value: MapMetric; onChange: (m: MapMetric) => void }) {
+function MapMetricTabs({
+  value,
+  onChange,
+  scope = "platform",
+}: {
+  value: MapMetric;
+  onChange: (m: MapMetric) => void;
+  scope?: AnalyticsScope;
+}) {
   return (
     <FilterTabs
       label="Map shows"
       value={value}
       onChange={onChange}
-      options={(Object.keys(MAP_METRICS) as MapMetric[]).map((id) => ({ id, label: MAP_METRICS[id].label }))}
+      options={(Object.keys(MAP_METRICS) as MapMetric[]).map((id) => ({
+        id,
+        label: id === "smes" ? WORDS[scope].smes : MAP_METRICS[id].label,
+      }))}
     />
   );
 }
@@ -183,16 +207,16 @@ function Card({ children, className }: { children: ReactNode; className?: string
   return <div className={cn("rounded-lg border bg-card p-5", className)}>{children}</div>;
 }
 
-export function PlatformAnalytics() {
+export function PlatformAnalytics({ scope = "platform" }: { scope?: AnalyticsScope }) {
   return (
     <RefreshScope>
-      <Analytics />
+      <Analytics scope={scope} />
     </RefreshScope>
   );
 }
 
-function Analytics() {
-  const data = useQuery(api.analytics.platform);
+function Analytics({ scope }: { scope: AnalyticsScope }) {
+  const data = useQuery(scope === "platform" ? api.analytics.platform : api.analytics.organisation);
   const now = useNow();
   const [range, setRange] = useTableState<Range>("analytics.range", "30d");
   const [metric, setMetric] = useTableState<MapMetric>("analytics.map", "activity");
@@ -225,8 +249,8 @@ function Analytics() {
       [
         { header: range === "12m" ? "Month" : range === "90d" ? "Week of" : "Day", value: (r) => r.label },
         { header: "New accounts", value: (r) => series.accounts[r.i] },
-        { header: "New SMEs", value: (r) => series.smes[r.i] },
-        { header: "Opportunities published", value: (r) => series.opportunities[r.i] },
+        { header: WORDS[scope].newSmes, value: (r) => series.smes[r.i] },
+        { header: WORDS[scope].published, value: (r) => series.opportunities[r.i] },
         { header: "Applications", value: (r) => series.applications[r.i] },
         { header: "Actions", value: (r) => series.activity[r.i] },
       ],
@@ -264,7 +288,7 @@ function Analytics() {
   return (
     <div className="space-y-8">
       {header}
-      <Report data={data} period={period} range={range} metric={metric} onMetric={setMetric} />
+      <Report data={data} period={period} range={range} metric={metric} onMetric={setMetric} scope={scope} />
     </div>
   );
 }
@@ -275,13 +299,16 @@ function Report({
   range,
   metric,
   onMetric,
+  scope,
 }: {
   data: Data;
   period: Period;
   range: Range;
   metric: MapMetric;
   onMetric: (m: MapMetric) => void;
+  scope: AnalyticsScope;
 }) {
+  const words = WORDS[scope];
   const previous = RANGES.find((r) => r.id === range)!.previous;
   const current = (t: number) => within(t, period);
   const before = (t: number) => within(t, period.previous);
@@ -338,7 +365,7 @@ function Report({
         variant="brand"
         items={[
           {
-            label: "New SMEs",
+            label: words.newSmes,
             icon: StoreIcon,
             value: smes.length,
             context: (
@@ -346,7 +373,7 @@ function Report({
             ),
           },
           {
-            label: "Opportunities published",
+            label: words.published,
             icon: BriefcaseBusinessIcon,
             value: opportunities.length,
             context: (
@@ -393,7 +420,7 @@ function Report({
                 ),
               },
               {
-                label: "New SMEs",
+                label: words.newSmes,
                 className: "bg-brand-green",
                 values: countByBucket(
                   smes.map((s) => s.t),
@@ -401,7 +428,7 @@ function Report({
                 ),
               },
               {
-                label: "Opportunities",
+                label: words.opportunities,
                 className: "bg-brand-yellow",
                 values: countByBucket(
                   opportunities.map((o) => o.t),
@@ -413,9 +440,13 @@ function Report({
         </Card>
       </Section>
 
-      <Section title="Across South Africa" action={<MapMetricTabs value={metric} onChange={onMetric} />}>
+      <Section title="Across South Africa" action={<MapMetricTabs value={metric} onChange={onMetric} scope={scope} />}>
         <Card>
-          <ProvinceMap values={mapValues} unit={MAP_METRICS[metric].unit} tone={MAP_METRICS[metric].tone} />
+          <ProvinceMap
+            values={mapValues}
+            unit={metric === "smes" ? words.smes.toLowerCase() : MAP_METRICS[metric].unit}
+            tone={MAP_METRICS[metric].tone}
+          />
         </Card>
       </Section>
 
@@ -537,7 +568,7 @@ function Report({
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        <Section title="Opportunities by type">
+        <Section title={`${words.opportunities} by type`}>
           <Card>
             <BarChart
               compact
@@ -556,7 +587,7 @@ function Report({
           </Card>
         </Section>
 
-        <Section title="SMEs by B-BBEE level">
+        <Section title={`${words.smes} by B-BBEE level`}>
           <Card>
             <BarChart
               compact
@@ -577,7 +608,7 @@ function Report({
           </Card>
         </Section>
 
-        <Section title="SMEs by industry">
+        <Section title={`${words.smes} by industry`}>
           <Card>
             <BarChart
               compact

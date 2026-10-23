@@ -1,5 +1,6 @@
 import {
   BriefcaseBusinessIcon,
+  ChartColumnIcon,
   HandHeartIcon,
   LayoutDashboardIcon,
   ListChecksIcon,
@@ -23,6 +24,7 @@ export const ENTERPRISE_NAV = {
   },
   suppliers: { href: "/dashboard/suppliers", label: "Find suppliers", icon: SearchCheckIcon },
   shortlists: { href: "/dashboard/shortlists", label: "Shortlists", icon: ListChecksIcon },
+  analytics: { href: "/dashboard/analytics", label: "Analytics", icon: ChartColumnIcon },
   team: { href: "/dashboard/team", label: "Team", icon: UsersIcon },
   audit: { href: "/dashboard/audit", label: "Audit log", icon: ScrollTextIcon },
   settings: { href: "/dashboard/settings", label: "Settings", icon: SettingsIcon },

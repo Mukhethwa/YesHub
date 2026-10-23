@@ -46,20 +46,23 @@ export function DocumentsSection({ sme }: { sme: SmeProfile }) {
         </CardContent>
       </Card>
 
-      <DocGroup
-        title="Required for most tenders"
-        description="Corporates and government buyers usually can’t contract without these."
-        docs={DOCUMENTS.filter((d) => d.required)}
-        sme={sme}
-        urls={urls}
-      />
-      <DocGroup
-        title="Recommended"
-        description="These make you easier to approve as a new supplier."
-        docs={DOCUMENTS.filter((d) => !d.required)}
-        sme={sme}
-        urls={urls}
-      />
+      {/* Required and recommended side by side on wide screens */}
+      <div className="grid items-start gap-5 xl:grid-cols-2">
+        <DocGroup
+          title="Required for most tenders"
+          description="Corporates and government buyers usually can’t contract without these."
+          docs={DOCUMENTS.filter((d) => d.required)}
+          sme={sme}
+          urls={urls}
+        />
+        <DocGroup
+          title="Recommended"
+          description="These make you easier to approve as a new supplier."
+          docs={DOCUMENTS.filter((d) => !d.required)}
+          sme={sme}
+          urls={urls}
+        />
+      </div>
     </div>
   );
 }
