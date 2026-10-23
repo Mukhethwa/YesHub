@@ -198,7 +198,8 @@ export function ApplicantReviewStatus({
   );
 }
 
-type ActionStatus = ApplicationStatus;
+// Withdrawing is the SME's to do, never the buyer's
+type ActionStatus = Exclude<ApplicationStatus, "withdrawn">;
 
 const ACTIONS: Record<ActionStatus, { label: string; title: string; done: string }> = {
   shortlisted: { label: "Shortlist", title: "Shortlist", done: "Shortlisted" },
@@ -229,7 +230,7 @@ export function ApplicantActions({
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
 
-  if (status === "awarded") return null;
+  if (status === "awarded" || status === "withdrawn") return null;
   const options: ActionStatus[] =
     status === "shortlisted"
       ? [...(canAward ? (["awarded"] as const) : []), "submitted", "declined"]

@@ -188,7 +188,13 @@ function SupplierDirectory() {
 
 type Profile = NonNullable<FunctionReturnType<typeof api.enterprise.supplier>>;
 
-const STATUS_LABELS = { submitted: "Applied", shortlisted: "Shortlisted", declined: "Declined", awarded: "Awarded" };
+const STATUS_LABELS = {
+  submitted: "Applied",
+  shortlisted: "Shortlisted",
+  declined: "Declined",
+  awarded: "Awarded",
+  withdrawn: "Withdrawn",
+};
 
 function Detail({ label, children }: { label: string; children: React.ReactNode }) {
   return (

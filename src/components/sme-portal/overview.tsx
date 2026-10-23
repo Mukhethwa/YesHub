@@ -16,6 +16,7 @@ import { Suspense } from "react";
 
 import { EmptyState } from "@/components/app/empty-state";
 import { CheckSegments } from "@/components/app/score";
+import { isFinished, phaseOf } from "@/components/enterprise/tenders";
 import { Section } from "@/components/app/section";
 import { StatStrip } from "@/components/app/stat-strip";
 import { Status, Tag } from "@/components/app/status";
@@ -150,9 +151,10 @@ function SmeSummary({
   const matches = useMatches(sme);
   const applications = useQuery(api.smeOpportunities.myApplications);
   const newMatches = (matches ?? []).filter((m) => !m.application && m.reach !== "outside").length;
-  const active = (applications ?? []).filter(
-    (r) => r.application.status === "submitted" || r.application.status === "shortlisted",
-  );
+  const submitted = (applications ?? []).filter((r) => r.status === "submitted").length;
+  const unfinished = (applications ?? []).filter(
+    (r) => r.status === "in_progress" && !isFinished(phaseOf(r.opportunity)),
+  ).length;
   const missing = documents.requiredTotal - documents.requiredDone;
 
   return (
@@ -174,11 +176,12 @@ function SmeSummary({
           action: newMatches ? { label: "See matches", href: "/sme/matches" } : undefined,
         },
         {
-          label: "Applications in progress",
+          label: "Applications submitted",
           icon: SendIcon,
-          value: applications === undefined ? "–" : active.length,
+          value: applications === undefined ? "–" : submitted,
           href: "/sme/opportunities",
-          context: `${applications?.length ?? 0} in total`,
+          context: unfinished ? undefined : "None in progress",
+          action: unfinished ? { label: `Finish ${unfinished} in progress`, href: "/sme/opportunities" } : undefined,
         },
         {
           label: "Documents",

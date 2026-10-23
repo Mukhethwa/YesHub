@@ -2,12 +2,14 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
+import Link from "next/link";
 import { type FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Pill } from "@/components/admin/page-header";
 import { daysUntil } from "@/components/enterprise/tenders";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +30,8 @@ import type { SmeProfile } from "@/lib/sme/types";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { evaluateApplication, type EvaluableOpportunity } from "../../../convex/lib/evaluation";
-import type { ApplicationStatus, Evaluation, OpportunityKind } from "../../../convex/schema";
+import type { Evaluation, OpportunityKind } from "../../../convex/schema";
+import type { SmeApplicationStatus } from "../../../convex/smeOpportunities";
 
 export type FeedItem = NonNullable<FunctionReturnType<typeof api.smeOpportunities.feed>>[number];
 
@@ -92,7 +95,8 @@ export type Match = FeedItem & { evaluation: Evaluation; reach: Reach };
 
 /**
  * Open opportunities that haven't closed, each checked against the SME with the same rules buyers use,
- * best fit first. Undefined while loading.
+ * best fit first. The check orders matches and drives recommendations; its score is never shown to the SME.
+ * Undefined while loading.
  */
 export function useMatches(sme: SmeProfile) {
   const feed = useQuery(api.smeOpportunities.feed);
@@ -118,62 +122,115 @@ export function useMatches(sme: SmeProfile) {
 /* Shared display pieces                                                                                  */
 /* ------------------------------------------------------------------------------------------------------ */
 
-const STATUS: Record<ApplicationStatus, { label: string; tone: "neutral" | "success" | "danger" | "info" }> = {
+const STATUS: Record<SmeApplicationStatus, { label: string; tone: "neutral" | "info" }> = {
+  in_progress: { label: "In progress", tone: "info" },
   submitted: { label: "Submitted", tone: "neutral" },
-  shortlisted: { label: "Shortlisted", tone: "success" },
-  declined: { label: "Not successful", tone: "danger" },
-  awarded: { label: "Awarded", tone: "info" },
+  withdrawn: { label: "Withdrawn", tone: "neutral" },
 };
 
-export function ApplicationStatusPill({ status }: { status: ApplicationStatus }) {
+/** The only application status an SME sees: in progress, submitted or withdrawn. */
+export function ApplicationStatusPill({ status }: { status: SmeApplicationStatus }) {
   return <Pill tone={STATUS[status].tone}>{STATUS[status].label}</Pill>;
 }
 
-export function FitPill({ evaluation }: { evaluation: Evaluation }) {
-  return evaluation.qualifies ? (
-    <Pill tone="success">You qualify</Pill>
-  ) : (
-    <Pill tone="danger">You don’t qualify yet</Pill>
-  );
+/**
+ * Whether the SME's profile fits what the listing is for (where the work is, B-BBEE level, its field, good
+ * standing). Documents aren't part of it: missing documents are something to fix, so they're recommendations.
+ */
+export function fitsProfile(evaluation: Evaluation) {
+  return evaluation.checks.filter((c) => c.required && c.id !== "documents").every((c) => c.passed);
 }
 
-/** Requirements and strengths, met or not. */
-export function ChecksList({ evaluation }: { evaluation: Evaluation }) {
-  // The tender's own requirements have their own checklist, with what to do about each
-  const checks = evaluation.requirements
-    ? evaluation.checks.filter((c) => !c.id.startsWith("tender-") || c.id === "tender-threshold")
-    : evaluation.checks;
-  const groups = [
-    { title: "Requirements", checks: checks.filter((c) => c.required) },
-    { title: "Strengths", checks: checks.filter((c) => !c.required) },
-  ];
+export type Recommendation = { id: string; text: string; action?: { label: string; href: string } };
+
+const DOCUMENTS_ACTION = { label: "Update documents", href: "/sme/documents" };
+const PROFILE_ACTION = { label: "Edit profile", href: "/sme/profile" };
+
+/**
+ * What would strengthen the SME's application to a listing, from the checks its profile doesn't meet yet.
+ * Phrased as advice: the SME is never told it doesn't qualify.
+ */
+export function recommendationsFor(
+  evaluation: Evaluation,
+  opportunity: { provinces: string[]; industry: string },
+): Recommendation[] {
+  const gaps = evaluation.checks.filter((c) => !c.passed);
+  const ordered = [...gaps.filter((c) => c.required), ...gaps.filter((c) => !c.required)];
+  return ordered.flatMap((check): Recommendation[] => {
+    switch (check.id) {
+      case "documents":
+        return [{ id: check.id, text: `Bring your documents up to date: ${check.detail}.`, action: DOCUMENTS_ACTION }];
+      case "bbbee":
+        return [
+          {
+            id: check.id,
+            text: `This buyer asks for ${check.label}. A current certificate at that level strengthens your application.`,
+            action: { label: "Update B-BBEE certificate", href: "/sme/documents" },
+          },
+        ];
+      case "province":
+        return [
+          {
+            id: check.id,
+            text: `The work is in ${opportunity.provinces.join(", ")}. If you can deliver there, add it to the provinces on your profile.`,
+            action: PROFILE_ACTION,
+          },
+        ];
+      case "sector":
+        return [
+          {
+            id: check.id,
+            text: `The buyer is looking for ${opportunity.industry} work. If you do this kind of work, list those services on your profile.`,
+            action: PROFILE_ACTION,
+          },
+        ];
+      case "services":
+        return [
+          {
+            id: check.id,
+            text: "List the services this work needs on your profile, if you offer them.",
+            action: PROFILE_ACTION,
+          },
+        ];
+      case "csd":
+        return [
+          {
+            id: check.id,
+            text: "Add your Central Supplier Database (CSD) number to your profile. Most buyers check it.",
+            action: PROFILE_ACTION,
+          },
+        ];
+      case "pack":
+        return [
+          {
+            id: check.id,
+            text: `Complete your document pack (${check.detail}) so buyers have everything they need.`,
+            action: DOCUMENTS_ACTION,
+          },
+        ];
+      case "standing":
+        return [{ id: check.id, text: "Your profile is suspended. Contact MASLink to restore it before you apply." }];
+      default:
+        return [];
+    }
+  });
+}
+
+/** Advice for strengthening an application, each with what to do. */
+export function RecommendationList({ recommendations }: { recommendations: Recommendation[] }) {
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      {groups.map((group) => (
-        <div key={group.title}>
-          <p className="mb-2 text-xs font-medium text-muted-foreground">{group.title}</p>
-          <ul className="space-y-2">
-            {group.checks.map((c) => (
-              <li key={c.id} className="flex items-baseline justify-between gap-4 text-sm">
-                <span>
-                  <span className="font-medium">{c.label}</span>
-                  <span className="block text-xs text-muted-foreground">{c.detail}</span>
-                </span>
-                <span
-                  className={
-                    c.passed
-                      ? "shrink-0 text-xs font-medium text-success"
-                      : "shrink-0 text-xs font-medium text-destructive"
-                  }
-                >
-                  {c.passed ? "Met" : "Not met"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+    <ul className="divide-y rounded-lg border">
+      {recommendations.map((r) => (
+        <li key={r.id} className="flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <span>{r.text}</span>
+          {r.action && (
+            <Button variant="outline" size="sm" className="shrink-0" asChild>
+              <Link href={r.action.href}>{r.action.label}</Link>
+            </Button>
+          )}
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -183,56 +240,89 @@ const ATTACHMENT_ACCEPT = "application/pdf,image/png,image/jpeg";
 
 type Attachment = { id: number; label: string; file: File | null };
 
+/** What the SME saved on an unfinished application. */
+export type SavedApplication = {
+  quote: number | null;
+  proposal: string | null;
+  attachments: { label: string; name: string }[];
+};
+
 /**
  * Opens the application form: a quote when the buyer scores price, a short proposal and supporting
- * documents. Jev reads them with the compliance documents on the profile and scores the application.
+ * documents. The SME can send it, or save it and finish later ("In progress"); the buyer only sees it once
+ * it's sent.
  */
 export function ApplyButton({
   opportunityId,
   title,
-  qualifies,
   scoresPrice,
+  saved = null,
   size = "sm",
 }: {
   opportunityId: Id<"opportunities">;
   title: string;
-  qualifies: boolean;
   scoresPrice: boolean;
+  saved?: SavedApplication | null;
   size?: "sm" | "default";
 }) {
   const apply = useMutation(api.smeOpportunities.apply);
+  const saveDraft = useMutation(api.smeOpportunities.saveDraft);
   const upload = useUploadFile();
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<"send" | "save" | null>(null);
   const [quote, setQuote] = useState("");
   const [proposal, setProposal] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [removeSaved, setRemoveSaved] = useState<number[]>([]);
 
+  const savedFiles = saved?.attachments ?? [];
+  const room = MAX_ATTACHMENTS - (savedFiles.length - removeSaved.length);
   const quoteValue = Number(quote.replace(/[\s,R]/gi, ""));
   const quoteOk = !scoresPrice || (quote.trim() !== "" && quoteValue > 0);
-  const attachmentsOk = attachments.every((a) => a.file && a.label.trim());
+  const quoteValid = quote.trim() === "" || quoteValue > 0;
+  const attachmentsOk = attachments.every((a) => a.file && a.label.trim()) && attachments.length <= room;
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setPending(true);
+  // Each time the form opens it starts from what's saved
+  const openForm = (next: boolean) => {
+    if (pending) return;
+    if (next) {
+      setQuote(saved?.quote != null ? String(saved.quote) : "");
+      setProposal(saved?.proposal ?? "");
+      setAttachments([]);
+      setRemoveSaved([]);
+    }
+    setOpen(next);
+  };
+
+  const send = async (mode: "send" | "save") => {
+    setPending(mode);
     try {
       const uploaded = [];
       for (const a of attachments) {
         const file = await upload(a.file!);
         uploaded.push({ ...file, label: a.label.trim() });
       }
-      await apply({
+      const args = {
         opportunityId,
         quote: quote.trim() ? quoteValue : undefined,
         proposal: proposal.trim() || undefined,
         attachments: uploaded,
-      });
-      toast.success(`Applied to ${title}. Your documents are being reviewed.`);
+        removeSaved,
+      };
+      if (mode === "send") {
+        await apply(args);
+        toast.success(`Application sent for ${title}.`);
+      } else {
+        await saveDraft(args);
+        toast.success("Saved. Finish it any time from Opportunities.");
+      }
       setOpen(false);
     } catch (error) {
-      toast.error(errorMessage(error, "Couldn’t send your application."));
+      toast.error(
+        errorMessage(error, mode === "send" ? "Couldn’t send your application." : "Couldn’t save your application."),
+      );
     } finally {
-      setPending(false);
+      setPending(null);
     }
   };
 
@@ -240,24 +330,25 @@ export function ApplyButton({
     setAttachments((list) => list.map((a) => (a.id === id ? { ...a, ...change } : a)));
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
+    <Dialog open={open} onOpenChange={openForm}>
       <DialogTrigger asChild>
-        <Button size={size}>Apply</Button>
+        <Button size={size}>{saved ? "Continue application" : "Apply"}</Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <form onSubmit={submit} className="space-y-5">
+        <form
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault();
+            void send("send");
+          }}
+          className="space-y-5"
+        >
           <DialogHeader>
             <DialogTitle>Apply to {title}</DialogTitle>
             <DialogDescription>
-              Your compliance documents and any attachments are reviewed and scored against the buyer’s criteria.
+              Your compliance documents come from your profile. Not ready yet? Save it and finish later: the buyer only
+              sees your application once you send it.
             </DialogDescription>
           </DialogHeader>
-
-          {!qualifies && (
-            <p className="rounded-md bg-warning/10 px-3 py-2 text-sm text-warning">
-              Some requirements are not met. The buyer will see which.
-            </p>
-          )}
 
           <FieldGroup>
             <Field>
@@ -268,11 +359,10 @@ export function ApplyButton({
                 placeholder="e.g. 1 250 000"
                 value={quote}
                 onChange={(e) => setQuote(e.target.value)}
-                required={scoresPrice}
               />
               <FieldDescription>
                 {scoresPrice
-                  ? "Required. Price is scored with the PPPFA formula."
+                  ? "Needed before you send. This buyer evaluates price."
                   : "Leave empty if the opportunity doesn’t ask for a price."}
               </FieldDescription>
             </Field>
@@ -286,7 +376,7 @@ export function ApplyButton({
                 value={proposal}
                 onChange={(e) => setProposal(e.target.value)}
               />
-              <FieldDescription>Used to score functionality.</FieldDescription>
+              <FieldDescription>The buyer reads this to understand how you’d deliver.</FieldDescription>
             </Field>
 
             <div className="space-y-3">
@@ -296,16 +386,33 @@ export function ApplyButton({
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={attachments.length >= MAX_ATTACHMENTS}
+                  disabled={attachments.length >= room}
                   onClick={() => setAttachments((list) => [...list, { id: Date.now(), label: "", file: null }])}
                 >
                   Add document
                 </Button>
               </div>
-              {attachments.length === 0 && (
+              {savedFiles.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Saved with this application</p>
+                  {savedFiles.map((f, i) => (
+                    <label key={`${f.name}-${i}`} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={removeSaved.includes(i)}
+                        onCheckedChange={(checked) =>
+                          setRemoveSaved((list) => (checked ? [...list, i] : list.filter((n) => n !== i)))
+                        }
+                      />
+                      <span>
+                        Remove {f.label} <span className="text-muted-foreground">({f.name})</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {attachments.length === 0 && savedFiles.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  E.g. a pricing schedule, method statement or returnable forms. PDF, JPG or PNG, up to 10 MB each. Your
-                  compliance documents come from your profile.
+                  E.g. a pricing schedule, method statement or returnable forms. PDF, JPG or PNG, up to 10 MB each.
                 </p>
               )}
               {attachments.map((a) => (
@@ -339,13 +446,22 @@ export function ApplyButton({
             </div>
           </FieldGroup>
 
-          <DialogFooter>
-            <Button type="button" variant="ghost" disabled={pending} onClick={() => setOpen(false)}>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="ghost" disabled={!!pending} onClick={() => openForm(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending || !quoteOk || !attachmentsOk}>
-              {pending && <Spinner />}
-              {qualifies ? "Send application" : "Apply anyway"}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!!pending || !quoteValid || !attachmentsOk}
+              onClick={() => void send("save")}
+            >
+              {pending === "save" && <Spinner />}
+              Save and finish later
+            </Button>
+            <Button type="submit" disabled={!!pending || !quoteOk || !attachmentsOk}>
+              {pending === "send" && <Spinner />}
+              Send application
             </Button>
           </DialogFooter>
         </form>

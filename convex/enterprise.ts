@@ -83,8 +83,9 @@ function summarize(
     createdAt: opportunity._creationTime,
     teamId,
     teamName: teamId ? teamNames.get(teamId)! : null,
-    applications: applications.length,
-    qualified: applications.filter((a) => a.evaluation.qualifies).length,
+    // Withdrawn applications are listed, but out of every count
+    applications: applications.filter((a) => a.status !== "withdrawn").length,
+    qualified: applications.filter((a) => a.status !== "withdrawn" && a.evaluation.qualifies).length,
     shortlisted: applications.filter((a) => a.status === "shortlisted").length,
     /** Applications nobody has shortlisted or declined yet. */
     awaitingReview: applications.filter((a) => a.status === "submitted").length,
@@ -176,6 +177,8 @@ export const opportunity = query({
     }
     applicants.sort(
       (a, b) =>
+        // Withdrawn applications go last, out of the ranking
+        Number(a.status === "withdrawn") - Number(b.status === "withdrawn") ||
         Number(b.evaluation.qualifies) - Number(a.evaluation.qualifies) ||
         b.evaluation.score - a.evaluation.score ||
         a.submittedAt - b.submittedAt,
@@ -288,6 +291,7 @@ export const setApplicationStatus = mutation({
       throw new ConvexError("That application isn’t available.");
     }
     if (application.status === "awarded") throw new ConvexError("This application has already been awarded.");
+    if (application.status === "withdrawn") throw new ConvexError("The supplier withdrew this application.");
     const manager = canManage(enterprise.organization.role);
     const settings = await getOrganizationSettings(ctx, enterprise.organization.id);
     if (settings.shortlistAdminsOnly && !manager) {

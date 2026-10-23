@@ -528,7 +528,7 @@ function MatrixCard({ detail, register }: { detail: Detail; register: Register }
     (r) => r.kind !== "condition" && r.action !== "review",
   );
   // Shortlisted applicants first: those are the ones the buyer is choosing between
-  const order = { awarded: 0, shortlisted: 1, submitted: 2, declined: 3 };
+  const order = { awarded: 0, shortlisted: 1, submitted: 2, declined: 3, withdrawn: 4 };
   const rows = detail.applicants
     .filter((a) => a.evaluation.requirements)
     .sort((a, b) => order[a.status] - order[b.status]);

@@ -9,7 +9,6 @@ import { Status, Tag } from "@/components/app/status";
 import {
   ACTION_LABELS,
   REQUIREMENT_GROUPS,
-  RequirementsChecklist,
   requirementCodes,
   TIER_LABELS,
 } from "@/components/review/requirements-checklist";
@@ -33,12 +32,12 @@ import type { SmeProfile } from "@/lib/sme/types";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { PROFILE_RETURNABLES, returnableKey } from "../../../convex/lib/tender";
-import type { DocKey, Evaluation, TenderRequirement } from "../../../convex/schema";
+import type { DocKey, TenderRequirement } from "../../../convex/schema";
 
 /*
- * The SME's side of a tender's requirements: before applying, what the tender asks for and which documents
- * the profile already covers; after the review, what the application has and what it still needs, with a
- * way to add the missing documents while the tender is open.
+ * The SME's side of a tender's requirements: what the tender asks for and which documents the profile
+ * already covers, and adding documents to an application while the tender is open. SMEs never see how their
+ * application was assessed against these.
  */
 
 type Tender = { requirements: TenderRequirement[]; threshold: number | null; documentName: string | null };
@@ -97,7 +96,7 @@ export function TenderPreview({ tender, sme }: { tender: Tender; sme: SmeProfile
                           <Status tone="success">On your profile</Status>
                         ) : (
                           <Status tone="warning">
-                            {profile.status === "expired" ? "Expired" : "Not on your profile"}
+                            {profile.status === "expired" ? "Renew on your profile" : "Add to your profile"}
                           </Status>
                         ))}
                     </div>
@@ -128,51 +127,14 @@ export function TenderPreview({ tender, sme }: { tender: Tender; sme: SmeProfile
   );
 }
 
-/** The review against the tender's requirements, and what to add. */
-export function TenderFeedback({
-  tender,
-  evaluation,
-  application,
-  canChange,
-}: {
-  tender: Tender;
-  evaluation: Evaluation;
-  application: { id: Id<"applications">; attachments: { label: string; name: string }[] };
-  canChange: boolean;
-}) {
-  if (!evaluation.requirements) {
-    return <p className="text-sm text-muted-foreground">Your application is being checked against the tender.</p>;
-  }
-  // Returnables still missing or incomplete are what the SME can fix by attaching a file
-  const results = new Map(evaluation.requirements.map((r) => [r.id, r]));
-  const suggestions = tender.requirements
-    .filter((r) => r.kind === "returnable" && results.get(r.id) && results.get(r.id)!.status !== "met")
-    .map((r) => r.text);
-  return (
-    <div className="space-y-4">
-      <RequirementsChecklist requirements={tender.requirements} evaluation={evaluation} audience="sme" />
-      {canChange && (
-        <div className="flex flex-col gap-3 rounded-lg border-l-4 border-l-primary bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm">
-            {suggestions.length
-              ? `Add the ${suggestions.length} missing or incomplete document${suggestions.length === 1 ? "" : "s"} before the tender closes, and your application is checked again.`
-              : "Add or replace documents before the tender closes, and your application is checked again."}
-          </p>
-          <AddDocumentsButton application={application} suggestions={suggestions} />
-        </div>
-      )}
-    </div>
-  );
-}
-
 type NewFile = { id: number; label: string; file: File | null };
 
 export function AddDocumentsButton({
   application,
-  suggestions,
+  suggestions = [],
 }: {
   application: { id: Id<"applications">; attachments: { label: string; name: string }[] };
-  suggestions: string[];
+  suggestions?: string[];
 }) {
   const addDocuments = useMutation(api.smeOpportunities.addDocuments);
   const upload = useUploadFile();
@@ -194,7 +156,7 @@ export function AddDocumentsButton({
       const uploaded = [];
       for (const f of files) uploaded.push({ ...(await upload(f.file!)), label: f.label.trim() });
       await addDocuments({ applicationId: application.id, attachments: uploaded, remove });
-      toast.success("Documents added. Your application is being checked again.");
+      toast.success("Documents added to your application.");
       setOpen(false);
       setFiles([]);
       setRemove([]);
@@ -299,7 +261,7 @@ export function AddDocumentsButton({
             </Button>
             <Button type="submit" disabled={pending || !ready || files.length > room}>
               {pending && <Spinner />}
-              Send and check again
+              Add to application
             </Button>
           </DialogFooter>
         </form>

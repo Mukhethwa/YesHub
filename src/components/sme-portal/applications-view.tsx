@@ -1,15 +1,15 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { FilterTabs, formatDateTime } from "@/components/admin/shared";
+import { FilterTabs, formatDateTime, runMutation } from "@/components/admin/shared";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { useBreadcrumb } from "@/components/portal/breadcrumbs";
 import { closingLabel, formatRand, KIND_LABELS, PhasePill, isFinished, phaseOf } from "@/components/enterprise/tenders";
-import { CriteriaList, DecisionPill, ReviewStatus } from "@/components/review/review-parts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -17,11 +17,25 @@ import { DOCUMENTS } from "@/lib/sme/documents";
 import { formatBytes, formatDate } from "@/lib/sme/format";
 import type { SmeProfile } from "@/lib/sme/types";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { evaluateApplication, type EvaluableOpportunity } from "../../../convex/lib/evaluation";
 import { rand } from "../../../convex/lib/procurement";
-import { ApplicationStatusPill, ApplyButton, ChecksList, FitPill, reachLabel, reachOf } from "./opportunities-shared";
+import type { SmeApplicationStatus } from "../../../convex/smeOpportunities";
+import {
+  ApplicationStatusPill,
+  ApplyButton,
+  reachLabel,
+  reachOf,
+  RecommendationList,
+  recommendationsFor,
+} from "./opportunities-shared";
 import { SectionHeader } from "./require-sme";
-import { TenderFeedback, TenderPreview } from "./tender-feedback";
+import { AddDocumentsButton, TenderPreview } from "./tender-feedback";
+
+/*
+ * The SME's Opportunities tab. An SME sees only the status of its applications (in progress, submitted or
+ * withdrawn), never how the buyer rated, ranked, opened or decided on them: that stays with the buyer.
+ */
 
 /** The Opportunities tab: the SME's applications, or one opportunity when the URL has ?id=. */
 export function ApplicationsView({ sme }: { sme: SmeProfile }) {
@@ -34,22 +48,7 @@ export function ApplicationsView({ sme }: { sme: SmeProfile }) {
 /* ------------------------------------------------------------------------------------------------------ */
 
 type Row = NonNullable<FunctionReturnType<typeof api.smeOpportunities.myApplications>>[number];
-type Filter = "all" | "active" | "shortlisted" | "past";
-
-const isPast = (row: Row) => isFinished(phaseOf(row.opportunity)) || row.application.status === "declined";
-
-function matchesFilter(row: Row, filter: Filter) {
-  switch (filter) {
-    case "active":
-      return !isPast(row);
-    case "shortlisted":
-      return row.application.status === "shortlisted" || row.application.status === "awarded";
-    case "past":
-      return isPast(row);
-    default:
-      return true;
-  }
-}
+type Filter = "all" | SmeApplicationStatus;
 
 function Stat({ label, value, note }: { label: string; value: number; note?: string }) {
   return (
@@ -65,32 +64,18 @@ function ApplicationsList({ sme }: { sme: SmeProfile }) {
   const rows = useQuery(api.smeOpportunities.myApplications);
   const [filter, setFilter] = useState<Filter>("all");
 
-  // Requirements that held the SME back most often, so it knows what to fix first
-  const commonGaps = useMemo(() => {
-    const counts = new Map<string, { label: string; detail: string; count: number }>();
-    for (const row of rows ?? []) {
-      for (const check of row.application.evaluation.checks) {
-        if (!check.required || check.passed) continue;
-        const entry = counts.get(check.id) ?? { label: check.label, detail: check.detail, count: 0 };
-        entry.count++;
-        counts.set(check.id, entry);
-      }
-    }
-    return [...counts.values()].sort((a, b) => b.count - a.count).slice(0, 3);
-  }, [rows]);
-
   if (rows === undefined) return <Spinner className="mx-auto mt-24" />;
   if (rows === null) return null;
 
-  const count = (f: Filter) => rows.filter((r) => matchesFilter(r, f)).length;
-  const visible = rows.filter((r) => matchesFilter(r, filter));
-  const viewed = rows.filter((r) => r.application.views > 0).length;
+  const count = (f: Filter) => rows.filter((r) => f === "all" || r.status === f).length;
+  const visible = rows.filter((r) => filter === "all" || r.status === filter);
+  const stillOpen = rows.filter((r) => r.status === "submitted" && !isFinished(phaseOf(r.opportunity))).length;
 
   return (
     <div className="space-y-5">
       <SectionHeader
         title="Opportunities"
-        description={`Every tender, RFQ and grant ${sme.companyName} has applied to, and how each one is going.`}
+        description={`Every tender, RFQ and grant ${sme.companyName} has started or applied to.`}
       />
 
       {rows.length === 0 ? (
@@ -107,50 +92,11 @@ function ApplicationsList({ sme }: { sme: SmeProfile }) {
         </Card>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Applications" value={rows.length} note={`${count("active")} still open`} />
-            <Stat label="Shortlisted" value={count("shortlisted")} />
-            <Stat
-              label="Qualified"
-              value={rows.filter((r) => r.application.evaluation.qualifies).length}
-              note="Met every requirement when you applied"
-            />
-            <Stat label="Viewed by buyers" value={viewed} note={`${rows.length - viewed} not opened yet`} />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Stat label="Submitted" value={count("submitted")} note={`${stillOpen} still open`} />
+            <Stat label="In progress" value={count("in_progress")} note="Saved, not sent yet" />
+            <Stat label="Withdrawn" value={count("withdrawn")} />
           </div>
-
-          {commonGaps.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>What’s holding you back</CardTitle>
-                <CardDescription>
-                  Requirements you didn’t meet across your applications. Fixing these opens up more work.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm">
-                  {commonGaps.map((gap) => (
-                    <li key={gap.label} className="flex items-baseline justify-between gap-4">
-                      <span>
-                        <span className="font-medium">{gap.label}</span>
-                        <span className="block text-xs text-muted-foreground">{gap.detail}</span>
-                      </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {gap.count} application{gap.count === 1 ? "" : "s"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-4 flex gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href="/sme/documents">Update documents</Link>
-                  </Button>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/sme/profile">Edit profile</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           <FilterTabs
             label="Filter applications"
@@ -158,15 +104,15 @@ function ApplicationsList({ sme }: { sme: SmeProfile }) {
             onChange={setFilter}
             options={[
               { id: "all", label: "All", count: rows.length },
-              { id: "active", label: "Open", count: count("active") },
-              { id: "shortlisted", label: "Shortlisted", count: count("shortlisted") },
-              { id: "past", label: "Past", count: count("past") },
+              { id: "in_progress", label: "In progress", count: count("in_progress") },
+              { id: "submitted", label: "Submitted", count: count("submitted") },
+              { id: "withdrawn", label: "Withdrawn", count: count("withdrawn") },
             ]}
           />
 
           <ul className="space-y-3">
             {visible.map((row) => (
-              <ApplicationCard key={row.application.id} row={row} />
+              <ApplicationCard key={row.id} row={row} />
             ))}
           </ul>
         </>
@@ -176,12 +122,14 @@ function ApplicationsList({ sme }: { sme: SmeProfile }) {
 }
 
 function ApplicationCard({ row }: { row: Row }) {
-  const { opportunity: o, application: a } = row;
+  const { opportunity: o } = row;
+  const finished = isFinished(phaseOf(o));
+  const href = `/sme/opportunities?id=${o.id}`;
   return (
     <li className="rounded-xl border bg-card p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
-          <Link href={`/sme/opportunities?id=${o.id}`} className="block font-medium hover:underline">
+          <Link href={href} className="block font-medium hover:underline">
             {o.title}
           </Link>
           <p className="text-sm text-muted-foreground">
@@ -189,39 +137,29 @@ function ApplicationCard({ row }: { row: Row }) {
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <ApplicationStatusPill status={a.status} />
-          <ReviewStatus review={a.review} engine={a.evaluation.engine} />
+          <ApplicationStatusPill status={row.status} />
           <PhasePill phase={phaseOf(o)} />
         </div>
       </div>
-      <dl className="mt-4 grid gap-3 border-t pt-3 text-sm sm:grid-cols-4">
-        <div>
-          <dt className="text-xs text-muted-foreground">Applied</dt>
-          <dd>{formatDate(a.submittedAt)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted-foreground">Your ranking</dt>
-          <dd>
-            {a.rank} of {a.applicants} applicant{a.applicants === 1 ? "" : "s"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted-foreground">
-            {a.evaluation.engine === "jev" ? "Review" : "When you applied"}
-          </dt>
-          <dd>
-            {a.evaluation.qualifies ? "Qualified" : "Didn’t qualify"}, score {a.evaluation.score}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted-foreground">Buyer activity</dt>
-          <dd>
-            {a.views === 0
-              ? "Not opened yet"
-              : `Opened ${a.views} time${a.views === 1 ? "" : "s"}, last ${formatDate(a.lastViewedAt ?? undefined)}`}
-          </dd>
-        </div>
-      </dl>
+      <div className="mt-4 flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-end sm:justify-between">
+        <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs text-muted-foreground">
+              {row.status === "in_progress" ? "Last saved" : row.status === "withdrawn" ? "Withdrawn" : "Submitted"}
+            </dt>
+            <dd>{formatDate(row.at)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">{finished ? "Closed" : "Closes"}</dt>
+            <dd>
+              {formatDate(o.closesAt)} <span className="text-muted-foreground">({closingLabel(o.closesAt)})</span>
+            </dd>
+          </div>
+        </dl>
+        <Button size="sm" variant={row.status === "in_progress" && !finished ? "default" : "outline"} asChild>
+          <Link href={href}>{row.status === "in_progress" && !finished ? "Continue application" : "View"}</Link>
+        </Button>
+      </div>
     </li>
   );
 }
@@ -241,12 +179,14 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 const docLabel = (key: string) => DOCUMENTS.find((d) => d.key === key)?.label ?? key;
 
+type ForSme = NonNullable<FunctionReturnType<typeof api.smeOpportunities.opportunity>>;
+
 function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme: SmeProfile }) {
   const o = useQuery(api.smeOpportunities.opportunity, { opportunityId });
   useBreadcrumb(o?.title);
-  // A live check for SMEs that haven't applied, so they see their fit before applying
-  const preview = useMemo(
-    () => (o && !o.application ? evaluateApplication(o as EvaluableOpportunity, sme) : null),
+  // Checked in the browser against the SME's own profile, only to suggest what would strengthen it
+  const recommendations = useMemo(
+    () => (o && !o.application ? recommendationsFor(evaluateApplication(o as EvaluableOpportunity, sme), o) : []),
     [o, sme],
   );
 
@@ -265,18 +205,20 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
 
   const phase = phaseOf(o);
   const a = o.application;
-  const evaluation = a?.evaluation ?? preview!;
+  const status: SmeApplicationStatus | null = a ? a.status : o.draft ? "in_progress" : null;
 
   return (
     <div className="space-y-6">
       <Button variant="link" size="sm" className="-ml-3 text-muted-foreground" asChild>
-        <Link href={a ? "/sme/opportunities" : "/sme/matches"}>{a ? "All my applications" : "Back to my matches"}</Link>
+        <Link href={status ? "/sme/opportunities" : "/sme/matches"}>
+          {status ? "All my applications" : "Back to my matches"}
+        </Link>
       </Button>
 
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <PhasePill phase={phase} />
-          {a && <ApplicationStatusPill status={a.status} />}
+          {status && <ApplicationStatusPill status={status} />}
           <span className="text-sm text-muted-foreground">
             {KIND_LABELS[o.kind]}, {o.reference}
           </span>
@@ -313,94 +255,22 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
         </div>
       </dl>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{a ? "Your application" : "Your fit"}</CardTitle>
-          <CardDescription>
-            {a
-              ? a.evaluation.engine === "jev"
-                ? `Reviewed on ${formatDateTime(a.evaluation.evaluatedAt)}, the same way the buyer sees it.`
-                : `Checked when you applied on ${formatDateTime(a.submittedAt)}, the same way the buyer sees it.`
-              : "Your profile against this opportunity’s requirements."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="flex flex-wrap items-center gap-3">
-            <FitPill evaluation={evaluation} />
-            <span className="text-sm">
-              Fit score <span className="font-semibold tabular-nums">{evaluation.score}</span>
-            </span>
-            {a && (
-              <span className="text-sm text-muted-foreground">
-                Ranked {a.rank} of {a.applicants} applicant{a.applicants === 1 ? "" : "s"}
-              </span>
-            )}
-          </div>
-          <ChecksList evaluation={evaluation} />
-          {a && <ApplicationReview application={a} />}
-
-          {a ? (
-            <ol className="space-y-2 border-t pt-4 text-sm">
-              <TimelineItem at={a.submittedAt}>You applied</TimelineItem>
-              {a.views > 0 && (
-                <TimelineItem at={a.lastViewedAt}>
-                  {o.organizationName} last opened your application ({a.views} time{a.views === 1 ? "" : "s"} so far)
-                </TimelineItem>
-              )}
-              {a.status !== "submitted" && (
-                <TimelineItem at={a.statusChangedAt}>
-                  {a.status === "shortlisted"
-                    ? `Shortlisted. ${o.organizationName} can now see your contact details.`
-                    : a.status === "awarded"
-                      ? `Awarded by ${o.organizationName}.`
-                      : "Not taken further."}
-                  {/* The reason given for the decision (PAJA s5) */}
-                  {a.statusReason && <span className="block text-muted-foreground">Reason: {a.statusReason}</span>}
-                </TimelineItem>
-              )}
-            </ol>
-          ) : (
-            !isFinished(phase) && (
-              <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {evaluation.qualifies
-                    ? "You meet every requirement."
-                    : "Requirements you don’t meet are shown to the buyer."}
-                </p>
-                <ApplyButton
-                  opportunityId={o.id}
-                  title={o.title}
-                  qualifies={evaluation.qualifies}
-                  scoresPrice={o.scoresPrice}
-                  size="default"
-                />
-              </div>
-            )
-          )}
-        </CardContent>
-      </Card>
+      {a ? (
+        <YourApplication opportunity={o} application={a} />
+      ) : (
+        <BeforeYouApply opportunity={o} recommendations={recommendations} />
+      )}
 
       {o.tender && (
         <Card>
           <CardHeader>
-            <CardTitle>{a ? "Against the tender’s requirements" : "What the tender asks for"}</CardTitle>
+            <CardTitle>What the tender asks for</CardTitle>
             <CardDescription>
-              {a
-                ? "What your application already has, and what you still need to qualify and score well."
-                : "Mandatory requirements, scored criteria and the documents to return, from the buyer’s tender."}
+              Mandatory requirements, scored criteria and the documents to return, from the buyer’s tender.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {a ? (
-              <TenderFeedback
-                tender={o.tender}
-                evaluation={a.evaluation}
-                application={a}
-                canChange={!isFinished(phase) && a.status === "submitted" && !a.decision}
-              />
-            ) : (
-              <TenderPreview tender={o.tender} sme={sme} />
-            )}
+            <TenderPreview tender={o.tender} sme={sme} />
           </CardContent>
         </Card>
       )}
@@ -471,86 +341,168 @@ function OpportunityForSme({ opportunityId, sme }: { opportunityId: string; sme:
   );
 }
 
+/** Before the SME sends an application: what would strengthen it, and applying or finishing a saved one. */
+function BeforeYouApply({
+  opportunity: o,
+  recommendations,
+}: {
+  opportunity: ForSme;
+  recommendations: ReturnType<typeof recommendationsFor>;
+}) {
+  const discard = useMutation(api.smeOpportunities.discardDraft);
+  const [confirming, setConfirming] = useState(false);
+  const finished = isFinished(phaseOf(o));
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{o.draft ? "Your application, in progress" : "Before you apply"}</CardTitle>
+        <CardDescription>
+          {recommendations.length
+            ? "Ways to strengthen your application, from your profile."
+            : "Your profile covers what this opportunity asks for."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {recommendations.length > 0 && <RecommendationList recommendations={recommendations} />}
+
+        {o.draft && <WhatYouSent sent={o.draft} />}
+
+        <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            {finished
+              ? o.draft
+                ? "This opportunity closed before you sent your application."
+                : "This opportunity has closed."
+              : o.draft
+                ? `Saved on ${formatDateTime(o.draft.updatedAt)}. The buyer sees nothing until you send it.`
+                : "Save your application to finish later, or send it when it’s ready."}
+          </p>
+          <div className="flex shrink-0 gap-2">
+            {o.draft && (
+              <Button variant="ghost" onClick={() => setConfirming(true)}>
+                Discard
+              </Button>
+            )}
+            {!finished && (
+              <ApplyButton
+                opportunityId={o.id}
+                title={o.title}
+                scoresPrice={o.scoresPrice}
+                saved={o.draft}
+                size="default"
+              />
+            )}
+          </div>
+        </div>
+      </CardContent>
+
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Discard this application?"
+        description="Everything you saved for it, including documents, is deleted. The buyer never saw it."
+        confirmLabel="Discard"
+        destructive
+        onConfirm={() => runMutation("Application discarded.", () => discard({ opportunityId: o.id }))}
+      />
+    </Card>
+  );
+}
+
+/** A sent application: its status, what was sent, and adding documents or withdrawing while it's open. */
+function YourApplication({
+  opportunity: o,
+  application: a,
+}: {
+  opportunity: ForSme;
+  application: NonNullable<ForSme["application"]>;
+}) {
+  const withdraw = useMutation(api.smeOpportunities.withdraw);
+  const [confirming, setConfirming] = useState(false);
+  const canChange = a.status === "submitted" && !isFinished(phaseOf(o));
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Your application</CardTitle>
+        <CardDescription>
+          {a.status === "withdrawn"
+            ? "You withdrew this application, so the buyer no longer considers it."
+            : `Sent to ${o.organizationName}. The buyer contacts you directly if they want to take it further.`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <ol className="space-y-2 text-sm">
+          <TimelineItem at={a.submittedAt}>You sent your application</TimelineItem>
+          {a.withdrawnAt && <TimelineItem at={a.withdrawnAt}>You withdrew it</TimelineItem>}
+        </ol>
+
+        <WhatYouSent sent={a} />
+
+        {canChange && (
+          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              You can add documents or withdraw until the opportunity closes.
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <Button variant="ghost" onClick={() => setConfirming(true)}>
+                Withdraw
+              </Button>
+              <AddDocumentsButton application={a as { id: Id<"applications">; attachments: typeof a.attachments }} />
+            </div>
+          </div>
+        )}
+      </CardContent>
+
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Withdraw your application?"
+        description={`${o.organizationName} will no longer consider it. You can’t apply to this opportunity again.`}
+        confirmLabel="Withdraw application"
+        destructive
+        onConfirm={() => runMutation("Application withdrawn.", () => withdraw({ applicationId: a.id }))}
+      />
+    </Card>
+  );
+}
+
+function WhatYouSent({
+  sent,
+}: {
+  sent: { quote: number | null; proposal: string | null; attachments: { label: string; name: string }[] };
+}) {
+  if (sent.quote === null && !sent.proposal && sent.attachments.length === 0) return null;
+  return (
+    <dl className="grid gap-3 border-t pt-4 text-sm sm:grid-cols-2">
+      {sent.quote !== null && (
+        <div>
+          <dt className="text-xs text-muted-foreground">Your price</dt>
+          <dd>{rand(sent.quote)}</dd>
+        </div>
+      )}
+      {sent.attachments.length > 0 && (
+        <div>
+          <dt className="text-xs text-muted-foreground">Documents</dt>
+          <dd>{sent.attachments.map((f) => f.label).join(", ")}</dd>
+        </div>
+      )}
+      {sent.proposal && (
+        <div className="sm:col-span-2">
+          <dt className="text-xs text-muted-foreground">Your proposal</dt>
+          <dd className="whitespace-pre-line">{sent.proposal}</dd>
+        </div>
+      )}
+    </dl>
+  );
+}
+
 function ListingItem({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
       <dt className="mb-1 text-xs font-medium text-muted-foreground">{label}</dt>
       <dd>{children}</dd>
-    </div>
-  );
-}
-
-type MyApplication = NonNullable<
-  NonNullable<FunctionReturnType<typeof api.smeOpportunities.opportunity>>["application"]
->;
-
-/** Jev's review of the SME's own application: how each criterion scored, and the decision with its reasons. */
-function ApplicationReview({ application: a }: { application: MyApplication }) {
-  const { evaluation } = a;
-  return (
-    <div className="space-y-4 border-t pt-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs font-medium text-muted-foreground">Review</p>
-        <ReviewStatus review={a.review} engine={evaluation.engine} />
-      </div>
-
-      {a.decision && (
-        <div className="rounded-lg border bg-muted/40 p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <DecisionPill decision={a.decision} />
-            {a.decision.totalPoints !== null && (
-              <span className="text-sm text-muted-foreground">{a.decision.totalPoints} points</span>
-            )}
-          </div>
-          <p className="mt-2 text-sm">{a.decision.rationale}</p>
-        </div>
-      )}
-
-      {evaluation.engine === "jev" ? (
-        <>
-          <p className="text-sm">{evaluation.summary}</p>
-          <CriteriaList criteria={evaluation.criteria ?? []} />
-          {(evaluation.concerns ?? []).length > 0 && (
-            <div>
-              <p className="mb-1 text-sm font-medium">What to look at</p>
-              <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
-                {evaluation.concerns!.map((c) => (
-                  <li key={c}>{c}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          {a.review?.status === "reviewing"
-            ? "Review in progress."
-            : "Scored on eligibility rules. Document review pending."}
-        </p>
-      )}
-
-      {(a.quote !== null || a.attachments.length > 0 || a.proposal) && (
-        <dl className="grid gap-3 text-sm sm:grid-cols-2">
-          {a.quote !== null && (
-            <div>
-              <dt className="text-xs text-muted-foreground">Your price</dt>
-              <dd>{rand(a.quote)}</dd>
-            </div>
-          )}
-          {a.attachments.length > 0 && (
-            <div>
-              <dt className="text-xs text-muted-foreground">Documents you sent</dt>
-              <dd>{a.attachments.map((f) => f.label).join(", ")}</dd>
-            </div>
-          )}
-          {a.proposal && (
-            <div className="sm:col-span-2">
-              <dt className="text-xs text-muted-foreground">Your proposal</dt>
-              <dd className="whitespace-pre-line">{a.proposal}</dd>
-            </div>
-          )}
-        </dl>
-      )}
     </div>
   );
 }
