@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Pill } from "@/components/admin/page-header";
-import { Score } from "@/components/app/score";
 import { FilterTabs } from "@/components/admin/shared";
 import { closingLabel, formatRand, KIND_LABELS } from "@/components/enterprise/tenders";
 import { Button } from "@/components/ui/button";
@@ -18,11 +17,12 @@ import type { SmeProfile } from "@/lib/sme/types";
 import type { OpportunityKind } from "../../../convex/schema";
 import {
   ApplyButton,
-  FitPill,
+  fitsProfile,
   type Match,
   minimumValue,
   preferredKinds,
   reachLabel,
+  recommendationsFor,
   useMatches,
 } from "./opportunities-shared";
 import { SectionHeader } from "./require-sme";
@@ -48,7 +48,7 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
   const settings = getSettings(sme);
   const [area, setArea] = useState<Area>("provinces");
   const [kind, setKind] = useState<OpportunityKind | "preferred" | "all">("preferred");
-  const [qualifyOnly, setQualifyOnly] = useState(settings.eligibleOnly);
+  const [fitOnly, setFitOnly] = useState(settings.eligibleOnly);
   const [sort, setSort] = useState<Sort>("fit");
 
   const minValue = minimumValue(settings.minContractValue);
@@ -59,7 +59,7 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
   const kept = open.filter(
     (m) =>
       (kind === "all" ? true : kind === "preferred" ? kinds.includes(m.kind) : m.kind === kind) &&
-      (!qualifyOnly || m.evaluation.qualifies) &&
+      (!fitOnly || fitsProfile(m.evaluation)) &&
       (m.value === null || m.value >= minValue),
   );
   const filtered = sort === "closing" ? [...kept].sort((a, b) => a.closesAt.localeCompare(b.closesAt)) : kept;
@@ -74,7 +74,7 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
     <div className="space-y-5">
       <SectionHeader
         title="My matches"
-        description={`Open tenders, RFQs and grants checked against your business profile, best fit first.${
+        description={`Open tenders, RFQs and grants that fit your business profile, best matches first.${
           applied > 0 ? ` ${applied} you’ve applied to ${applied === 1 ? "is" : "are"} in Opportunities.` : ""
         }`}
       />
@@ -114,14 +114,14 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="fit">Best fit first</SelectItem>
+              <SelectItem value="fit">Best matches first</SelectItem>
               <SelectItem value="closing">Closing soonest</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <Label className="flex items-center gap-2.5 font-normal">
-          <Switch checked={qualifyOnly} onCheckedChange={setQualifyOnly} />
-          Only ones I qualify for
+          <Switch checked={fitOnly} onCheckedChange={setFitOnly} />
+          Only ones that fit my profile
         </Label>
       </div>
 
@@ -136,8 +136,8 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
           <CardContent className="py-10 text-center">
             <p className="font-medium">No matches here yet</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              {qualifyOnly && open.length > 0
-                ? "Try turning off “Only ones I qualify for” to see opportunities you’re close to qualifying for."
+              {fitOnly && open.length > 0
+                ? "Try turning off “Only ones that fit my profile” to see more opportunities, with tips on strengthening your application."
                 : "Try a wider area. New opportunities appear here as soon as buyers publish them."}
             </p>
           </CardContent>
@@ -154,7 +154,7 @@ export function MatchesView({ sme }: { sme: SmeProfile }) {
 }
 
 export function MatchCard({ match, sme }: { match: Match; sme: SmeProfile }) {
-  const firstGap = match.evaluation.checks.find((c) => c.required && !c.passed);
+  const tip = recommendationsFor(match.evaluation, match)[0];
   return (
     <li className="rounded-xl border bg-card p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -171,35 +171,29 @@ export function MatchCard({ match, sme }: { match: Match; sme: SmeProfile }) {
             <span className="text-muted-foreground">{closingLabel(match.closesAt)}</span>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-4 sm:flex-col sm:items-end sm:gap-2">
-          <FitPill evaluation={match.evaluation} />
-          <div className="w-28">
-            <p className="text-right text-xs text-muted-foreground">
-              Fit <Score value={match.evaluation.score} className="text-foreground" />
-            </p>
-          </div>
-        </div>
       </div>
       <div className="mt-4 flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
-          {firstGap ? (
+          {tip ? (
             <>
-              <span className="font-medium text-foreground">To qualify:</span> {firstGap.detail}
+              <span className="font-medium text-foreground">Tip:</span> {tip.text}
             </>
           ) : (
-            match.evaluation.summary
+            "Your profile covers what this opportunity asks for."
           )}
         </p>
         <div className="flex shrink-0 gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/sme/opportunities?id=${match.id}`}>View details</Link>
           </Button>
-          <ApplyButton
-            opportunityId={match.id}
-            title={match.title}
-            qualifies={match.evaluation.qualifies}
-            scoresPrice={match.scoresPrice}
-          />
+          {match.inProgress ? (
+            // The saved answers load on the opportunity's page
+            <Button size="sm" asChild>
+              <Link href={`/sme/opportunities?id=${match.id}`}>Continue application</Link>
+            </Button>
+          ) : (
+            <ApplyButton opportunityId={match.id} title={match.title} scoresPrice={match.scoresPrice} />
+          )}
         </div>
       </div>
     </li>

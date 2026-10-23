@@ -24,6 +24,7 @@ export const EMPTY_DETAILS: SmeDetails = {
   services: [],
   capabilities: "",
   accreditations: [],
+  companySummary: "",
   nationwide: false,
   provinces: [],
   serviceAreas: [],
@@ -40,7 +41,8 @@ export const EMPTY_DETAILS: SmeDetails = {
 /** A form pre-filled from a stored profile, with no pending uploads. */
 export function formFromProfile(sme: SmeProfile): SmeForm {
   const details = Object.fromEntries(
-    (Object.keys(EMPTY_DETAILS) as (keyof SmeDetails)[]).map((key) => [key, sme[key]]),
+    // Fields added after a profile was created (such as companySummary) fall back to their empty value
+    (Object.keys(EMPTY_DETAILS) as (keyof SmeDetails)[]).map((key) => [key, sme[key] ?? EMPTY_DETAILS[key]]),
   ) as SmeDetails;
   return { ...details, bbbeeCertificate: null, taxCertificate: null, companyProfile: null, consent: true };
 }

@@ -207,8 +207,8 @@ export function SettingsSection({ sme }: { sme: SmeProfile }) {
               plain
               checked={draft.eligibleOnly}
               onChange={(eligibleOnly) => set({ eligibleOnly })}
-              label="Only show opportunities I qualify for"
-              description="Hide opportunities that need a B-BBEE level, grading or province you don’t have yet."
+              label="Only show opportunities that fit my profile"
+              description="Hide opportunities in provinces, fields or B-BBEE levels outside your profile. Missing documents never hide one: you get tips instead."
             />
           </div>
         </CardContent>

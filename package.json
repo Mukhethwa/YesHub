@@ -23,6 +23,7 @@
     "auth:generate": "cd convex/betterAuth && pnpm dlx auth@1.6.33 generate --output generatedSchema.ts -y"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.1.0",
     "@base-ui/react": "^1.9.0",
     "@better-auth-ui/core": "1.6.45",
     "@better-auth-ui/react": "1.6.45",

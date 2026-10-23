@@ -488,6 +488,7 @@ export function ReviewStep({ form, errors, update, onEdit }: StepProps & { onEdi
         <Row label="Services" value={<Chips items={form.services} />} />
         <Row label="Capabilities" value={<span className="line-clamp-3">{form.capabilities}</span>} />
         <Row label="Accreditations" value={form.accreditations.length ? <Chips items={form.accreditations} /> : ""} />
+        <Row label="Company summary" value={<span className="line-clamp-3">{form.companySummary}</span>} />
       </ReviewCard>
 
       <ReviewCard title="Coverage" onEdit={() => onEdit("coverage")}>

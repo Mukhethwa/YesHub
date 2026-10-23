@@ -524,10 +524,12 @@ export const decisionFinished = internalMutation({
 async function applicationsOfRun(ctx: QueryCtx, runId: Id<"decisionRuns">) {
   const run = await ctx.db.get("decisionRuns", runId);
   if (!run) return { run: null, applications: [] };
-  const applications = await ctx.db
-    .query("applications")
-    .withIndex("by_opportunity", (q) => q.eq("opportunityId", run.opportunityId))
-    .take(APPLICATION_LIMIT);
+  const applications = (
+    await ctx.db
+      .query("applications")
+      .withIndex("by_opportunity", (q) => q.eq("opportunityId", run.opportunityId))
+      .take(APPLICATION_LIMIT)
+  ).filter((a) => a.status !== "withdrawn"); // A withdrawn application is out of shortlisting
   return { run, applications };
 }
 
@@ -801,7 +803,8 @@ export const applyDecision = internalMutation({
     for (const c of args.candidates) {
       const outcome = outcomes.get(c.applicationId)!;
       const application = await ctx.db.get("applications", c.applicationId);
-      if (!application) continue;
+      // The SME may have withdrawn while the run was going
+      if (!application || application.status === "withdrawn") continue;
       // Shortlisting never awards: the buyer decides among the shortlist (setApplicationStatus)
       await ctx.db.patch("applications", application._id, {
         status: outcome.shortlisted ? "shortlisted" : "declined",
@@ -873,7 +876,7 @@ export const requestDecision = mutation({
     const enterprise = await getEnterprise(ctx);
     const opportunity = await ctx.db.get("opportunities", args.opportunityId);
     if (!enterprise || !opportunity || opportunity.organizationId !== enterprise.organization.id) {
-      throw new ConvexError("That opportunity isn’t available.");
+      throw new ConvexError("That listing isn’t available.");
     }
     if (!canManage(enterprise.organization.role)) throw new ConvexError("Only owners and admins can run shortlisting.");
     if (enterprise.organization.verificationStatus !== "verified") {
@@ -887,7 +890,7 @@ export const requestDecision = mutation({
       .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
       .order("desc")
       .take(1);
-    if (runs[0]?.status === "running") throw new ConvexError("Shortlisting is already running for this opportunity.");
+    if (runs[0]?.status === "running") throw new ConvexError("Shortlisting is already running for this listing.");
     const applications = await ctx.db
       .query("applications")
       .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))

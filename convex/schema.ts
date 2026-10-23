@@ -67,6 +67,8 @@ export const smeDetails = {
   services: v.array(v.string()),
   capabilities: v.string(),
   accreditations: v.array(v.string()),
+  /** Optional narrative introduction for buyers, which the SME can polish with AI. Missing on older profiles. */
+  companySummary: v.optional(v.string()),
 
   // Coverage
   nationwide: v.boolean(),
@@ -104,6 +106,8 @@ export const applicationStatus = v.union(
   v.literal("shortlisted"),
   v.literal("declined"),
   v.literal("awarded"),
+  /** The SME took the application back while the listing was open. Out of the review and every count. */
+  v.literal("withdrawn"),
 );
 
 /** One eligibility or ranking check on an application, written for buyers to read. */
@@ -485,6 +489,21 @@ export default defineSchema({
     .index("by_opportunity", ["opportunityId"])
     .index("by_sme_and_opportunity", ["smeId", "opportunityId"])
     .index("by_organization_and_status", ["organizationId", "status"]),
+
+  /**
+   * An application the SME started and saved without submitting ("In progress" in the SME portal). Only the
+   * SME ever reads these: buyers, reviews and counts see an application once it's submitted.
+   */
+  applicationDrafts: defineTable({
+    smeId: v.id("smes"),
+    opportunityId: v.id("opportunities"),
+    quote: v.optional(v.number()),
+    proposal: v.optional(v.string()),
+    attachments: v.array(applicationAttachment),
+    updatedAt: v.number(),
+  })
+    .index("by_sme_and_opportunity", ["smeId", "opportunityId"])
+    .index("by_opportunity", ["opportunityId"]),
 
   /** What Jev read from each document behind an application. */
   documentExtractions: defineTable({

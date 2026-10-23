@@ -99,12 +99,12 @@ export function TeamView() {
         <Stat
           label="Departments"
           value={departments.length}
-          note={`${unassigned.length} opportunit${unassigned.length === 1 ? "y" : "ies"} unassigned`}
+          note={`${unassigned.length} listing${unassigned.length === 1 ? "" : "s"} unassigned`}
         />
         <Stat
           label="Your departments’ open work"
           value={myWork.filter(isOpen).length}
-          note={`${myWork.length} opportunities in total`}
+          note={`${myWork.length} listings in total`}
         />
         <Stat
           label="Awaiting review"
@@ -115,7 +115,7 @@ export function TeamView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Your departments’ opportunities</CardTitle>
+          <CardTitle>Your departments’ listings</CardTitle>
           <CardDescription>
             {myDepartments.length
               ? `Tenders, RFQs and grants owned by ${myDepartments.map((d) => d.name).join(" and ")}.`
@@ -133,7 +133,7 @@ export function TeamView() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold">Departments</h2>
-            <p className="text-sm text-muted-foreground">Who works in each department and the opportunities it owns.</p>
+            <p className="text-sm text-muted-foreground">Who works in each department and the listings it owns.</p>
           </div>
           {me.canManage && <CreateDepartment />}
         </div>
@@ -223,7 +223,7 @@ function DepartmentCard({
         </dl>
         <div className="flex items-center justify-between gap-2">
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/dashboard/opportunities?department=${department.id}`}>View opportunities</Link>
+            <Link href={`/dashboard/opportunities?department=${department.id}`}>View listings</Link>
           </Button>
           {canManage && <DeleteDepartment department={department} owns={opportunities.length} />}
         </div>
@@ -278,7 +278,7 @@ function DeleteDepartment({ department, owns }: { department: Department; owns: 
           <AlertDialogDescription>
             Its members stay in the organisation.
             {owns > 0 &&
-              ` Its ${owns} opportunit${owns === 1 ? "y becomes" : "ies become"} unassigned until you move ${owns === 1 ? "it" : "them"} to another department.`}
+              ` Its ${owns} listing${owns === 1 ? " becomes" : "s become"} unassigned until you move ${owns === 1 ? "it" : "them"} to another department.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -354,7 +354,7 @@ function UnassignedCard({
       <CardHeader>
         <CardTitle>Not in a department</CardTitle>
         <CardDescription>
-          Give each opportunity a department so its team sees it in their work.
+          Give each listing a department so its team sees it in their work.
           {!me.canManage && " You can move these into your own departments."}
         </CardDescription>
       </CardHeader>
@@ -515,7 +515,7 @@ function EditDepartments({ member, departments }: { member: Member; departments:
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{member.name}’s departments</DialogTitle>
-          <DialogDescription>They’ll see these departments’ opportunities as their own work.</DialogDescription>
+          <DialogDescription>They’ll see these departments’ listings as their own work.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           {departments.map((d) => (
@@ -553,7 +553,7 @@ function RemoveMember({ member }: { member: Member }) {
         <AlertDialogHeader>
           <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            They lose access to your organisation’s opportunities and applicants. Their account stays.
+            They lose access to your organisation’s listings and applicants. Their account stays.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

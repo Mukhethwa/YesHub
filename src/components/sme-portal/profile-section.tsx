@@ -5,6 +5,7 @@ import Link from "next/link";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
+import { CompanySummaryField } from "@/components/sme/company-summary";
 import { Chips, FileDrop, FormField, Row } from "@/components/sme/controls";
 import { CompanyStep, ComplianceDateFields, ContactStep, CoverageStep, OfferingStep } from "@/components/sme/steps";
 import { Button } from "@/components/ui/button";
@@ -16,15 +17,22 @@ import { isExpired } from "@/lib/sme/dates";
 import { formatBytes, formatDate, websiteHref } from "@/lib/sme/format";
 import { formFromProfile, pickDetails, type SmeForm, type UpdateForm } from "@/lib/sme/form";
 import type { DocKey, SmeProfile } from "@/lib/sme/types";
-import { type Errors, validateCompliance, validateContactDetails, validateStep } from "@/lib/sme/validation";
+import {
+  type Errors,
+  validateCompanySummary,
+  validateCompliance,
+  validateContactDetails,
+  validateStep,
+} from "@/lib/sme/validation";
 import { cn } from "@/lib/utils";
 import type { SmeDetails } from "../../../convex/schema";
 import { api } from "../../../convex/_generated/api";
 import { SectionHeader } from "./require-sme";
 
-type Part = "company" | "offering" | "coverage" | "compliance" | "contact";
+type Part = "summary" | "company" | "offering" | "coverage" | "compliance" | "contact";
 
 const PARTS: Record<Part, { title: string; fields: (keyof SmeDetails)[] }> = {
+  summary: { title: "Professional company summary", fields: ["companySummary"] },
   company: {
     title: "Company details",
     fields: [
@@ -62,6 +70,7 @@ function validate(part: Part, f: SmeForm, sme: SmeProfile): Errors {
     });
   }
   if (part === "contact") return validateContactDetails(f);
+  if (part === "summary") return validateCompanySummary(f);
   return validateStep(part, f);
 }
 
@@ -145,6 +154,24 @@ export function ProfileSection({ sme }: { sme: SmeProfile }) {
         title="Business profile"
         description={`This is what corporates and funders see when you’re matched. Registered ${formatDate(sme._creationTime)}.`}
       />
+
+      {section(
+        "summary",
+        sme.companySummary ? (
+          <p className="text-sm whitespace-pre-line">{sme.companySummary}</p>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              No summary yet. It’s the introduction procurement teams read first on your supplier profile: who you are,
+              what you deliver and why you’re a good fit.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => start("summary")} disabled={editing !== null}>
+              Write your summary
+            </Button>
+          </div>
+        ),
+        <CompanySummaryField {...stepProps} heading={false} />,
+      )}
 
       {section(
         "company",

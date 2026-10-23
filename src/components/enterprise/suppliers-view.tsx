@@ -188,7 +188,13 @@ function SupplierDirectory() {
 
 type Profile = NonNullable<FunctionReturnType<typeof api.enterprise.supplier>>;
 
-const STATUS_LABELS = { submitted: "Applied", shortlisted: "Shortlisted", declined: "Declined", awarded: "Awarded" };
+const STATUS_LABELS = {
+  submitted: "Applied",
+  shortlisted: "Shortlisted",
+  declined: "Declined",
+  awarded: "Awarded",
+  withdrawn: "Withdrawn",
+};
 
 function Detail({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -203,7 +209,7 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
   const profile = useQuery(api.enterprise.supplier, { smeId });
   useBreadcrumb(profile?.companyName);
   const back = fromOpportunity
-    ? { href: `/dashboard/opportunities?id=${fromOpportunity}`, label: "Back to the opportunity" }
+    ? { href: `/dashboard/opportunities?id=${fromOpportunity}`, label: "Back to the listing" }
     : { href: "/dashboard/suppliers", label: "All suppliers" };
 
   if (profile === undefined) return <Spinner className="mx-auto mt-24" />;
@@ -245,7 +251,11 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
               <CardTitle>About the business</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
-              <p className="whitespace-pre-line">{profile.capabilities || "No capability statement yet."}</p>
+              {profile.companySummary && <p className="whitespace-pre-line">{profile.companySummary}</p>}
+              <div className="space-y-1">
+                {profile.companySummary && <p className="text-xs font-medium text-muted-foreground">Capabilities</p>}
+                <p className="whitespace-pre-line">{profile.capabilities || "No capability statement yet."}</p>
+              </div>
               <TagList label="Services" items={profile.services} />
               <TagList label="Accreditations" items={profile.accreditations} />
             </CardContent>
@@ -336,7 +346,7 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
                 </dl>
               ) : (
                 <p className="text-muted-foreground">
-                  This business shares its contact details once you shortlist it for one of your opportunities.
+                  This business shares its contact details once you shortlist it for one of your listings.
                 </p>
               )}
             </CardContent>
@@ -395,7 +405,7 @@ function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpp
         <CardDescription>
           {profile.canViewDocuments
             ? "Open each document to check it against the details on this profile."
-            : "Documents can be opened once this business applies to one of your opportunities."}
+            : "Documents can be opened once this business applies to one of your listings."}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0">
@@ -455,7 +465,7 @@ function HistoryCard({ profile }: { profile: Profile }) {
         <CardTitle>History with {profile.organizationName}</CardTitle>
         <CardDescription>
           {profile.history.length === 0
-            ? "This business hasn’t applied to your opportunities yet."
+            ? "This business hasn’t applied to your listings yet."
             : `${profile.history.length} application${profile.history.length === 1 ? "" : "s"}, ${shortlisted} shortlisted`}
         </CardDescription>
       </CardHeader>
@@ -464,7 +474,7 @@ function HistoryCard({ profile }: { profile: Profile }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-6">Opportunity</TableHead>
+                <TableHead className="pl-6">Listing</TableHead>
                 <TableHead>Applied</TableHead>
                 <TableHead>Result</TableHead>
                 <TableHead className="pr-6">Status</TableHead>

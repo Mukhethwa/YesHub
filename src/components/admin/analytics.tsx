@@ -43,6 +43,7 @@ const STATUS = {
   shortlisted: { label: "Shortlisted", className: "bg-brand-green" },
   awarded: { label: "Awarded", className: "bg-brand-yellow" },
   declined: { label: "Declined", className: "bg-brand-red" },
+  withdrawn: { label: "Withdrawn", className: "bg-muted-foreground/40" },
 } as const;
 
 const MAP_METRICS = {

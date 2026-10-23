@@ -15,6 +15,7 @@ import { EMPTY_DETAILS, pickDetails, type SmeForm, type UpdateForm } from "@/lib
 import { type Errors, type StepId, validateStep } from "@/lib/sme/validation";
 import { cn } from "@/lib/utils";
 import { api } from "../../../convex/_generated/api";
+import { CompanySummaryField } from "./company-summary";
 import { CompanyStep, ContactStep, CoverageStep, DocumentsStep, OfferingStep, ReviewStep } from "./steps";
 
 const STEPS: { id: StepId; title: string; heading: string; blurb: string; tip: string }[] = [
@@ -230,7 +231,12 @@ export function RegistrationWizard({ name, email }: { name: string; email: strin
           >
             <div className="px-5 py-7 md:px-10 md:py-9">
               {step.id === "company" && <CompanyStep {...stepProps} />}
-              {step.id === "offering" && <OfferingStep {...stepProps} />}
+              {step.id === "offering" && (
+                <div className="space-y-7">
+                  <OfferingStep {...stepProps} />
+                  <CompanySummaryField {...stepProps} />
+                </div>
+              )}
               {step.id === "coverage" && <CoverageStep {...stepProps} />}
               {step.id === "documents" && <DocumentsStep {...stepProps} />}
               {step.id === "contact" && <ContactStep {...stepProps} />}

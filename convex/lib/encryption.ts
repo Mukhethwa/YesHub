@@ -31,6 +31,7 @@ type Table = TableNamesInDataModel<DataModel>;
 export const ENCRYPTED_FIELDS: Partial<Record<Table, readonly string[]>> = {
   smes: ["registrationNumber", "csdNumber", "address", "contactName", "contactRole", "email", "phone"],
   applications: ["proposal"],
+  applicationDrafts: ["proposal"],
   documentExtractions: ["excerpt"],
 };
 

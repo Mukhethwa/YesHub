@@ -6,15 +6,16 @@ import { type MutationCtx, type QueryCtx } from "./_generated/server";
 import { mutation, query } from "./functions";
 import { authComponent } from "./auth";
 import { evaluateApplication } from "./lib/evaluation";
-import { APPLICATION_LIMIT } from "./lib/opportunities";
+import { outstandingAfterReview } from "./lib/outstanding";
+import { APPLICATION_LIMIT, deleteDraft } from "./lib/opportunities";
 import { classifyCriteria } from "./lib/procurement";
 import { addTrail, MAX_ATTACHMENTS, startReview } from "./review";
 import type { ApplicationAttachment } from "./schema";
 
 /*
- * The SME side of opportunities: what's open to apply for (Matches), what the SME applied to
- * (Opportunities), and applying. SMEs see buyers as organisations only: never which staff member
- * viewed them, and never other applicants' names.
+ * The SME side of opportunities: what's open to apply for (Matches), what the SME started or applied to
+ * (Opportunities), and applying. SMEs see buyers as organisations only, and only the status of their own
+ * applications: never their evaluation, score, ranking, whether a buyer opened them, or what a buyer decided.
  */
 
 /** Most open opportunities read for the match feed. */
@@ -63,57 +64,48 @@ function publicOpportunity(o: Doc<"opportunities">, organizationName: string) {
   };
 }
 
-/** Where this application ranks among everyone's to the same opportunity, and how many applied. */
-async function rankOf(ctx: QueryCtx, application: Doc<"applications">) {
-  const all = await ctx.db
-    .query("applications")
-    .withIndex("by_opportunity", (q) => q.eq("opportunityId", application.opportunityId))
-    .take(APPLICATION_LIMIT);
-  all.sort(
-    (a, b) =>
-      Number(b.evaluation.qualifies) - Number(a.evaluation.qualifies) ||
-      b.evaluation.score - a.evaluation.score ||
-      a.submittedAt - b.submittedAt,
-  );
-  return { rank: all.findIndex((a) => a._id === application._id) + 1, applicants: all.length };
-}
+/**
+ * What an SME may see of its own application status. Everything the buyer does with an application stays
+ * with the buyer (shortlisting, declining, awarding), so SMEs never have their expectations raised: to the
+ * SME an application is submitted until it withdraws it.
+ */
+export type SmeApplicationStatus = "in_progress" | "submitted" | "withdrawn";
 
-/** How often the buyer's team opened the application, and when they last did. Names stay private. */
-async function buyerViews(ctx: QueryCtx, application: Doc<"applications">) {
-  const entries = await ctx.db
-    .query("applicationActivity")
-    .withIndex("by_application", (q) => q.eq("applicationId", application._id))
-    .order("desc")
-    .take(200);
-  const views = entries.filter((e) => e.action === "viewed" || e.action === "document_opened");
-  return { views: views.length, lastViewedAt: views[0]?._creationTime ?? null };
-}
+const smeStatus = (status: Doc<"applications">["status"]): SmeApplicationStatus =>
+  status === "withdrawn" ? "withdrawn" : "submitted";
 
-async function applicationSummary(ctx: QueryCtx, application: Doc<"applications">) {
+/**
+ * The SME's own application as it may see it: what it sent and its status. Never the evaluation, score,
+ * ranking, buyer activity, review or decision, which only the buyer and MASLink staff see.
+ */
+function applicationSummary(application: Doc<"applications">) {
   return {
     id: application._id,
-    status: application.status,
+    status: smeStatus(application.status),
     submittedAt: application.submittedAt,
-    statusChangedAt: application.statusChangedAt ?? null,
-    statusReason: application.statusReason ?? null,
-    evaluation: application.evaluation,
-    review: application.review ? { status: application.review.status } : null,
-    // The SME sees its own outcome and why, never other applicants' details
-    decision: application.decision
-      ? {
-          outcome: application.decision.outcome,
-          rationale: application.decision.rationale,
-          eligible: application.decision.eligible,
-          totalPoints: application.decision.totalPoints ?? null,
-          decidedAt: application.decision.decidedAt,
-        }
-      : null,
+    withdrawnAt: application.status === "withdrawn" ? (application.statusChangedAt ?? null) : null,
     quote: application.quote ?? null,
     proposal: application.proposal ?? null,
     attachments: (application.attachments ?? []).map((a) => ({ label: a.label, name: a.name })),
-    ...(await rankOf(ctx, application)),
-    ...(await buyerViews(ctx, application)),
   };
+}
+
+/** An application the SME saved without submitting. */
+function draftSummary(draft: Doc<"applicationDrafts">) {
+  return {
+    id: draft._id,
+    updatedAt: draft.updatedAt,
+    quote: draft.quote ?? null,
+    proposal: draft.proposal ?? null,
+    attachments: draft.attachments.map((a) => ({ label: a.label, name: a.name })),
+  };
+}
+
+async function ownDraft(ctx: QueryCtx, smeId: Id<"smes">, opportunityId: Id<"opportunities">) {
+  return ctx.db
+    .query("applicationDrafts")
+    .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", smeId).eq("opportunityId", opportunityId))
+    .unique();
 }
 
 /**
@@ -126,7 +118,7 @@ export const feed = query({
     const sme = await getOwnSme(ctx);
     if (!sme) return null;
 
-    const [orgs, open, mine] = await Promise.all([
+    const [orgs, open, mine, drafts] = await Promise.all([
       organizations(ctx),
       ctx.db
         .query("opportunities")
@@ -136,8 +128,13 @@ export const feed = query({
         .query("applications")
         .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", sme._id))
         .take(APPLICATION_LIMIT),
+      ctx.db
+        .query("applicationDrafts")
+        .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", sme._id))
+        .take(APPLICATION_LIMIT),
     ]);
     const appliedTo = new Map(mine.map((a) => [a.opportunityId, a]));
+    const started = new Set(drafts.map((d) => d.opportunityId));
 
     return open
       .filter((o) => orgs.get(o.organizationId)?.verified)
@@ -145,44 +142,68 @@ export const feed = query({
         const application = appliedTo.get(o._id);
         return {
           ...publicOpportunity(o, orgs.get(o.organizationId)!.name),
-          application: application ? { id: application._id, status: application.status } : null,
+          application: application ? { id: application._id, status: smeStatus(application.status) } : null,
+          inProgress: started.has(o._id),
         };
       });
   },
 });
 
-/** Everything the SME applied to, newest first, with how each is going. */
+/**
+ * Everything the SME started or applied to, most recent first, with its status: in progress (saved, not
+ * submitted), submitted or withdrawn.
+ */
 export const myApplications = query({
   args: {},
   handler: async (ctx) => {
     const sme = await getOwnSme(ctx);
     if (!sme) return null;
 
-    const [orgs, applications] = await Promise.all([
+    const [orgs, applications, drafts] = await Promise.all([
       organizations(ctx),
       ctx.db
         .query("applications")
         .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", sme._id))
         .take(APPLICATION_LIMIT),
+      ctx.db
+        .query("applicationDrafts")
+        .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", sme._id))
+        .take(APPLICATION_LIMIT),
     ]);
+    const name = (o: Doc<"opportunities">) => orgs.get(o.organizationId)?.name ?? "A buyer";
 
     const rows = [];
     for (const application of applications) {
       const opportunity = await ctx.db.get("opportunities", application.opportunityId);
       if (!opportunity) continue;
+      const a = applicationSummary(application);
       rows.push({
-        opportunity: publicOpportunity(opportunity, orgs.get(opportunity.organizationId)?.name ?? "A buyer"),
-        application: await applicationSummary(ctx, application),
+        opportunity: publicOpportunity(opportunity, name(opportunity)),
+        id: a.id as string,
+        status: a.status,
+        at: a.withdrawnAt ?? a.submittedAt,
+        submittedAt: a.submittedAt as number | null,
       });
     }
-    rows.sort((a, b) => b.application.submittedAt - a.application.submittedAt);
+    for (const draft of drafts) {
+      const opportunity = await ctx.db.get("opportunities", draft.opportunityId);
+      if (!opportunity) continue;
+      rows.push({
+        opportunity: publicOpportunity(opportunity, name(opportunity)),
+        id: draft._id as string,
+        status: "in_progress" as SmeApplicationStatus,
+        at: draft.updatedAt,
+        submittedAt: null,
+      });
+    }
+    rows.sort((a, b) => b.at - a.at);
     return rows;
   },
 });
 
 /**
- * One opportunity as an SME sees it: the listing, released documents and the SME's own application.
- * Available while it's open (from a verified buyer), or any time to an SME that applied.
+ * One opportunity as an SME sees it: the listing, released documents and the SME's own application or
+ * unfinished one. Available while it's open (from a verified buyer), or any time to an SME that started on it.
  */
 export const opportunity = query({
   args: { opportunityId: v.string() },
@@ -194,15 +215,16 @@ export const opportunity = query({
     const opportunity = id ? await ctx.db.get("opportunities", id) : null;
     if (!opportunity) return null;
 
-    const [orgs, application] = await Promise.all([
+    const [orgs, application, draft] = await Promise.all([
       organizations(ctx),
       ctx.db
         .query("applications")
         .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", sme._id).eq("opportunityId", opportunity._id))
         .unique(),
+      ownDraft(ctx, sme._id, opportunity._id),
     ]);
     const org = orgs.get(opportunity.organizationId);
-    if (!application && !(opportunity.status === "open" && org?.verified)) return null;
+    if (!application && !draft && !(opportunity.status === "open" && org?.verified)) return null;
 
     const released = await ctx.db
       .query("opportunityDocuments")
@@ -236,7 +258,19 @@ export const opportunity = query({
             }
           : null,
       documents,
-      application: application ? await applicationSummary(ctx, application) : null,
+      application: application ? applicationSummary(application) : null,
+      /**
+       * Documents the tender still needs from this application, from the review: names and what to do, never
+       * how it was scored. Null before the review has checked it against a confirmed tender.
+       */
+      outstanding:
+        application && opportunity.tender?.status === "confirmed" && application.evaluation.requirements
+          ? outstandingAfterReview(
+              { requirements: opportunity.tender.requirements, threshold: null, documentName: null },
+              application.evaluation,
+            )
+          : null,
+      draft: !application && draft ? draftSummary(draft) : null,
     };
   },
 });
@@ -289,7 +323,18 @@ function todayInSouthAfrica() {
   return new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
-/** Applies to an open opportunity. The buyer sees it straight away, checked against their requirements. */
+const uploadedFiles = v.array(v.object({ storageId: v.id("_storage"), label: v.string(), name: v.string() }));
+
+function cleanQuote(value: number | undefined) {
+  const quote = value === undefined ? undefined : Math.round(value * 100) / 100;
+  if (quote !== undefined && !(quote > 0 && quote < 1e12)) throw new ConvexError("Enter your quoted price in rand.");
+  return quote;
+}
+
+/**
+ * Applies to an open opportunity, with anything saved on an unfinished application. The buyer sees it straight
+ * away, checked against their requirements.
+ */
 export const apply = mutation({
   args: {
     opportunityId: v.id("opportunities"),
@@ -297,7 +342,9 @@ export const apply = mutation({
     quote: v.optional(v.number()),
     proposal: v.optional(v.string()),
     /** Files the browser already uploaded to Convex storage. */
-    attachments: v.optional(v.array(v.object({ storageId: v.id("_storage"), label: v.string(), name: v.string() }))),
+    attachments: v.optional(uploadedFiles),
+    /** Files saved on the unfinished application to leave out, by position. */
+    removeSaved: v.optional(v.array(v.number())),
   },
   handler: async (ctx, args) => {
     const sme = await getOwnSme(ctx);
@@ -320,12 +367,23 @@ export const apply = mutation({
       .query("applications")
       .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", sme._id).eq("opportunityId", opportunity._id))
       .unique();
-    if (existing) throw new ConvexError("You’ve already applied to this opportunity.");
+    if (existing) {
+      throw new ConvexError(
+        existing.status === "withdrawn"
+          ? "You withdrew your application to this opportunity, so you can’t apply again."
+          : "You’ve already applied to this opportunity.",
+      );
+    }
 
-    const quote = args.quote === undefined ? undefined : Math.round(args.quote * 100) / 100;
-    if (quote !== undefined && !(quote > 0 && quote < 1e12)) throw new ConvexError("Enter your quoted price in rand.");
+    const quote = cleanQuote(args.quote);
     const proposal = args.proposal?.trim().slice(0, PROPOSAL_MAX_CHARS) || undefined;
-    const attachments = await checkAttachments(ctx, args.attachments ?? []);
+    const draft = await ownDraft(ctx, sme._id, opportunity._id);
+    const removed = new Set(args.removeSaved ?? []);
+    const saved = (draft?.attachments ?? []).filter((_, i) => !removed.has(i));
+    if (saved.length + (args.attachments ?? []).length > MAX_ATTACHMENTS) {
+      throw new ConvexError(`Send at most ${MAX_ATTACHMENTS} documents with an application.`);
+    }
+    const attachments = [...saved, ...(await checkAttachments(ctx, args.attachments ?? []))];
 
     const applicationId = await ctx.db.insert("applications", {
       opportunityId: opportunity._id,
@@ -349,13 +407,130 @@ export const apply = mutation({
       details: attachments.map((a) => `${a.label}: ${a.name}`),
     });
     await startReview(ctx, applicationId);
+
+    // The unfinished application becomes this one: its kept files moved across, the rest are deleted
+    if (draft) {
+      const dropped = draft.attachments.filter((_, i) => removed.has(i));
+      await Promise.all(dropped.map((f) => ctx.storage.delete(f.storageId).catch(() => {})));
+      await ctx.db.delete("applicationDrafts", draft._id);
+    }
     return applicationId;
   },
 });
 
 /**
- * Adds documents to an application while the opportunity is still open, so an SME can supply what the review
- * said was missing. The application is reviewed again with everything it now holds.
+ * Saves an application without submitting it ("In progress"), so the SME can finish it later. Only the SME
+ * ever sees it; the buyer sees nothing until it's submitted.
+ */
+export const saveDraft = mutation({
+  args: {
+    opportunityId: v.id("opportunities"),
+    quote: v.optional(v.number()),
+    proposal: v.optional(v.string()),
+    /** New files the browser already uploaded to Convex storage. */
+    attachments: v.optional(uploadedFiles),
+    /** Files saved earlier to drop, by position. */
+    removeSaved: v.optional(v.array(v.number())),
+  },
+  handler: async (ctx, args) => {
+    const added = args.attachments ?? [];
+    const fail = async (message: string): Promise<never> => {
+      await Promise.all(added.map((f) => ctx.storage.delete(f.storageId).catch(() => {})));
+      throw new ConvexError(message);
+    };
+
+    const sme = await getOwnSme(ctx);
+    if (!sme) return fail("Register your business before applying.");
+    const opportunity = await ctx.db.get("opportunities", args.opportunityId);
+    if (!opportunity || opportunity.status !== "open" || opportunity.closesAt < todayInSouthAfrica()) {
+      return fail("This opportunity isn’t open any more.");
+    }
+    const applied = await ctx.db
+      .query("applications")
+      .withIndex("by_sme_and_opportunity", (q) => q.eq("smeId", sme._id).eq("opportunityId", opportunity._id))
+      .unique();
+    if (applied) return fail("You’ve already applied to this opportunity.");
+
+    const quote = args.quote === undefined ? undefined : Math.round(args.quote * 100) / 100;
+    if (quote !== undefined && !(quote > 0 && quote < 1e12)) return fail("Enter your quoted price in rand.");
+    const draft = await ownDraft(ctx, sme._id, opportunity._id);
+    const removed = new Set(args.removeSaved ?? []);
+    const kept = (draft?.attachments ?? []).filter((_, i) => !removed.has(i));
+    if (kept.length + added.length > MAX_ATTACHMENTS) {
+      return fail(`An application holds at most ${MAX_ATTACHMENTS} documents. Remove one to make room.`);
+    }
+    const attachments = [...kept, ...(await checkAttachments(ctx, added))];
+    const dropped = (draft?.attachments ?? []).filter((_, i) => removed.has(i));
+    await Promise.all(dropped.map((f) => ctx.storage.delete(f.storageId).catch(() => {})));
+
+    const fields = {
+      smeId: sme._id,
+      opportunityId: opportunity._id,
+      quote,
+      proposal: args.proposal?.trim().slice(0, PROPOSAL_MAX_CHARS) || undefined,
+      attachments,
+      updatedAt: Date.now(),
+    };
+    if (draft) await ctx.db.replace("applicationDrafts", draft._id, fields);
+    else await ctx.db.insert("applicationDrafts", fields);
+    return null;
+  },
+});
+
+/** Deletes an unfinished application and the files saved on it. */
+export const discardDraft = mutation({
+  args: { opportunityId: v.id("opportunities") },
+  handler: async (ctx, args) => {
+    const sme = await getOwnSme(ctx);
+    if (!sme) return null;
+    const draft = await ownDraft(ctx, sme._id, args.opportunityId);
+    if (draft) await deleteDraft(ctx, draft);
+    return null;
+  },
+});
+
+/**
+ * Withdraws a submitted application while the opportunity is open. It leaves the buyer's review and
+ * shortlisting, and the buyer sees it as withdrawn.
+ */
+export const withdraw = mutation({
+  args: { applicationId: v.id("applications") },
+  handler: async (ctx, args) => {
+    const sme = await getOwnSme(ctx);
+    const application = await ctx.db.get("applications", args.applicationId);
+    if (!sme || !application || application.smeId !== sme._id) {
+      throw new ConvexError("That application isn’t available.");
+    }
+    if (application.status === "withdrawn") return null;
+    const opportunity = await ctx.db.get("opportunities", application.opportunityId);
+    if (!opportunity || opportunity.status !== "open" || opportunity.closesAt < todayInSouthAfrica()) {
+      throw new ConvexError("This opportunity has closed, so your application can’t be withdrawn.");
+    }
+    if (application.status === "awarded") {
+      throw new ConvexError("This application can’t be withdrawn here. Contact the buyer.");
+    }
+
+    await ctx.db.patch("applications", application._id, {
+      status: "withdrawn",
+      statusChangedAt: Date.now(),
+      statusChangedBy: undefined,
+      statusReason: undefined,
+    });
+    await addTrail(ctx, {
+      opportunityId: opportunity._id,
+      organizationId: opportunity.organizationId,
+      applicationId: application._id,
+      kind: "action",
+      actor: sme.companyName,
+      summary: `${sme.companyName} withdrew its application.`,
+    });
+    return null;
+  },
+});
+
+/**
+ * Adds documents to an application while the opportunity is still open. The application is reviewed again
+ * with everything it now holds.
  */
 export const addDocuments = mutation({
   args: {
@@ -376,9 +551,12 @@ export const addDocuments = mutation({
     const problem =
       !opportunity || opportunity.status !== "open" || opportunity.closesAt < todayInSouthAfrica()
         ? "This opportunity has closed, so the application can’t change."
-        : application.status !== "submitted" || application.decision
-          ? "The buyer has already decided on this application."
-          : null;
+        : application.status === "withdrawn"
+          ? "You withdrew this application, so it can’t change."
+          : application.status !== "submitted" || application.decision
+            ? // Never tell the SME what the buyer decided (to the SME it's simply submitted)
+              "This application can’t be changed any more. Contact the buyer if you need to send more."
+            : null;
     if (problem || !opportunity) {
       await discard();
       throw new ConvexError(problem ?? "This opportunity has closed.");

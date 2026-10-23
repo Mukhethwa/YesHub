@@ -191,6 +191,7 @@ pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'   # a
 | `JEV_MODEL` | Convex | Optional. Defaults to `jev-latest`; pin a version such as `jev-1.14.0` for repeatable reviews |
 | `SUPER_ADMIN_EMAILS` | Convex | Comma-separated emails that become MASLink super admins when they sign up |
 | `AUTH_EMAIL_FROM` | Convex | Sender address on a domain verified in Resend. Until one is set, mail only reaches the Resend account owner, so sign-up doesn’t require email verification (see `convex/auth.ts`) |
+| `ANTHROPIC_API_KEY` | `.env.local`, Vercel | The SME's "Improve my summary" (Professional company summary), in `src/app/api/company-summary/route.ts`. Without it the button explains that AI summaries aren't set up |
 | `CONVEX_DEPLOY_KEY` | Vercel | See below |
 
 ### Scripts

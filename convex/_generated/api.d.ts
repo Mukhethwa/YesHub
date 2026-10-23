@@ -24,6 +24,7 @@ import type * as lib_evaluation from "../lib/evaluation.js";
 import type * as lib_jev from "../lib/jev.js";
 import type * as lib_opportunities from "../lib/opportunities.js";
 import type * as lib_organizationSettings from "../lib/organizationSettings.js";
+import type * as lib_outstanding from "../lib/outstanding.js";
 import type * as lib_procurement from "../lib/procurement.js";
 import type * as lib_samplePdf from "../lib/samplePdf.js";
 import type * as lib_staff from "../lib/staff.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   "lib/jev": typeof lib_jev;
   "lib/opportunities": typeof lib_opportunities;
   "lib/organizationSettings": typeof lib_organizationSettings;
+  "lib/outstanding": typeof lib_outstanding;
   "lib/procurement": typeof lib_procurement;
   "lib/samplePdf": typeof lib_samplePdf;
   "lib/staff": typeof lib_staff;

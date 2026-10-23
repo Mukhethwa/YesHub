@@ -54,7 +54,7 @@ function matches(row: Parameters<typeof phaseOf>[0], filter: Filter) {
   return phase === filter;
 }
 
-/** The Opportunities page: the full list, or one opportunity when the URL has ?id=. */
+/** The Listings page: the full list, or one listing when the URL has ?id=. */
 export function OpportunitiesView() {
   const params = useSearchParams();
   const id = params.get("id");
@@ -105,15 +105,15 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
 
   return (
     <div className="space-y-5">
-      <AdminPageHeader title="Opportunities">
+      <AdminPageHeader title="Listings">
         <Button asChild>
-          <Link href="/dashboard/opportunities/new">New opportunity</Link>
+          <Link href="/dashboard/opportunities/new">New listing</Link>
         </Button>
       </AdminPageHeader>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterTabs
-          label="Filter opportunities"
+          label="Filter listings"
           value={filter}
           onChange={setFilter}
           options={[
@@ -144,7 +144,7 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
           <Input
             type="search"
             placeholder="Search by title or reference"
-            aria-label="Search opportunities"
+            aria-label="Search listings"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="sm:w-72"
@@ -155,13 +155,13 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
       <div className="overflow-hidden rounded-xl border bg-card">
         {visible.length === 0 ? (
           <p className="px-6 py-10 text-center text-sm text-muted-foreground">
-            {rows.length === 0 ? "You haven’t listed any opportunities yet." : "No opportunities match."}
+            {rows.length === 0 ? "You haven’t published any listings yet." : "No listings match."}
           </p>
         ) : (
           <OpportunityTable rows={pagination.rows} />
         )}
       </div>
-      <TablePagination pagination={pagination} noun="opportunities" />
+      <TablePagination pagination={pagination} noun="listings" />
     </div>
   );
 }
@@ -195,12 +195,12 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
   if (detail === null) {
     return (
       <div className="py-24 text-center">
-        <p className="font-medium">This opportunity isn’t available</p>
+        <p className="font-medium">This listing isn’t available</p>
         <p className="mt-1 text-sm text-muted-foreground">
           It may have been removed, or it belongs to another organisation.
         </p>
         <Button variant="outline" className="mt-4" asChild>
-          <Link href="/dashboard/opportunities">All opportunities</Link>
+          <Link href="/dashboard/opportunities">All listings</Link>
         </Button>
       </div>
     );
@@ -208,17 +208,20 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
 
   const phase = phaseOf(detail);
   const filter: ApplicantFilter = chosenFilter ?? detail.defaultApplicantFilter;
-  const qualifying = detail.applicants.filter((a) => a.evaluation.qualifies);
-  const visible = detail.applicants.filter((a) =>
-    filter === "all" ? true : filter === "qualify" ? a.evaluation.qualifies : !a.evaluation.qualifies,
-  );
+  const qualifying = detail.applicants.filter((a) => a.status !== "withdrawn" && a.evaluation.qualifies);
+  const active = detail.applicants.filter((a) => a.status !== "withdrawn");
+  // Withdrawn applications show under All only
+  const visible =
+    filter === "all"
+      ? detail.applicants
+      : active.filter((a) => (filter === "qualify" ? a.evaluation.qualifies : !a.evaluation.qualifies));
   const reviewed = detail.applicants.some((a) => a.evaluation.engine === "jev");
 
   return (
     <div className="space-y-6">
       <Part id="opp-back">
         <Button variant="link" size="sm" className="-ml-3 text-muted-foreground" asChild>
-          <Link href="/dashboard/opportunities">All opportunities</Link>
+          <Link href="/dashboard/opportunities">All listings</Link>
         </Button>
       </Part>
 
@@ -338,7 +341,7 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
                     options={[
                       { id: "all", label: "All", count: detail.applicants.length },
                       { id: "qualify", label: "Qualify", count: qualifying.length },
-                      { id: "not", label: "Don’t qualify", count: detail.applicants.length - qualifying.length },
+                      { id: "not", label: "Don’t qualify", count: active.length - qualifying.length },
                     ]}
                   />
                 </div>
@@ -352,7 +355,10 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
                     canShortlist={detail.canShortlist}
                     canAward={detail.canAward}
                     applicants={visible}
-                    ranks={new Map(detail.applicants.map((a, i) => [a.id, i + 1]))}
+                    // Withdrawn applications have no rank
+                    ranks={
+                      new Map(detail.applicants.filter((a) => a.status !== "withdrawn").map((a, i) => [a.id, i + 1]))
+                    }
                     requirements={detail.tender?.status === "confirmed" ? detail.tender.requirements : undefined}
                   />
                 )}
@@ -389,7 +395,7 @@ function ListingCard({ detail }: { detail: Detail }) {
       <Card>
         <CardHeader>
           <CardTitle>Listing</CardTitle>
-          <CardDescription>This opportunity was created before full listings were captured.</CardDescription>
+          <CardDescription>This listing was created before its full details were captured.</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -474,7 +480,7 @@ function ReleasedDocumentsCard({ detail }: { detail: Detail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Documents released with this opportunity</CardTitle>
+        <CardTitle>Documents released with this listing</CardTitle>
         <CardDescription>
           The documents SMEs download to respond: the RFQ or terms of reference, specifications, pricing schedules and
           forms.
@@ -610,6 +616,7 @@ const STATUS_LABELS: Record<Applicant["status"], string> = {
   shortlisted: "Shortlisted",
   declined: "Not taken further",
   awarded: "Awarded",
+  withdrawn: "Withdrawn by the supplier",
 };
 
 function ApplicantTable({
@@ -652,12 +659,13 @@ function ApplicantTable({
           return (
             <Fragment key={a.id}>
               <TableRow>
-                <TableCell className="pl-6 font-medium tabular-nums">{ranks.get(a.id)}</TableCell>
+                <TableCell className="pl-6 font-medium tabular-nums">{ranks.get(a.id) ?? "–"}</TableCell>
                 <TableCell className="max-w-72">
                   <span className="flex items-center gap-2">
                     <span className="truncate font-medium">{a.sme.companyName}</span>
                     {a.sme.verified && <Pill tone="info">Verified</Pill>}
                     {a.status === "shortlisted" && <Pill tone="success">Shortlisted</Pill>}
+                    {a.status === "withdrawn" && <Pill tone="neutral">Withdrawn</Pill>}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {a.sme.city}, {a.sme.hqProvince}, {a.sme.industry}

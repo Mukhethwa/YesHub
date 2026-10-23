@@ -95,7 +95,7 @@ export function OpportunityActions({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onSelect={() => setConfirming("cancel")}>
-                  Cancel opportunity
+                  Cancel listing
                 </DropdownMenuItem>
               </>
             )}
@@ -117,7 +117,7 @@ export function OpportunityActions({
         onOpenChange={(open) => !open && setConfirming(null)}
         title={`Cancel ${reference}?`}
         description="It can’t be awarded afterwards. Every applicant sees that it was cancelled and your reason. This can’t be undone."
-        confirmLabel="Cancel opportunity"
+        confirmLabel="Cancel listing"
         destructive
         reason={{ label: "Reason, shown to applicants and on the audit log", required: true }}
         onConfirm={(reason) => runMutation(`${reference} cancelled.`, () => cancel({ opportunityId, reason }))}

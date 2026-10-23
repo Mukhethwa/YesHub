@@ -72,14 +72,14 @@ export function OpportunityFormPage() {
   const settings = useQuery(api.enterprise.settings);
   const overview = useQuery(api.enterprise.overview);
   const existing = useQuery(api.enterprise.opportunity, id ? { opportunityId: id } : "skip");
-  useBreadcrumb(id ? (existing?.reference ?? "Edit") : "New opportunity");
+  useBreadcrumb(id ? (existing?.reference ?? "Edit") : "New listing");
 
   if (settings === undefined || overview === undefined || (id && existing === undefined)) {
     return <Spinner className="mx-auto mt-24" />;
   }
   if (settings === null || overview === null) return <CreateOrganisation />;
   if (id && !existing) {
-    return <p className="py-24 text-center text-sm text-muted-foreground">That opportunity isn’t available.</p>;
+    return <p className="py-24 text-center text-sm text-muted-foreground">That listing isn’t available.</p>;
   }
 
   const s = settings.settings;
@@ -217,7 +217,7 @@ function OpportunityForm({
       );
       router.push(`/dashboard/opportunities?id=${created.id}`);
     } catch (error) {
-      toast.error(errorMessage(error, "Couldn’t save the opportunity."));
+      toast.error(errorMessage(error, "Couldn’t save the listing."));
     } finally {
       setPending(null);
     }
@@ -226,17 +226,17 @@ function OpportunityForm({
   return (
     <form onSubmit={(e) => save(e, false)} className="space-y-8">
       <AdminPageHeader
-        title={opportunityId ? `Edit ${reference}` : "New opportunity"}
+        title={opportunityId ? `Edit ${reference}` : "New listing"}
         description={
           opportunityId
             ? published
-              ? "This opportunity is published. Your changes, and your reason for them, go on the audit log."
+              ? "This listing is published. Your changes, and your reason for them, go on the audit log."
               : `Reference ${reference}, generated when the draft was created. It never changes.`
             : "A reference is generated when you save, and never changes, so documents, applications and the audit log can point to it."
         }
       />
 
-      <Section title="The opportunity">
+      <Section title="The listing">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel>Kind</FieldLabel>
@@ -462,8 +462,8 @@ function OpportunityForm({
               onChange={(e) => setTenderFile(e.target.files?.[0] ?? null)}
             />
             <FieldDescription>
-              Released with the opportunity. Its mandatory requirements, scored criteria and returnable documents are
-              read for you to check.
+              Released with the listing. Its mandatory requirements, scored criteria and returnable documents are read
+              for you to check.
             </FieldDescription>
           </Field>
         )}
