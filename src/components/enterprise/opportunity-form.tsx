@@ -23,6 +23,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { OpportunityKind } from "../../../convex/schema";
 import { CreateOrganisation } from "./create-organisation";
+import { ESD_KINDS, isEsd, PROCUREMENT_KINDS } from "../../../convex/lib/kinds";
 import { KIND_LABELS } from "./tenders";
 
 /*
@@ -72,7 +73,11 @@ export function OpportunityFormPage() {
   const settings = useQuery(api.enterprise.settings);
   const overview = useQuery(api.enterprise.overview);
   const existing = useQuery(api.enterprise.opportunity, id ? { opportunityId: id } : "skip");
-  useBreadcrumb(id ? (existing?.reference ?? "Edit") : "New listing");
+  // ESD pages open the form with ?kind=grant (or funding, accelerator, support)
+  const kindParam = params.get("kind") as OpportunityKind | null;
+  const newKind: OpportunityKind = kindParam && kindParam in KIND_LABELS ? kindParam : "rfq";
+  const esd = isEsd(existing?.kind ?? newKind);
+  useBreadcrumb(id ? (existing?.reference ?? "Edit") : esd ? "New programme" : "New listing");
 
   if (settings === undefined || overview === undefined || (id && existing === undefined)) {
     return <Spinner className="mx-auto mt-24" />;
@@ -105,7 +110,7 @@ export function OpportunityFormPage() {
         enquiriesEmail: existing.listing?.enquiriesEmail ?? "",
       }
     : {
-        kind: "rfq",
+        kind: newKind,
         title: "",
         description: "",
         industry: s.industry && INDUSTRIES.includes(s.industry) ? s.industry : "",
@@ -120,7 +125,8 @@ export function OpportunityFormPage() {
         contractPeriod: "",
         briefing: "",
         submission: s.defaultSubmission,
-        evaluationCriteria: s.defaultEvaluationCriteria.join("\n"),
+        // The organisation's default criteria are for procurement (price and B-BBEE points)
+        evaluationCriteria: esd ? "" : s.defaultEvaluationCriteria.join("\n"),
         enquiriesName: "",
         enquiriesEmail: s.procurementEmail,
       };
@@ -134,6 +140,7 @@ export function OpportunityFormPage() {
       canManage={settings.canManage}
       verified={settings.organization.verificationStatus === "verified"}
       departments={overview.departments}
+      esd={esd}
     />
   );
 }
@@ -146,6 +153,7 @@ function OpportunityForm({
   canManage,
   verified,
   departments,
+  esd,
 }: {
   opportunityId?: Id<"opportunities">;
   reference?: string;
@@ -154,6 +162,8 @@ function OpportunityForm({
   canManage: boolean;
   verified: boolean;
   departments: { id: string; name: string }[];
+  /** An ESD programme rather than a procurement listing. */
+  esd: boolean;
 }) {
   const router = useRouter();
   const create = useMutation(api.opportunities.create);
@@ -166,6 +176,8 @@ function OpportunityForm({
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState<"draft" | "publish" | null>(null);
   const published = status !== "draft";
+  const kinds: readonly OpportunityKind[] = esd ? ESD_KINDS : PROCUREMENT_KINDS;
+  const home = esd ? "/dashboard/esd" : "/dashboard/opportunities";
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
   const toggle = (key: "provinces" | "requiredDocuments", value: string, on: boolean) =>
     set(key, on ? [...form[key], value] : form[key].filter((v) => v !== value));
@@ -201,7 +213,7 @@ function OpportunityForm({
       if (opportunityId) {
         await update({ opportunityId, ...payload(), reason: published ? reason : undefined });
         toast.success(published ? "Amendment saved and recorded." : "Draft saved.");
-        router.push(`/dashboard/opportunities?id=${opportunityId}`);
+        router.push(`${home}?id=${opportunityId}`);
         return;
       }
       const created = await create({ ...payload(), publish });
@@ -215,7 +227,7 @@ function OpportunityForm({
           tenderFile ? " The tender is being read; check its requirements under Requirements." : ""
         }`,
       );
-      router.push(`/dashboard/opportunities?id=${created.id}`);
+      router.push(`${home}?id=${created.id}`);
     } catch (error) {
       toast.error(errorMessage(error, "Couldn’t save the listing."));
     } finally {
@@ -226,17 +238,17 @@ function OpportunityForm({
   return (
     <form onSubmit={(e) => save(e, false)} className="space-y-8">
       <AdminPageHeader
-        title={opportunityId ? `Edit ${reference}` : "New listing"}
+        title={opportunityId ? `Edit ${reference}` : esd ? "New programme" : "New listing"}
         description={
           opportunityId
             ? published
-              ? "This listing is published. Your changes, and your reason for them, go on the audit log."
+              ? `This ${esd ? "programme" : "listing"} is published. Your changes, and your reason for them, go on the audit log.`
               : `Reference ${reference}, generated when the draft was created. It never changes.`
             : "A reference is generated when you save, and never changes, so documents, applications and the audit log can point to it."
         }
       />
 
-      <Section title="The listing">
+      <Section title={esd ? "The programme" : "The listing"}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel>Kind</FieldLabel>
@@ -245,7 +257,7 @@ function OpportunityForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(KIND_LABELS) as OpportunityKind[]).map((k) => (
+                {kinds.map((k) => (
                   <SelectItem key={k} value={k}>
                     {KIND_LABELS[k]}
                   </SelectItem>
@@ -278,7 +290,9 @@ function OpportunityForm({
             id="opp-title"
             value={form.title}
             onChange={(e) => set("title", e.target.value)}
-            placeholder="e.g. Office cleaning and hygiene services, 36 months"
+            placeholder={
+              esd ? "e.g. SME growth accelerator, 6 months" : "e.g. Office cleaning and hygiene services, 36 months"
+            }
             required
           />
         </Field>
@@ -304,7 +318,7 @@ function OpportunityForm({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="opp-value">Estimated value (rand)</FieldLabel>
+            <FieldLabel htmlFor="opp-value">{esd ? "Value per SME (rand)" : "Estimated value (rand)"}</FieldLabel>
             <Input
               id="opp-value"
               inputMode="decimal"
@@ -314,12 +328,12 @@ function OpportunityForm({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="opp-period">Contract period</FieldLabel>
+            <FieldLabel htmlFor="opp-period">{esd ? "Programme length" : "Contract period"}</FieldLabel>
             <Input
               id="opp-period"
               value={form.contractPeriod}
               onChange={(e) => set("contractPeriod", e.target.value)}
-              placeholder="e.g. 36 months"
+              placeholder={esd ? "e.g. 6 months" : "e.g. 36 months"}
             />
           </Field>
         </div>
@@ -400,24 +414,31 @@ function OpportunityForm({
           </div>
         </fieldset>
         <Field>
-          <FieldLabel htmlFor="opp-criteria">How bids are evaluated, one criterion per line</FieldLabel>
+          <FieldLabel htmlFor="opp-criteria">
+            {esd ? "Selection criteria, one per line" : "How bids are evaluated, one criterion per line"}
+          </FieldLabel>
           <Textarea
             id="opp-criteria"
             rows={4}
             value={form.evaluationCriteria}
             onChange={(e) => set("evaluationCriteria", e.target.value)}
-            placeholder={"Functionality: 70 points minimum to proceed\nPrice: 80 points\nB-BBEE: 20 points"}
+            placeholder={
+              esd
+                ? "At least one year of trading\nBased in or serving a township\nCommitted to attend every session"
+                : "Functionality: 70 points minimum to proceed\nPrice: 80 points\nB-BBEE: 20 points"
+            }
           />
           <FieldDescription>
-            Price and B-BBEE points are calculated with the 80/20 or 90/10 formula. For a detailed tender, attach the
-            document and its requirements are read for you.
+            {esd
+              ? "Who you’ll accept, one per line. SMEs see these before they apply."
+              : "Price and B-BBEE points are calculated with the 80/20 or 90/10 formula. For a detailed tender, attach the document and its requirements are read for you."}
           </FieldDescription>
         </Field>
       </Section>
 
-      <Section title="The listing">
+      <Section title={esd ? "What SMEs get" : "The listing"}>
         <Field>
-          <FieldLabel htmlFor="opp-scope">Scope of work</FieldLabel>
+          <FieldLabel htmlFor="opp-scope">{esd ? "What it offers" : "Scope of work"}</FieldLabel>
           <Textarea id="opp-scope" rows={4} value={form.scope} onChange={(e) => set("scope", e.target.value)} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -452,7 +473,7 @@ function OpportunityForm({
             />
           </Field>
         </div>
-        {!opportunityId && (
+        {!opportunityId && !esd && (
           <Field>
             <FieldLabel htmlFor="opp-tender">Tender document (PDF), optional</FieldLabel>
             <Input
@@ -488,9 +509,7 @@ function OpportunityForm({
 
       <div className="flex flex-col-reverse gap-2 border-t pt-5 sm:flex-row sm:justify-end">
         <Button variant="ghost" asChild>
-          <Link href={opportunityId ? `/dashboard/opportunities?id=${opportunityId}` : "/dashboard/opportunities"}>
-            Cancel
-          </Link>
+          <Link href={opportunityId ? `${home}?id=${opportunityId}` : home}>Cancel</Link>
         </Button>
         {published ? (
           <Button type="submit" disabled={!!pending || !canManage || reason.trim().length < 10}>

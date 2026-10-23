@@ -36,6 +36,7 @@ import { DOCUMENTS } from "@/lib/sme/documents";
 import { formatBytes, formatDate } from "@/lib/sme/format";
 import { api } from "../../../convex/_generated/api";
 import type { TenderRequirement } from "../../../convex/schema";
+import { isEsd } from "../../../convex/lib/kinds";
 import { CreateOrganisation } from "./create-organisation";
 import { OpportunityTable } from "./enterprise-overview";
 import { ApplicantActions, ApplicantReview, ApplicantReviewStatus, EvaluationCard } from "./evaluation";
@@ -79,7 +80,8 @@ function OpportunityList({ initialDepartment }: { initialDepartment: string }) {
   const [department, setDepartment] = useState(initialDepartment);
   const [search, setSearch] = useState("");
 
-  const rows = useMemo(() => data?.opportunities ?? [], [data]);
+  // Listings are procurement; grants and other ESD programmes are under ESD
+  const rows = useMemo(() => (data?.opportunities ?? []).filter((o) => !isEsd(o.kind)), [data]);
   const myTeamIds = useMemo(() => data?.myTeamIds ?? [], [data]);
   const inScope = useMemo(
     () => rows.filter((r) => inDepartment(r, department, myTeamIds)),
@@ -185,9 +187,19 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
+/**
+ * One listing or ESD programme and its applicants. A programme leaves out what's only for procurement
+ * (the tender's requirements, shortlisting) and accepts SMEs rather than awarding.
+ */
+export function OpportunityDetail({
+  opportunityId,
+  area = "listings",
+}: {
+  opportunityId: string;
+  area?: "listings" | "esd";
+}) {
   const detail = useQuery(api.enterprise.opportunity, { opportunityId });
-  useBreadcrumb(detail?.title);
+  useBreadcrumb(detail?.reference);
   // Null until the user picks a filter, so it starts from the organisation's chosen default
   const [chosenFilter, setFilter] = useState<ApplicantFilter | null>(null);
 
@@ -195,16 +207,20 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
   if (detail === null) {
     return (
       <div className="py-24 text-center">
-        <p className="font-medium">This listing isn’t available</p>
+        <p className="font-medium">This {area === "esd" ? "programme" : "listing"} isn’t available</p>
         <p className="mt-1 text-sm text-muted-foreground">
           It may have been removed, or it belongs to another organisation.
         </p>
         <Button variant="outline" className="mt-4" asChild>
-          <Link href="/dashboard/opportunities">All listings</Link>
+          <Link href={area === "esd" ? "/dashboard/esd" : "/dashboard/opportunities"}>
+            {area === "esd" ? "All programmes" : "All listings"}
+          </Link>
         </Button>
       </div>
     );
   }
+
+  const esd = isEsd(detail.kind);
 
   const phase = phaseOf(detail);
   const filter: ApplicantFilter = chosenFilter ?? detail.defaultApplicantFilter;
@@ -221,7 +237,9 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
     <div className="space-y-6">
       <Part id="opp-back">
         <Button variant="link" size="sm" className="-ml-3 text-muted-foreground" asChild>
-          <Link href="/dashboard/opportunities">All listings</Link>
+          <Link href={esd ? "/dashboard/esd" : "/dashboard/opportunities"}>
+            {esd ? "All programmes" : "All listings"}
+          </Link>
         </Button>
       </Part>
 
@@ -299,7 +317,9 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
             context: `${percent(detail.qualified, detail.applications)}% of applicants`,
           },
           { label: "Don’t meet them", icon: CircleSlashIcon, value: detail.applications - detail.qualified },
-          { label: "Shortlisted", icon: ListChecksIcon, value: detail.shortlisted },
+          esd
+            ? { label: "Accepted", icon: ListChecksIcon, value: detail.accepted }
+            : { label: "Shortlisted", icon: ListChecksIcon, value: detail.shortlisted },
         ]}
       />
 
@@ -307,29 +327,37 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
         <Part id="opp-tabs">
           <TabsList>
             <TabsTrigger value="applicants">Applicants ({detail.applicants.length})</TabsTrigger>
-            <TabsTrigger value="requirements">
-              Requirements{detail.tender ? " (" + detail.tender.requirements.length + ")" : ""}
+            {!esd && (
+              <TabsTrigger value="requirements">
+                Requirements{detail.tender ? " (" + detail.tender.requirements.length + ")" : ""}
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="listing">
+              {esd ? "Programme" : "Listing"} and documents ({detail.documents.length})
             </TabsTrigger>
-            <TabsTrigger value="listing">Listing and documents ({detail.documents.length})</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
         </Part>
 
         <TabsContent value="applicants" className="space-y-6">
-          <Part id="opp-evaluation">
-            <EvaluationCard opportunityId={detail.id} applicants={detail.applicants.length} />
-          </Part>
+          {!esd && (
+            <Part id="opp-evaluation">
+              <EvaluationCard opportunityId={detail.id} applicants={detail.applicants.length} />
+            </Part>
+          )}
           <Part id="opp-applicants">
             <Card>
               <CardHeader>
                 <CardTitle>Applicants</CardTitle>
                 <CardDescription>
                   Ranked best fit first: SMEs that meet every requirement, then by score.{" "}
-                  {detail.tender?.status === "confirmed"
-                    ? "Scored on the tender’s own evaluation criteria and the returnable documents each SME supplied."
-                    : reviewed
-                      ? "Scored against your evaluation criteria."
-                      : "Eligibility checked. Document review in progress."}
+                  {esd
+                    ? "Accept the SMEs you’re taking into the programme; they see that they were accepted."
+                    : detail.tender?.status === "confirmed"
+                      ? "Scored on the tender’s own evaluation criteria and the returnable documents each SME supplied."
+                      : reviewed
+                        ? "Scored against your evaluation criteria."
+                        : "Eligibility checked. Document review in progress."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 px-0">
@@ -360,6 +388,7 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
                       new Map(detail.applicants.filter((a) => a.status !== "withdrawn").map((a, i) => [a.id, i + 1]))
                     }
                     requirements={detail.tender?.status === "confirmed" ? detail.tender.requirements : undefined}
+                    esd={esd}
                   />
                 )}
               </CardContent>
@@ -367,9 +396,11 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
           </Part>
         </TabsContent>
 
-        <TabsContent value="requirements">
-          <RequirementsTab detail={detail} />
-        </TabsContent>
+        {!esd && (
+          <TabsContent value="requirements">
+            <RequirementsTab detail={detail} />
+          </TabsContent>
+        )}
 
         <TabsContent value="listing" className="space-y-6">
           <ListingCard detail={detail} />
@@ -390,11 +421,12 @@ function OpportunityDetail({ opportunityId }: { opportunityId: string }) {
 
 function ListingCard({ detail }: { detail: Detail }) {
   const listing = detail.listing;
+  const esd = isEsd(detail.kind);
   if (!listing) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Listing</CardTitle>
+          <CardTitle>{esd ? "Programme" : "Listing"}</CardTitle>
           <CardDescription>This listing was created before its full details were captured.</CardDescription>
         </CardHeader>
       </Card>
@@ -404,20 +436,22 @@ function ListingCard({ detail }: { detail: Detail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Listing</CardTitle>
+        <CardTitle>{esd ? "Programme" : "Listing"}</CardTitle>
         <CardDescription>What was published for SMEs on {formatDateTime(listing.publishedAt)}.</CardDescription>
       </CardHeader>
       <CardContent>
         <dl className="space-y-5 text-sm">
-          <ListingItem label="Scope of work">
+          <ListingItem label={esd ? "What it offers" : "Scope of work"}>
             <p className="whitespace-pre-line">{listing.scope}</p>
           </ListingItem>
           <div className="grid gap-5 sm:grid-cols-2">
-            <ListingItem label="Contract period">{listing.contractPeriod || "Not stated"}</ListingItem>
+            <ListingItem label={esd ? "Programme length" : "Contract period"}>
+              {listing.contractPeriod || "Not stated"}
+            </ListingItem>
             <ListingItem label="Briefing session">{listing.briefing || "No briefing session"}</ListingItem>
           </div>
           <ListingItem label="How to submit">{listing.submission}</ListingItem>
-          <ListingItem label="Evaluation criteria">
+          <ListingItem label={esd ? "Selection criteria" : "Evaluation criteria"}>
             <ul className="list-disc space-y-1 pl-5">
               {listing.evaluationCriteria.map((c) => (
                 <li key={c}>{c}</li>
@@ -626,6 +660,7 @@ function ApplicantTable({
   applicants,
   ranks,
   requirements,
+  esd,
 }: {
   opportunityId: string;
   canShortlist: boolean;
@@ -633,6 +668,7 @@ function ApplicantTable({
   applicants: Applicant[];
   ranks: Map<string, number>;
   requirements?: TenderRequirement[];
+  esd: boolean;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const recordView = useMutation(api.enterprise.recordApplicationView);
@@ -665,6 +701,7 @@ function ApplicantTable({
                     <span className="truncate font-medium">{a.sme.companyName}</span>
                     {a.sme.verified && <Pill tone="info">Verified</Pill>}
                     {a.status === "shortlisted" && <Pill tone="success">Shortlisted</Pill>}
+                    {a.status === "awarded" && <Pill tone="success">{esd ? "Accepted" : "Awarded"}</Pill>}
                     {a.status === "withdrawn" && <Pill tone="neutral">Withdrawn</Pill>}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
@@ -720,6 +757,7 @@ function ApplicantTable({
                       canAct={canShortlist}
                       canAward={canAward}
                       requirements={requirements}
+                      esd={esd}
                     />
                   </TableCell>
                 </TableRow>
@@ -767,11 +805,13 @@ function ApplicantChecks({
   canAct,
   canAward,
   requirements,
+  esd,
 }: {
   applicant: Applicant;
   canAct: boolean;
   canAward: boolean;
   requirements?: TenderRequirement[];
+  esd: boolean;
 }) {
   const { evaluation } = applicant;
   const required = evaluation.checks.filter((c) => c.required);
@@ -801,7 +841,9 @@ function ApplicantChecks({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 text-sm">
-          <p className="font-medium">{STATUS_LABELS[applicant.status]}</p>
+          <p className="font-medium">
+            {esd && applicant.status === "awarded" ? "Accepted into the programme" : STATUS_LABELS[applicant.status]}
+          </p>
           {applicant.statusReason ? (
             <p className="text-muted-foreground">
               {applicant.statusChangedBy}: {applicant.statusReason}
@@ -817,6 +859,7 @@ function ApplicantChecks({
             status={applicant.status}
             canAct={canAct}
             canAward={canAward}
+            esd={esd}
           />
         </div>
       </div>

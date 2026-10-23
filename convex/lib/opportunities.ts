@@ -4,6 +4,7 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { OpportunityKind, OpportunityListing, OpportunityStatus } from "../schema";
 import { deleteDecisionData, deleteReviewData } from "../review";
 import { evaluateApplication } from "./evaluation";
+import { isEsd } from "./kinds";
 
 /** Most applications read for one opportunity. Enough for any tender we expect during the pilot. */
 export const APPLICATION_LIMIT = 500;
@@ -101,9 +102,11 @@ type SampleOpportunity = {
   provinces: string[];
   minBbbeeLevel?: number;
   requiredDocuments: string[];
-  value: number;
+  value?: number;
   closesInDays: number;
   status: OpportunityStatus;
+  /** The reference's middle part, when it isn't the code (two samples of a kind share it). */
+  referenceCode?: string;
 };
 
 const SAMPLE_OPPORTUNITIES: SampleOpportunity[] = [
@@ -192,6 +195,104 @@ const SAMPLE_OPPORTUNITIES: SampleOpportunity[] = [
   },
 ];
 
+/** Sample ESD programmes: what an organisation offers SMEs, beside what it buys (lib/kinds.ts). */
+const SAMPLE_PROGRAMMES: SampleOpportunity[] = [
+  {
+    code: "GRW",
+    referenceCode: "GRT",
+    kind: "grant",
+    title: "Women-owned business equipment grant",
+    description: "Grants of up to R150 000 for equipment, for businesses at least 51% owned by women.",
+    industry: "",
+    services: [],
+    provinces: [],
+    requiredDocuments: ["cipcCertificate", "bbbeeCertificate"],
+    value: 150_000,
+    closesInDays: 35,
+    status: "open",
+  },
+  {
+    code: "FND",
+    kind: "funding",
+    title: "Enterprise development loan fund",
+    description: "Loans of R100 000 to R1 million at prime minus 2%, with a six-month repayment holiday.",
+    industry: "",
+    services: [],
+    provinces: [],
+    requiredDocuments: ["cipcCertificate", "taxCertificate", "bankLetter"],
+    value: 1_000_000,
+    closesInDays: 45,
+    status: "open",
+  },
+  {
+    code: "FNI",
+    referenceCode: "FND",
+    kind: "funding",
+    title: "Invoice finance for small suppliers",
+    description: "Get paid within 7 days on approved invoices to large buyers, for a flat 1.5% fee.",
+    industry: "",
+    services: [],
+    provinces: [],
+    requiredDocuments: ["taxCertificate", "bankLetter"],
+    value: 500_000,
+    closesInDays: 60,
+    status: "open",
+  },
+  {
+    code: "ACC",
+    kind: "accelerator",
+    title: "SME growth accelerator, 6 months",
+    description: "Weekly workshops, a business coach and a showcase to corporate buyers, for 20 suppliers.",
+    industry: "",
+    services: [],
+    provinces: ["Gauteng", "KwaZulu-Natal", "Western Cape"],
+    requiredDocuments: ["cipcCertificate"],
+    value: 75_000,
+    closesInDays: 25,
+    status: "open",
+  },
+  {
+    code: "ACD",
+    referenceCode: "ACC",
+    kind: "accelerator",
+    title: "Digital skills bootcamp for small suppliers",
+    description: "Eight weeks of evening classes on e-invoicing and procurement portals, with a laptop for graduates.",
+    industry: "",
+    services: [],
+    provinces: [],
+    requiredDocuments: [],
+    value: 25_000,
+    closesInDays: 18,
+    status: "open",
+  },
+  {
+    code: "SUP",
+    kind: "support",
+    title: "Free bookkeeping and tax compliance support",
+    description: "Twelve months of bookkeeping and SARS compliance support from an accredited accounting firm.",
+    industry: "",
+    services: [],
+    provinces: [],
+    requiredDocuments: ["cipcCertificate"],
+    value: 36_000,
+    closesInDays: 50,
+    status: "open",
+  },
+  {
+    code: "SUB",
+    referenceCode: "SUP",
+    kind: "support",
+    title: "Supplier readiness clinic: CSD, B-BBEE and tender documents",
+    description: "One-on-one sessions to get your CSD registration, B-BBEE affidavit and tender pack in order.",
+    industry: "",
+    services: [],
+    provinces: ["KwaZulu-Natal", "Gauteng"],
+    requiredDocuments: [],
+    closesInDays: 14,
+    status: "open",
+  },
+];
+
 /** The published notice and released documents for each sample opportunity, keyed by its code. */
 const SAMPLE_LISTINGS: Record<
   string,
@@ -266,10 +367,90 @@ const SAMPLE_LISTINGS: Record<
     evaluationCriteria: ["Price: 80 points", "B-BBEE status: 20 points"],
     documents: ["Request for quotation"],
   },
+  GRW: {
+    scope:
+      "Once-off grants of up to R150 000 towards equipment that grows a women-owned business: machinery, vehicles, tools or computers. Successful applicants also join a peer network of women business owners for a year.",
+    contractPeriod: "Grant paid within 30 days of approval",
+    briefing: "Information session online, 12:00 on the Thursday after publication",
+    submission: "Apply through MASLink with a short motivation and a quote for the equipment.",
+    evaluationCriteria: [
+      "At least 51% women-owned",
+      "Clear link between the equipment and growth or jobs",
+      "At least six months of trading",
+    ],
+    documents: ["Grant guidelines", "Motivation template"],
+  },
+  FND: {
+    scope:
+      "Loans of R100 000 to R1 million for suppliers that need working capital or equipment to take on larger contracts. Interest at prime minus 2%, a six-month repayment holiday and up to 48 months to repay.",
+    contractPeriod: "Repay over up to 48 months",
+    briefing: "",
+    submission: "Apply through MASLink with your latest management accounts and what the loan is for.",
+    evaluationCriteria: [
+      "Two years of trading",
+      "Ability to repay from cash flow",
+      "Supplier to a corporate buyer, or close to it",
+    ],
+    documents: ["Loan fund terms", "Application checklist"],
+  },
+  FNI: {
+    scope:
+      "Invoice finance for small suppliers to large buyers: once a buyer approves your invoice, you're paid within 7 days for a flat 1.5% fee, instead of waiting 30 to 90 days.",
+    contractPeriod: "Ongoing, cancel any time",
+    briefing: "",
+    submission: "Apply through MASLink with a recent invoice to a corporate client and your bank confirmation letter.",
+    evaluationCriteria: ["Invoices to a corporate or public sector buyer", "Valid tax clearance"],
+    documents: ["How invoice finance works"],
+  },
+  ACC: {
+    scope:
+      "A six-month accelerator for 20 suppliers: weekly workshops on pricing, cash flow and tendering, a business coach every fortnight, and a showcase to corporate buyers at the end. Worth R75 000 per business.",
+    contractPeriod: "6 months, one afternoon a week",
+    briefing: "Open day online, 10:00 on the Saturday after publication",
+    submission:
+      "Apply through MASLink with a short motivation: where your business is now and where you want it in a year.",
+    evaluationCriteria: [
+      "Commitment to attend every session",
+      "Potential to supply corporate buyers",
+      "Growth since starting",
+    ],
+    documents: ["Programme outline", "Session calendar"],
+  },
+  ACD: {
+    scope:
+      "Eight weeks of evening classes on e-invoicing, procurement portals such as the CSD and eTenders, and marketing your business online. Every graduate keeps a laptop.",
+    contractPeriod: "8 weeks, two evenings a week",
+    briefing: "",
+    submission: "Apply through MASLink. No documents needed beyond your profile.",
+    evaluationCriteria: ["Owner or manager of a small supplier", "Able to attend both weekly evenings"],
+    documents: ["Course outline"],
+  },
+  SUP: {
+    scope:
+      "Twelve months of bookkeeping, VAT and income tax submissions and SARS compliance support from an accredited accounting firm, paid for by the programme, so your tax clearance and financials stay up to date.",
+    contractPeriod: "12 months",
+    briefing: "",
+    submission: "Apply through MASLink. The accounting firm contacts accepted businesses within two weeks.",
+    evaluationCriteria: ["Annual turnover under R10 million", "Registered with SARS"],
+    documents: ["What the support covers"],
+  },
+  SUB: {
+    scope:
+      "One-on-one sessions with a supplier development advisor to complete your CSD registration, B-BBEE affidavit or certificate, and a standard tender pack (SBD forms, company profile, references).",
+    contractPeriod: "Three 1-hour sessions over a month",
+    briefing: "",
+    submission: "Apply through MASLink and choose a time; sessions are in person or online.",
+    evaluationCriteria: ["Small supplier preparing for its first corporate tenders"],
+    documents: ["Clinic checklist"],
+  },
 };
 
+function sampleFor(title: string) {
+  return [...SAMPLE_OPPORTUNITIES, ...SAMPLE_PROGRAMMES].find((s) => s.title === title);
+}
+
 function sampleCodeFor(title: string) {
-  return SAMPLE_OPPORTUNITIES.find((s) => s.title === title)?.code;
+  return sampleFor(title)?.code;
 }
 
 /** Which department (Better Auth team name) owns each sample opportunity, when the organisation has it. */
@@ -296,17 +477,19 @@ export function sampleListingFor(
   organizationName: string,
   publishedAt: number,
 ): OpportunityListing | null {
-  const code = sampleCodeFor(title);
-  if (!code) return null;
-  const { scope, contractPeriod, briefing, submission, evaluationCriteria } = SAMPLE_LISTINGS[code];
+  const sample = sampleFor(title);
+  if (!sample) return null;
+  const { scope, contractPeriod, briefing, submission, evaluationCriteria } = SAMPLE_LISTINGS[sample.code];
+  const esd = isEsd(sample.kind);
+  const domain = organizationName.toLowerCase().replace(/[^a-z0-9]+/g, "");
   return {
     scope,
     contractPeriod,
     briefing,
     submission,
     evaluationCriteria,
-    enquiriesName: `${organizationName} procurement office`,
-    enquiriesEmail: `tenders@${organizationName.toLowerCase().replace(/[^a-z0-9]+/g, "")}.test`,
+    enquiriesName: `${organizationName} ${esd ? "enterprise development team" : "procurement office"}`,
+    enquiriesEmail: `${esd ? "esd" : "tenders"}@${domain}.test`,
     publishedAt,
   };
 }
@@ -417,4 +600,69 @@ export async function insertSampleOpportunities(
     }
   }
   return SAMPLE_OPPORTUNITIES.length;
+}
+
+/**
+ * Dev only: gives an organisation sample ESD programmes (grants, funding, accelerators, business support),
+ * once. Some already have applications from the seeded SMEs, one of them accepted, so both portals show the
+ * whole flow. Returns how many programmes it added.
+ */
+export async function insertSamplePrograms(
+  ctx: MutationCtx,
+  {
+    organizationId,
+    organizationName,
+    createdBy,
+  }: { organizationId: string; organizationName: string; createdBy: string },
+) {
+  const mine = await ctx.db
+    .query("opportunities")
+    .withIndex("by_organization", (q) => q.eq("organizationId", organizationId))
+    .take(APPLICATION_LIMIT);
+  if (mine.some((o) => SAMPLE_PROGRAMMES.some((p) => p.title === o.title))) return 0;
+
+  const smes = (await ctx.db.query("smes").take(50)).filter((s: Doc<"smes">) => !s.suspendedAt);
+  const prefix = referencePrefix(organizationName);
+  const year = new Date().getFullYear();
+
+  for (const [i, sample] of SAMPLE_PROGRAMMES.entries()) {
+    const opportunityId = await ctx.db.insert("opportunities", {
+      organizationId,
+      createdBy,
+      kind: sample.kind,
+      title: sample.title,
+      reference: `${prefix}-${sample.referenceCode ?? sample.code}-${year}-${String(i + 31).padStart(3, "0")}`,
+      description: sample.description,
+      industry: sample.industry,
+      services: sample.services,
+      provinces: sample.provinces,
+      minBbbeeLevel: sample.minBbbeeLevel,
+      requiredDocuments: sample.requiredDocuments,
+      value: sample.value,
+      closesAt: isoDate(sample.closesInDays),
+      status: sample.status,
+      listing: sampleListingFor(sample.title, organizationName, Date.now() - 10 * DAY) ?? undefined,
+      isDemo: true,
+    });
+    const opportunity = (await ctx.db.get("opportunities", opportunityId))!;
+
+    // The accelerator and the bookkeeping support already have applicants; the bookkeeping support has
+    // accepted its first one
+    if (sample.code !== "ACC" && sample.code !== "SUP") continue;
+    for (const [j, sme] of smes.slice(i % 3, (i % 3) + 3).entries()) {
+      await ctx.db.insert("applications", {
+        opportunityId,
+        organizationId,
+        smeId: sme._id,
+        status: sample.code === "SUP" && j === 0 ? "awarded" : "submitted",
+        submittedAt: Date.now() - (2 + j) * DAY,
+        ...(sample.code === "SUP" && j === 0
+          ? { statusChangedAt: Date.now() - DAY, statusReason: "Meets the turnover and SARS registration criteria." }
+          : {}),
+        evaluation: evaluateApplication(opportunity, sme),
+        proposal: `${sme.companyName} would like to join ${sample.title}. ${sme.capabilities}`,
+      });
+    }
+  }
+  return SAMPLE_PROGRAMMES.length;
 }

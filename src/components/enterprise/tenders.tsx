@@ -1,18 +1,74 @@
 import {
   AwardIcon,
   BanIcon,
+  BanknoteIcon,
   ClipboardListIcon,
   ClockIcon,
   FileTextIcon,
   HandCoinsIcon,
+  LifeBuoyIcon,
   type LucideIcon,
+  RocketIcon,
 } from "lucide-react";
 
 import { Status, type Tone } from "@/components/app/status";
 import { cn } from "@/lib/utils";
+import type { EsdKind } from "../../../convex/lib/kinds";
 import type { OpportunityKind, OpportunityStatus } from "../../../convex/schema";
 
-export const KIND_LABELS: Record<OpportunityKind, string> = { tender: "Tender", rfq: "RFQ", grant: "Grant" };
+export const KIND_LABELS: Record<OpportunityKind, string> = {
+  tender: "Tender",
+  rfq: "RFQ",
+  grant: "Grant",
+  funding: "Funding",
+  accelerator: "Accelerator",
+  support: "Business support",
+};
+
+/** The ESD menu's sections, one per kind of programme, in the order they're listed. */
+export const ESD_SECTIONS: {
+  kind: EsdKind;
+  slug: string;
+  title: string;
+  /** The shorter name in the sidebar. */
+  navLabel: string;
+  /** One of them, for buttons: "New grant". */
+  noun: string;
+  description: string;
+}[] = [
+  {
+    kind: "grant",
+    slug: "grants",
+    title: "Grants",
+    navLabel: "Grants",
+    noun: "grant",
+    description: "Money SMEs don’t pay back, for equipment, working capital or growth.",
+  },
+  {
+    kind: "funding",
+    slug: "funding",
+    title: "Funding",
+    navLabel: "Funding",
+    noun: "funding offer",
+    description: "Loans and finance on better terms than SMEs get elsewhere: working capital, equipment and invoices.",
+  },
+  {
+    kind: "accelerator",
+    slug: "accelerators",
+    title: "Accelerator initiatives",
+    navLabel: "Accelerators",
+    noun: "accelerator",
+    description: "Structured programmes with workshops, coaching and access to corporate buyers.",
+  },
+  {
+    kind: "support",
+    slug: "support",
+    title: "Business-support services",
+    navLabel: "Business support",
+    noun: "support service",
+    description: "Practical help: bookkeeping, compliance, tender readiness and mentoring.",
+  },
+];
 
 /** Today as yyyy-mm-dd in the viewer's timezone, to compare with closing dates. */
 function todayIso() {
@@ -94,6 +150,9 @@ export const KIND_ICONS: Record<OpportunityKind, LucideIcon> = {
   tender: FileTextIcon,
   rfq: ClipboardListIcon,
   grant: HandCoinsIcon,
+  funding: BanknoteIcon,
+  accelerator: RocketIcon,
+  support: LifeBuoyIcon,
 };
 
 /** Each kind takes a colour from the logo, so lists of opportunities read at a glance (DESIGN.md). */
@@ -101,9 +160,12 @@ const KIND_TILES: Record<OpportunityKind, string> = {
   tender: "bg-brand-blue text-white",
   rfq: "bg-brand-green text-brand-navy",
   grant: "bg-brand-yellow text-brand-navy",
+  funding: "bg-brand-navy text-white",
+  accelerator: "bg-brand-red text-white",
+  support: "bg-primary text-primary-foreground",
 };
 
-/** A small solid tile in the kind's logo colour, with its icon. Identifies tenders, RFQs and grants in lists. */
+/** A small solid tile in the kind's logo colour, with its icon. Identifies each kind of opportunity in lists. */
 export function KindTile({ kind, className }: { kind: OpportunityKind; className?: string }) {
   const Icon = KIND_ICONS[kind];
   return (
