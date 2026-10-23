@@ -65,9 +65,13 @@ function validateOffering(f: SmeDetails): Errors {
   const e: Errors = {};
   if (f.services.length === 0) e.services = "Add at least one service you offer";
   if (f.capabilities.trim().length < 40) e.capabilities = "Tell us a little more (at least 40 characters)";
-  if ((f.companySummary ?? "").trim().length > COMPANY_SUMMARY_MAX)
-    e.companySummary = `Keep your summary under ${COMPANY_SUMMARY_MAX.toLocaleString("en-ZA")} characters`;
-  return e;
+  return { ...e, ...validateCompanySummary(f) };
+}
+
+export function validateCompanySummary(f: Pick<SmeDetails, "companySummary">): Errors {
+  return (f.companySummary ?? "").trim().length > COMPANY_SUMMARY_MAX
+    ? { companySummary: `Keep your summary under ${COMPANY_SUMMARY_MAX.toLocaleString("en-ZA")} characters` }
+    : {};
 }
 
 /** `has` says which documents exist, whether new uploads or ones already on file. */
