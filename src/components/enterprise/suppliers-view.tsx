@@ -203,7 +203,7 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
   const profile = useQuery(api.enterprise.supplier, { smeId });
   useBreadcrumb(profile?.companyName);
   const back = fromOpportunity
-    ? { href: `/dashboard/opportunities?id=${fromOpportunity}`, label: "Back to the opportunity" }
+    ? { href: `/dashboard/opportunities?id=${fromOpportunity}`, label: "Back to the listing" }
     : { href: "/dashboard/suppliers", label: "All suppliers" };
 
   if (profile === undefined) return <Spinner className="mx-auto mt-24" />;
@@ -340,7 +340,7 @@ function SupplierProfile({ smeId, fromOpportunity }: { smeId: string; fromOpport
                 </dl>
               ) : (
                 <p className="text-muted-foreground">
-                  This business shares its contact details once you shortlist it for one of your opportunities.
+                  This business shares its contact details once you shortlist it for one of your listings.
                 </p>
               )}
             </CardContent>
@@ -399,7 +399,7 @@ function DocumentsCard({ profile, fromOpportunity }: { profile: Profile; fromOpp
         <CardDescription>
           {profile.canViewDocuments
             ? "Open each document to check it against the details on this profile."
-            : "Documents can be opened once this business applies to one of your opportunities."}
+            : "Documents can be opened once this business applies to one of your listings."}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0">
@@ -459,7 +459,7 @@ function HistoryCard({ profile }: { profile: Profile }) {
         <CardTitle>History with {profile.organizationName}</CardTitle>
         <CardDescription>
           {profile.history.length === 0
-            ? "This business hasn’t applied to your opportunities yet."
+            ? "This business hasn’t applied to your listings yet."
             : `${profile.history.length} application${profile.history.length === 1 ? "" : "s"}, ${shortlisted} shortlisted`}
         </CardDescription>
       </CardHeader>
@@ -468,7 +468,7 @@ function HistoryCard({ profile }: { profile: Profile }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-6">Opportunity</TableHead>
+                <TableHead className="pl-6">Listing</TableHead>
                 <TableHead>Applied</TableHead>
                 <TableHead>Result</TableHead>
                 <TableHead className="pr-6">Status</TableHead>

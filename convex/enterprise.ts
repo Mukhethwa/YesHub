@@ -526,7 +526,7 @@ export async function ownOpportunity(ctx: QueryCtx, opportunityId: Id<"opportuni
   const enterprise = await getEnterprise(ctx);
   const opportunity = await ctx.db.get("opportunities", opportunityId);
   if (!enterprise || !opportunity || opportunity.organizationId !== enterprise.organization.id) {
-    throw new ConvexError("That opportunity isn’t available.");
+    throw new ConvexError("That listing isn’t available.");
   }
   return { enterprise, opportunity };
 }

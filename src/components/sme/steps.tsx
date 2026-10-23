@@ -19,7 +19,6 @@ import { formatBytes } from "@/lib/sme/format";
 import type { SmeForm, UpdateForm } from "@/lib/sme/form";
 import type { Errors, StepId } from "@/lib/sme/validation";
 import { cn } from "@/lib/utils";
-import { CompanySummaryField } from "./company-summary";
 import { Chips, ChipGroup, FileDrop, FormField, Row, SectionLabel, SelectInput, SwitchRow, TagInput } from "./controls";
 
 export interface StepProps {
@@ -208,8 +207,6 @@ export function OfferingStep({ form, errors, update }: StepProps) {
           placeholder="e.g. CIDB 3GB"
         />
       </FormField>
-
-      <CompanySummaryField form={form} errors={errors} update={update} />
     </div>
   );
 }

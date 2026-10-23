@@ -46,16 +46,16 @@ export function ShortlistsView() {
         description={
           rows.length === 0
             ? undefined
-            : `${businesses} business${businesses === 1 ? "" : "es"} across ${opportunities.length} opportunit${opportunities.length === 1 ? "y" : "ies"}`
+            : `${businesses} business${businesses === 1 ? "" : "es"} across ${opportunities.length} listing${opportunities.length === 1 ? "" : "s"}`
         }
       >
         {opportunities.length > 1 && (
           <Select value={opportunityId} onValueChange={setOpportunityId}>
-            <SelectTrigger className="sm:w-80" aria-label="Show opportunity">
+            <SelectTrigger className="sm:w-80" aria-label="Show listing">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All opportunities</SelectItem>
+              <SelectItem value="all">All listings</SelectItem>
               {opportunities.map((o) => (
                 <SelectItem key={o.id} value={o.id}>
                   {o.title} ({o.count})
@@ -71,13 +71,12 @@ export function ShortlistsView() {
           <CardHeader>
             <CardTitle>No one shortlisted yet</CardTitle>
             <CardDescription>
-              Open an opportunity, review its applicants and choose Shortlist on the businesses you want to take
-              further.
+              Open a listing, review its applicants and choose Shortlist on the businesses you want to take further.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/dashboard/opportunities">Review opportunities</Link>
+              <Link href="/dashboard/opportunities">Review listings</Link>
             </Button>
           </CardContent>
         </Card>

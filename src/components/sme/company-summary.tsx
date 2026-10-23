@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { COMPANY_SUMMARY_MAX } from "@/lib/sme/validation";
 import type { CompanySummaryRequest, CompanySummaryResult } from "@/app/api/company-summary/route";
 import { FormField } from "./controls";
@@ -14,8 +15,9 @@ import type { StepProps } from "./steps";
 /**
  * The SME's Professional Company Summary: their own words, which AI can rewrite for procurement teams using
  * the profile details already entered. Optional, and separate from the structured profile fields.
+ * `heading={false}` leaves the title to a surrounding card (the Business profile page).
  */
-export function CompanySummaryField({ form, errors, update }: StepProps) {
+export function CompanySummaryField({ form, errors, update, heading = true }: StepProps & { heading?: boolean }) {
   const summary = form.companySummary ?? "";
   const [improving, setImproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,11 +86,17 @@ export function CompanySummaryField({ form, errors, update }: StepProps) {
   };
 
   return (
-    <section aria-labelledby="company-summary-heading" className="space-y-4 border-t pt-7">
+    <section
+      aria-labelledby={heading ? "company-summary-heading" : undefined}
+      aria-label={heading ? undefined : "Professional company summary"}
+      className={cn("space-y-4", heading && "border-t pt-7")}
+    >
       <div className="space-y-1">
-        <h2 id="company-summary-heading" className="text-base font-semibold">
-          Professional company summary
-        </h2>
+        {heading && (
+          <h2 id="company-summary-heading" className="text-base font-semibold">
+            Professional company summary
+          </h2>
+        )}
         <p className="text-sm text-muted-foreground">
           The introduction procurement teams read first: who you are, what you deliver and why you’re a good fit. Write
           it in your own words, then let AI turn it into a professional summary. It uses the company details and

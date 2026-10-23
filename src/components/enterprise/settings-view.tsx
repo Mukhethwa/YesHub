@@ -308,7 +308,7 @@ function OrganisationSettings({ data }: { data: Data }) {
         <Field
           label="Keep applicants’ data for"
           htmlFor="retention"
-          hint="After an opportunity closes. Shortlisted and awarded suppliers’ records are kept for your audit trail."
+          hint="After a listing closes. Shortlisted and awarded suppliers’ records are kept for your audit trail."
         >
           <Select
             value={String(draft.retentionMonths)}
@@ -373,13 +373,13 @@ function NotificationPreferences({ preferences }: { preferences: MemberPreferenc
     <Section title="Your notifications" description="Just for you. Everyone in your organisation chooses their own.">
       <SwitchRow
         label="New applications"
-        description="When an SME applies to one of your organisation’s opportunities."
+        description="When an SME applies to one of your organisation’s listings."
         checked={draft.notifyNewApplications}
         onChange={(notifyNewApplications) => set({ notifyNewApplications })}
       />
       <SwitchRow
         label="Only my departments"
-        description="Limit application alerts to opportunities your departments own."
+        description="Limit application alerts to listings your departments own."
         checked={draft.onlyMyDepartments}
         onChange={(onlyMyDepartments) => set({ onlyMyDepartments })}
         disabled={!draft.notifyNewApplications}
@@ -387,7 +387,7 @@ function NotificationPreferences({ preferences }: { preferences: MemberPreferenc
       <div className="space-y-3">
         <SwitchRow
           label="Closing soon"
-          description="A reminder before an opportunity closes, with how many applicants still need review."
+          description="A reminder before a listing closes, with how many applicants still need review."
           checked={draft.notifyClosingSoon}
           onChange={(notifyClosingSoon) => set({ notifyClosingSoon })}
         />
@@ -417,7 +417,7 @@ function NotificationPreferences({ preferences }: { preferences: MemberPreferenc
       />
       <SwitchRow
         label="Weekly summary"
-        description="Monday morning: open opportunities, new applicants and what’s closing that week."
+        description="Monday morning: open listings, new applicants and what’s closing that week."
         checked={draft.weeklySummary}
         onChange={(weeklySummary) => set({ weeklySummary })}
       />

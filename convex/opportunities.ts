@@ -185,7 +185,7 @@ export const create = mutation({
   args: { ...fields, publish: v.boolean() },
   handler: async (ctx, { publish, ...args }) => {
     const enterprise = await getEnterprise(ctx);
-    if (!enterprise) throw new ConvexError("You need an organisation to list opportunities.");
+    if (!enterprise) throw new ConvexError("You need an organisation to publish listings.");
     const f = clean(args);
     if (f.teamId) {
       const detail = await organizationDetail(ctx, enterprise.organization.id);
@@ -193,7 +193,7 @@ export const create = mutation({
         throw new ConvexError("That department doesn’t exist any more.");
     }
     if (!(await canEdit(ctx, enterprise, f.teamId))) {
-      throw new ConvexError("You can only create opportunities for your own departments.");
+      throw new ConvexError("You can only create listings for your own departments.");
     }
     if (publish) {
       requireManager(enterprise, "publish opportunities");
@@ -222,12 +222,12 @@ export const update = mutation({
   handler: async (ctx, { opportunityId, reason, ...args }) => {
     const { enterprise, opportunity } = await ownOpportunity(ctx, opportunityId);
     if (opportunity.status === "cancelled" || opportunity.status === "awarded")
-      throw new ConvexError(`This opportunity has been ${opportunity.status}, so it can’t change.`);
+      throw new ConvexError(`This listing has been ${opportunity.status}, so it can’t change.`);
     const f = clean(args);
     if (f.kind !== opportunity.kind && opportunity.status !== "draft")
-      throw new ConvexError("The kind of a published opportunity can’t change. Cancel it and create a new one.");
+      throw new ConvexError("The kind of a published listing can’t change. Cancel it and create a new one.");
     if (!(await canEdit(ctx, enterprise, opportunity.teamId)))
-      throw new ConvexError("You can only edit opportunities in your own departments.");
+      throw new ConvexError("You can only edit listings in your own departments.");
     // The department moves through setOpportunityDepartment, which checks both sides
     const { listing, teamId: _teamId, ...rest } = f;
     void _teamId;
@@ -285,7 +285,7 @@ export const close = mutation({
   handler: async (ctx, args) => {
     const { enterprise, opportunity } = await ownOpportunity(ctx, args.opportunityId);
     requireManager(enterprise, "close opportunities");
-    if (opportunity.status !== "open") throw new ConvexError("Only open opportunities can be closed.");
+    if (opportunity.status !== "open") throw new ConvexError("Only open listings can be closed.");
     const reason = requireReason(args.reason);
     await noteReason(ctx, reason);
     await ctx.db.patch("opportunities", opportunity._id, { status: "closed" });
@@ -308,13 +308,13 @@ export const cancel = mutation({
     const { enterprise, opportunity } = await ownOpportunity(ctx, args.opportunityId);
     requireManager(enterprise, "cancel opportunities");
     if (opportunity.status === "cancelled") return null;
-    if (opportunity.status === "awarded") throw new ConvexError("An awarded opportunity can’t be cancelled.");
+    if (opportunity.status === "awarded") throw new ConvexError("An awarded listing can’t be cancelled.");
     const applications = await ctx.db
       .query("applications")
       .withIndex("by_opportunity", (q) => q.eq("opportunityId", opportunity._id))
       .take(APPLICATION_LIMIT);
     if (applications.some((a) => a.status === "awarded"))
-      throw new ConvexError("An applicant has already been awarded this opportunity.");
+      throw new ConvexError("An applicant has already been awarded this listing.");
     const reason = requireReason(args.reason);
     await noteReason(ctx, reason);
     await ctx.db.patch("opportunities", opportunity._id, {

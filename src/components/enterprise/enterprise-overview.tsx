@@ -64,8 +64,8 @@ export function EnterpriseOverview() {
           <ShieldAlertIcon className="mt-0.5 size-4 shrink-0 text-warning" />
           <p>
             {organization.verificationStatus === "rejected"
-              ? "MASLink couldn’t verify this organisation, so it can’t publish opportunities. Contact MASLink to resolve it."
-              : "MASLink is verifying your organisation. You can publish opportunities once it’s approved."}
+              ? "MASLink couldn’t verify this organisation, so it can’t publish listings. Contact MASLink to resolve it."
+              : "MASLink is verifying your organisation. You can publish listings once it’s approved."}
           </p>
         </div>
       )}
@@ -92,7 +92,7 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
         variant="brand"
         items={[
           {
-            label: "Open opportunities",
+            label: "Open listings",
             icon: BriefcaseBusinessIcon,
             value: open.length,
             context: `of ${rows.length}${more ? "+" : ""} listed`,
@@ -126,7 +126,7 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
       />
 
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <Section title="Applicants per opportunity" description="Open opportunities with the most applicants.">
+        <Section title="Applicants per listing" description="Open listings with the most applicants.">
           <div className="rounded-lg border bg-card p-5">
             <BarChart
               rows={busiest.map((r) => ({
@@ -142,7 +142,7 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
                 { label: "Meet the requirements", className: "bg-brand-green" },
                 { label: "Don’t yet", className: "bg-brand-blue/30" },
               ]}
-              empty="No open opportunities."
+              empty="No open listings."
             />
           </div>
         </Section>
@@ -150,11 +150,7 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
         <Section title="Needs attention">
           {needsAttention.length === 0 ? (
             <div className="rounded-lg border bg-card">
-              <EmptyState
-                illustration="allChecked"
-                title="Every open opportunity has a qualifying applicant"
-                size="sm"
-              />
+              <EmptyState illustration="allChecked" title="Every open listing has a qualifying applicant" size="sm" />
             </div>
           ) : (
             <ul className="divide-y overflow-hidden rounded-lg border border-l-4 border-l-warning bg-card">
@@ -179,9 +175,9 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
         </Section>
       </div>
 
-      <Section title="Your opportunities" href="/dashboard/opportunities">
+      <Section title="Latest listings" href="/dashboard/opportunities">
         <div className="overflow-hidden rounded-lg border bg-card">
-          <OpportunityTable rows={[...rows].sort(byUrgency).slice(0, 8)} />
+          <OpportunityTable rows={[...rows].sort((a, b) => b.createdAt - a.createdAt).slice(0, 3)} />
         </div>
       </Section>
 
@@ -190,17 +186,18 @@ function Dashboard({ rows, more }: { rows: OpportunityRow[]; more: boolean }) {
   );
 }
 
-/** Opportunities with their applicant counts. Shared by the overview and the Opportunities page. */
+/** Listings with their applicant counts. Shared by the overview and the Listings page. */
 export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="pl-4">Opportunity</TableHead>
+          <TableHead className="pl-4">Listing</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead className="text-right">Applications</TableHead>
-          <TableHead className="hidden lg:table-cell">Qualify</TableHead>
-          <TableHead className="hidden pr-4 text-right xl:table-cell">Shortlisted</TableHead>
+          {/* The number columns share one width so they sit evenly at the right */}
+          <TableHead className="w-32 text-right">Applications</TableHead>
+          <TableHead className="hidden w-32 text-right lg:table-cell">Qualify</TableHead>
+          <TableHead className="hidden w-32 pr-4 text-right xl:table-cell">Shortlisted</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -223,7 +220,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
               <span className="mt-0.5 block text-xs text-muted-foreground">{closingLabel(r.closesAt)}</span>
             </TableCell>
             <TableCell className="text-right font-medium tabular-nums">{r.applications}</TableCell>
-            <TableCell className="hidden lg:table-cell">
+            <TableCell className="hidden text-right lg:table-cell">
               <QualifiedShare qualified={r.qualified} applications={r.applications} />
             </TableCell>
             <TableCell className="hidden pr-4 text-right tabular-nums xl:table-cell">{r.shortlisted}</TableCell>
@@ -237,11 +234,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
 function NoOpportunities() {
   return (
     <div className="rounded-lg border bg-card">
-      <EmptyState
-        illustration="contract"
-        title="No opportunities yet"
-        action={isDev ? <AddSamplesButton /> : undefined}
-      >
+      <EmptyState illustration="contract" title="No listings yet" action={isDev ? <AddSamplesButton /> : undefined}>
         Your tenders, RFQs and grants appear here with how many SMEs applied and how many meet your requirements.
       </EmptyState>
     </div>
@@ -261,7 +254,7 @@ function AddSamplesButton() {
         try {
           await add();
         } catch (error) {
-          toast.error(errorMessage(error, "Couldn’t add the sample opportunities."));
+          toast.error(errorMessage(error, "Couldn’t add the sample listings."));
         } finally {
           setPending(false);
         }

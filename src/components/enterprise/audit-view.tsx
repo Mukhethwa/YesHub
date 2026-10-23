@@ -27,7 +27,7 @@ const SOURCE: ChangeLogSource = {
 
 /** The records an organisation owns, to filter the log by. */
 const TABLES = {
-  opportunities: "Opportunity",
+  opportunities: "Listing",
   opportunityDocuments: "Tender document",
   applications: "Application",
   documentExtractions: "Document reading",
@@ -71,7 +71,7 @@ export function AuditView() {
       <ChangeLog
         source={SOURCE}
         tables={TABLES}
-        intro={`Every change to ${overview.organization.name}’s opportunities, documents, applications and settings, who made it and why, with each field before and after. Records are only ever added.`}
+        intro={`Every change to ${overview.organization.name}’s listings, documents, applications and settings, who made it and why, with each field before and after. Records are only ever added.`}
       />
     </div>
   );
@@ -90,8 +90,8 @@ function OpportunityLog({ opportunityId }: { opportunityId: Id<"opportunities"> 
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        The opportunity, its documents, its applications and their reviews, newest first. Open a change to see each
-        field before and after.
+        The listing, its documents, its applications and their reviews, newest first. Open a change to see each field
+        before and after.
       </p>
       <CommandList commands={commands} source={SOURCE} />
     </div>
