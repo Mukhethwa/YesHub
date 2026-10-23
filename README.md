@@ -243,6 +243,9 @@ pnpm exec convex run admin:deleteAccount '{"email":"someone@example.com"}'   # a
 | `SUPER_ADMIN_EMAILS` | Convex | Comma-separated emails that become MASLink super admins when they sign up |
 | `AUTH_EMAIL_FROM` | Convex | Sender address on a domain verified in Resend. Until one is set, mail only reaches the Resend account owner, so sign-up doesn’t require email verification (see `convex/auth.ts`) |
 | `ANTHROPIC_API_KEY` | `.env.local`, Vercel | The SME's "Improve my summary" (Professional company summary), in `src/app/api/company-summary/route.ts`. Without it the button explains that AI summaries aren't set up |
+| `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN` | Convex | WhatsApp match alerts (`convex/matchAlerts.ts`), sent from the same WhatsApp Business number as PayB4 through Meta's Cloud API |
+| `WHATSAPP_ALLOWED_NUMBERS` | Convex | The only numbers that may receive alerts, comma-separated (e.g. `27821234567`); nothing is sent while it's empty, `*` allows all |
+| `WHATSAPP_MATCH_TEMPLATE`, `WHATSAPP_TEMPLATE_LANGUAGE`, `WHATSAPP_GRAPH_VERSION` | Convex | Optional. Without an approved template, alerts are plain text, which WhatsApp only delivers within 24 hours of the person messaging the number |
 | `CONVEX_DEPLOY_KEY` | Vercel | See below |
 
 ### Scripts

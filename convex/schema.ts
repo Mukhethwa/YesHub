@@ -499,6 +499,22 @@ export default defineSchema({
     .index("by_organization_and_status", ["organizationId", "status"]),
 
   /**
+   * Alerts sent to SMEs when a newly published listing matches their profile, one per SME and listing, so
+   * nobody is alerted twice. The phone number isn't kept: only whether it went, and why not.
+   */
+  matchAlerts: defineTable({
+    smeId: v.id("smes"),
+    opportunityId: v.id("opportunities"),
+    channel: v.literal("whatsapp"),
+    status: v.union(v.literal("sent"), v.literal("failed")),
+    /** WhatsApp's message id when it went; why not when it failed. */
+    messageId: v.optional(v.string()),
+    detail: v.optional(v.string()),
+  })
+    .index("by_sme_and_opportunity", ["smeId", "opportunityId"])
+    .index("by_opportunity", ["opportunityId"]),
+
+  /**
    * An application the SME started and saved without submitting ("In progress" in the SME portal). Only the
    * SME ever reads these: buyers, reviews and counts see an application once it's submitted.
    */
