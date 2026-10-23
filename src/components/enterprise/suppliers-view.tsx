@@ -488,11 +488,10 @@ function HistoryCard({ profile }: { profile: Profile }) {
                       href={`/dashboard/opportunities?id=${h.opportunityId}`}
                       className="block truncate font-medium hover:underline"
                     >
-                      {h.title}
+                      {h.reference}
                     </Link>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {KIND_LABELS[h.kind]}, {h.reference}
-                    </span>
+                    <span className="block truncate text-sm">{h.title}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{KIND_LABELS[h.kind]}</span>
                   </TableCell>
                   <TableCell className="text-sm">{formatDate(h.submittedAt)}</TableCell>
                   <TableCell>

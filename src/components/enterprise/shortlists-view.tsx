@@ -58,7 +58,7 @@ export function ShortlistsView() {
               <SelectItem value="all">All listings</SelectItem>
               {opportunities.map((o) => (
                 <SelectItem key={o.id} value={o.id}>
-                  {o.title} ({o.count})
+                  {o.reference}, {o.title} ({o.count})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -86,13 +86,14 @@ export function ShortlistsView() {
             <CardHeader>
               <CardTitle>
                 <Link href={`/dashboard/opportunities?id=${opportunity.id}`} className="hover:underline">
-                  {opportunity.title}
+                  {opportunity.reference}
                 </Link>
+                <span className="mt-0.5 block text-sm font-medium">{opportunity.title}</span>
               </CardTitle>
               <CardDescription className="flex flex-wrap items-center gap-2">
                 <PhasePill phase={phaseOf(opportunity)} />
                 <span>
-                  {KIND_LABELS[opportunity.kind]}, {opportunity.reference}, {closingLabel(opportunity.closesAt)}
+                  {KIND_LABELS[opportunity.kind]}, {closingLabel(opportunity.closesAt)}
                 </span>
               </CardDescription>
             </CardHeader>

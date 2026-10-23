@@ -161,11 +161,13 @@ export function MatchCard({ match, sme }: { match: Match; sme: SmeProfile }) {
     <li className="rounded-xl border bg-card p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
-          <Link href={`/sme/opportunities?id=${match.id}`} className="block font-medium hover:underline">
-            {match.title}
+          {/* The reference is how SMEs and buyers refer to a listing, so it's the heading */}
+          <Link href={`/sme/opportunities?id=${match.id}`} className="block font-semibold hover:underline">
+            {match.reference}
           </Link>
+          <p className="text-sm font-medium">{match.title}</p>
           <p className="text-sm text-muted-foreground">
-            {match.organizationName}, {KIND_LABELS[match.kind]}, {match.reference}
+            {match.organizationName}, {KIND_LABELS[match.kind]}
           </p>
           <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
             <Pill tone={match.reach === "outside" ? "warning" : "neutral"}>{reachLabel(match.reach, match, sme)}</Pill>
