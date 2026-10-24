@@ -1,10 +1,12 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { BadgeCheckIcon } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
+import { Status } from "@/components/app/status";
 import { CompanySummaryField } from "@/components/sme/company-summary";
 import { Chips, FileDrop, FormField, Row } from "@/components/sme/controls";
 import { CompanyStep, ComplianceDateFields, ContactStep, CoverageStep, OfferingStep } from "@/components/sme/steps";
@@ -178,6 +180,15 @@ export function ProfileSection({ sme }: { sme: SmeProfile }) {
         {section(
           "company",
           <dl className="divide-y">
+            {/* A mock for the demo: stands in for the KYC check MASLink runs before a business can trade */}
+            <Row
+              label="Verification"
+              value={
+                <Status tone="success" icon={BadgeCheckIcon} className="text-sm [&>svg]:size-4">
+                  KYC check completed
+                </Status>
+              }
+            />
             <Row label="Company name" value={sme.companyName} />
             <Row label="Registration no." value={sme.registrationNumber} />
             <Row label="CSD number" value={sme.csdNumber} />
